@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>选手端</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--pto-font-sans);
+    background:
+      radial-gradient(circle at top, rgba(251,191,36,0.18), transparent 28%),
+      linear-gradient(180deg, #08111f 0%, #101a2e 100%);
+    color: #e6edf8;
+    min-height: 100vh;
+  }
+  .wrap {
+    width: min(100%, 520px);
+    margin: 0 auto;
+    padding: 24px 16px 40px;
+  }
+  .card {
+    background: rgba(17, 24, 39, 0.88);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 22px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    padding: 20px;
+    backdrop-filter: blur(12px);
+  }
+  .hero {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(251,191,36,0.12);
+    color: #fbbf24;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  h1 {
+    margin: 14px 0 8px;
+    font-size: 28px;
+    line-height: 1.2;
+  }
+  .sub {
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .hidden { display: none !important; }
+  .field-label {
+    display: block;
+    margin: 0 0 8px;
+    color: #cbd5e1;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid #334155;
+    background: #0f172a;
+    color: #f8fafc;
+    font-size: 16px;
+    outline: none;
+  }
+  .input:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+  }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .btn {
+    border: none;
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.12s ease, opacity 0.12s ease, background 0.12s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary {
+    flex: 1;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+  }
+  .btn-secondary {
+    background: #334155;
+    color: #e2e8f0;
+  }
+  .btn-danger {
+    background: #b91c1c;
+    color: #fff;
+  }
+  .status-box {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.9);
+    color: #cbd5e1;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .status-box.warn {
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    color: #fde68a;
+  }
+  .status-box.ok {
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    color: #bbf7d0;
+  }
+  .player-name {
+    font-size: 34px;
+    font-weight: 900;
+    text-align: center;
+    margin: 6px 0 12px;
+    letter-spacing: 0.02em;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .meta-item {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .meta-label {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .meta-value {
+    margin-top: 6px;
+    font-size: 20px;
+    font-weight: 800;
+    color: #f8fafc;
+  }
+  .record {
+    display: inline-flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+  .record .w { color: #22c55e; }
+  .record .d { color: #94a3b8; }
+  .record .l { color: #ef4444; }
+  .live-room {
+    margin-top: 14px;
+    padding: 7px 14px 8px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.08));
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  .live-room .meta-label { color: #fbbf24; }
+  .live-room .meta-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    line-height: 1.1;
+  }
+  .live-room .meta-value {
+    margin-top: 3px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .match-box {
+    margin-top: 14px;
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid rgba(148, 163, 184, 0.14);
+  }
+  .round-pill {
+    display: inline-flex;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(99,102,241,0.16);
+    color: #c7d2fe;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .round-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .right-tags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .live-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.16);
+    color: #fecaca;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .match-main {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .match-side {
+    min-width: 0;
+    text-align: center;
+    padding: 14px 10px;
+    border-radius: 16px;
+    background: #172235;
+  }
+  .match-side .name {
+    font-size: 24px;
+    font-weight: 800;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .history {
+    margin-top: 18px;
+  }
+  .history h3 {
+    margin: 0 0 10px;
+    font-size: 15px;
+  }
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .history-item {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+  }
+  .history-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: #94a3b8;
+    font-size: 12px;
+  }
+  .history-main {
+    margin-top: 6px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .history-main .win { color: #22c55e; }
+  .history-main .loss { color: #ef4444; }
+  .history-main .draw { color: #fbbf24; }
+  .summary-box {
+    margin-top: 14px;
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(15,23,42,0.94);
+    border: 1px solid rgba(148,163,184,0.14);
+  }
+  .summary-rank {
+    font-size: 44px;
+    font-weight: 900;
+    color: #fbbf24;
+    text-align: center;
+    margin: 6px 0 4px;
+  }
+  .award {
+    margin-top: 14px;
+    text-align: center;
+    padding: 18px;
+    border-radius: 18px;
+    background: radial-gradient(circle at top, rgba(251,191,36,0.2), rgba(15,23,42,0.95));
+    border: 1px solid rgba(251,191,36,0.3);
+  }
+  .award-title {
+    color: #fbbf24;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .award-text {
+    margin-top: 8px;
+    font-size: 28px;
+    font-weight: 900;
+  }
+  .foot-note {
+    margin-top: 12px;
+    color: #64748b;
+    font-size: 12px;
+    text-align: center;
+  }
+  .top8-board {
+    margin-top: 16px;
+    padding: 18px;
+    border-radius: 18px;
+    background: rgba(15,23,42,0.94);
+    border: 1px solid rgba(148,163,184,0.14);
+  }
+  .top8-stage {
+    margin-top: 14px;
+  }
+  .top8-stage:first-child {
+    margin-top: 0;
+  }
+  .top8-stage-title {
+    color: #fbbf24;
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+  }
+  .top8-match {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(23,34,53,0.9);
+    margin-top: 8px;
+  }
+  .top8-match-main {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .top8-match-sub {
+    margin-top: 4px;
+    color: #94a3b8;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="eyebrow">PLAYER PORTAL</div>
+      <h1 id="tournamentName">宝可梦月赛</h1>
+      <div class="sub" id="heroSub">输入选手名称以进入本场比赛个人页。</div>
+    </div>
+
+    <div class="card" id="loginCard">
+      <label class="field-label" for="playerNameInput">输入你的选手名称</label>
+      <input class="input" id="playerNameInput" placeholder="" />
+      <div class="btn-row">
+        <button class="btn btn-primary" id="loginBtn">进入比赛</button>
+      </div>
+      <div class="status-box hidden" id="loginStatus"></div>
+      <div class="status-box warn hidden" id="nameExistsBox">
+        该名称已经存在。<br>如果这是你本人，请确认返回个人页。
+        <div class="btn-row">
+          <button class="btn btn-primary" id="confirmExistingBtn">是，我本人</button>
+          <button class="btn btn-secondary" id="denyExistingBtn">不是</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="playerCard">
+      <div class="player-name" id="playerNameLabel">选手</div>
+      <div class="sub" id="phaseSummary">等待比赛开始</div>
+
+      <div class="live-room hidden" id="liveRoomBox">
+        <div class="meta-label">直播房号</div>
+        <div class="meta-value" id="liveRoomCode">-</div>
+      </div>
+
+      <div class="meta-grid">
+        <div class="meta-item">
+          <div class="meta-label" id="recordLabel">当前战绩</div>
+          <div class="meta-value record" id="recordLine">
+            <span class="w">0</span>-<span class="d">0</span>-<span class="l">0</span>
+          </div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">比赛阶段</div>
+          <div class="meta-value" id="phaseLabel">等待开始</div>
+        </div>
+      </div>
+
+      <div class="match-box hidden" id="activeMatchBox">
+        <div class="round-row">
+          <div class="round-pill" id="roundPill">ROUND 1</div>
+          <div class="right-tags">
+            <div class="live-pill hidden" id="liveTablePill">直播桌</div>
+          </div>
+        </div>
+        <div class="match-main">
+          <div class="match-side">
+            <div class="meta-label">桌号</div>
+            <div class="meta-value" id="tableNumber">1</div>
+          </div>
+          <div class="match-side">
+            <div class="meta-label">对手</div>
+            <div class="name" id="opponentName">对手</div>
+          </div>
+        </div>
+        <div class="meta-grid hidden" id="bo3ScoreGrid" style="margin-top:12px;">
+          <div class="meta-item">
+            <div class="meta-label">我方局分</div>
+            <div class="meta-value" id="myGameWins">0</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">对手局分</div>
+            <div class="meta-value" id="oppGameWins">0</div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="reportWinBtn">提交胜利</button>
+        </div>
+        <div class="foot-note">提交前会再次确认。若误报，可由现场裁判在后台修正。</div>
+      </div>
+
+      <div class="summary-box hidden" id="swissSummaryBox">
+        <div class="meta-label" style="text-align:center;">瑞士轮最终排名</div>
+        <div class="summary-rank" id="summaryRank">#1</div>
+        <div class="meta-grid">
+          <div class="meta-item">
+            <div class="meta-label">对手胜率</div>
+            <div class="meta-value" id="summaryOmw">0.000</div>
+          </div>
+          <div class="meta-item">
+            <div class="meta-label">对手的对手胜率</div>
+            <div class="meta-value" id="summaryOow">0.000</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="award hidden" id="awardBox">
+        <div class="award-title">比赛已结束</div>
+        <div class="award-text" id="awardText">恭喜获得本场比赛八强</div>
+      </div>
+
+      <div class="btn-row hidden" id="playerReportRow">
+        <button class="btn btn-primary" id="playerReportBtn">导出个人战报</button>
+      </div>
+
+      <div class="top8-board hidden" id="top8Board">
+        <h3 style="margin:0 0 10px;">淘汰赛对局情况</h3>
+        <div id="top8BoardList"></div>
+      </div>
+
+      <div class="history">
+        <h3>历史配对与结果</h3>
+        <div class="history-list" id="historyList"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="logoutBtn">退出选手页</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const storageNameKey = 'pto2_player_name';
+const storageIdKey = 'pto2_player_id';
+const params = new URLSearchParams(location.search);
+const tournamentId = params.get('tournamentId') || '';
+let playerName = localStorage.getItem(storageNameKey) || '';
+let playerId = params.get('playerId') || localStorage.getItem(storageIdKey) || '';
+let lastView = null;
+
+function qs(id) { return document.getElementById(id); }
+
+function setStatus(text, cls = '') {
+  const el = qs('loginStatus');
+  el.className = `status-box ${cls}`.trim();
+  el.textContent = text;
+  el.classList.remove('hidden');
+}
+
+function hideLoginAux() {
+  qs('loginStatus').classList.add('hidden');
+  qs('nameExistsBox').classList.add('hidden');
+}
+
+function withTournament(path) {
+  if (!tournamentId) return path;
+  const join = path.includes('?') ? '&' : '?';
+  return `${path}${join}tournamentId=${encodeURIComponent(tournamentId)}`;
+}
+
+async function api(path, data = null) {
+  const init = data
+    ? {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }
+    : {};
+  const res = await fetch(withTournament(path), init);
+  return await res.json();
+}
+
+function phaseText(phase) {
+  return {
+    setup: '报名阶段',
+    swiss: '瑞士轮',
+    'swiss-ended': '瑞士轮已结束',
+    top8: '淘汰赛',
+    done: '比赛结束',
+  }[phase] || phase || '-';
+}
+
+function renderRecord(record) {
+  const safe = record || { wins: 0, draws: 0, losses: 0 };
+  qs('recordLine').innerHTML = `<span class="w">${safe.wins || 0}</span>-<span class="d">${safe.draws || 0}</span>-<span class="l">${safe.losses || 0}</span>`;
+}
+
+function renderHistory(history) {
+  const list = qs('historyList');
+  if (!history || history.length === 0) {
+    list.innerHTML = `<div class="history-item"><div class="history-main">暂无历史对局</div></div>`;
+    return;
+  }
+  list.innerHTML = history
+    .map(item => {
+      const label = item.phase || (item.round ? `第 ${item.round} 轮` : '对局');
+      const resultText = item.result === 'win' ? '胜' : item.result === 'loss' ? '负' : '平';
+      const resultClass = item.result === 'win' ? 'win' : item.result === 'loss' ? 'loss' : 'draw';
+      return `
+        <div class="history-item">
+          <div class="history-top">
+            <span>${label}</span>
+            <span>桌 ${item.table || '-'}${item.wasLive ? ' 📺' : ''}</span>
+          </div>
+          <div class="history-main">对手：${item.opponent || '-'} · <span class="${resultClass}">${resultText}</span></div>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+function renderPlayerView(view) {
+  lastView = view;
+  qs('tournamentName').textContent = view.tournamentName || '本场比赛';
+  qs('heroSub').textContent = '本页面会根据比赛进程自动刷新状态。';
+  qs('loginCard').classList.add('hidden');
+  qs('playerCard').classList.remove('hidden');
+  qs('playerNameLabel').textContent = view.playerName || playerName;
+  qs('phaseLabel').textContent = phaseText(view.phase);
+  renderRecord(view.record);
+  renderHistory(view.history);
+
+  qs('activeMatchBox').classList.add('hidden');
+  qs('swissSummaryBox').classList.add('hidden');
+  qs('awardBox').classList.add('hidden');
+  qs('top8Board').classList.add('hidden');
+  qs('playerReportRow').classList.add('hidden');
+  qs('liveTablePill').classList.add('hidden');
+  qs('liveRoomBox').classList.toggle('hidden', !view.liveRoomCode);
+  if (view.liveRoomCode) qs('liveRoomCode').textContent = view.liveRoomCode;
+  qs('recordLabel').textContent = view.phase === 'top8' ? '瑞士轮战绩' : '当前战绩';
+
+  if (view.mode === 'registration') {
+    qs('phaseSummary').textContent = '比赛尚未开始，当前可以报名。';
+  } else if (view.mode === 'registered') {
+    qs('phaseSummary').textContent = '报名成功，请等待比赛开始。';
+  } else if (view.mode === 'active-match' && view.activeMatch) {
+    const match = view.activeMatch;
+    const opponent = match.p1 === view.playerName ? match.p2 : match.p1;
+    qs('phaseSummary').textContent = '本轮对局进行中。';
+    qs('roundPill').textContent = match.phase || `ROUND ${match.round || view.round}`;
+    qs('liveTablePill').classList.toggle('hidden', !view.isLiveTable);
+    qs('tableNumber').textContent = match.table || '-';
+    qs('opponentName').textContent = opponent || '-';
+    if (view.phase === 'top8') {
+      const myWins = match.p1 === view.playerName ? (match.p1Wins || 0) : (match.p2Wins || 0);
+      const oppWins = match.p1 === view.playerName ? (match.p2Wins || 0) : (match.p1Wins || 0);
+      qs('bo3ScoreGrid').classList.remove('hidden');
+      qs('myGameWins').textContent = myWins;
+      qs('oppGameWins').textContent = oppWins;
+      qs('reportWinBtn').textContent = '提交本局胜利';
+    } else {
+      qs('bo3ScoreGrid').classList.add('hidden');
+      qs('reportWinBtn').textContent = '提交胜利';
+    }
+    qs('activeMatchBox').classList.remove('hidden');
+  } else if (view.mode === 'swiss-summary' && view.standings) {
+    qs('bo3ScoreGrid').classList.add('hidden');
+    qs('phaseSummary').textContent = '瑞士轮已结束，请查看你的最终排名与小分。';
+    qs('summaryRank').textContent = `#${view.standings.rank}`;
+    qs('summaryOmw').textContent = Number(view.standings.omw || 0).toFixed(3);
+    qs('summaryOow').textContent = Number(view.standings.oow || 0).toFixed(3);
+    qs('swissSummaryBox').classList.remove('hidden');
+  } else if (view.mode === 'final-result') {
+    qs('bo3ScoreGrid').classList.add('hidden');
+    qs('phaseSummary').textContent = '你的本场比赛已经结束。';
+    if (view.award) {
+      qs('awardText').textContent = `恭喜获得本场比赛${view.award}`;
+      qs('awardBox').classList.remove('hidden');
+    }
+    qs('playerReportRow').classList.toggle('hidden', !view.canExportReport);
+    if (!view.top8 && view.top8Overview && view.top8Overview.stages && view.top8Overview.stages.length > 0) {
+      qs('top8Board').classList.remove('hidden');
+      qs('top8BoardList').innerHTML = view.top8Overview.stages.map(stage => `
+        <div class="top8-stage">
+          <div class="top8-stage-title">${stage.phase}</div>
+          ${stage.matches.map(match => `
+            <div class="top8-match">
+              <div class="top8-match-main">桌 ${match.table || '-'} · ${match.p1 || '-'} VS ${match.p2 || '-'}</div>
+              <div class="top8-match-sub">${match.done
+                ? (match.winner
+                    ? (() => {
+                        const winnerIsP1 = match.winner === match.p1;
+                        const winnerScore = winnerIsP1 ? (match.p1Wins || 0) : (match.p2Wins || 0);
+                        const loserScore = winnerIsP1 ? (match.p2Wins || 0) : (match.p1Wins || 0);
+                        return `结果：${match.winner} 胜（${winnerScore}-${loserScore}）`;
+                      })()
+                    : '结果：平局')
+                : '尚未结束'}</div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('');
+    }
+  } else {
+    qs('bo3ScoreGrid').classList.add('hidden');
+    qs('phaseSummary').textContent = '结果统计中，请稍候。';
+  }
+}
+
+async function refreshPlayerView() {
+  if (!playerName && !playerId) return;
+  try {
+    const path = playerId
+      ? `/api/player-view-by-id/${encodeURIComponent(playerId)}`
+      : `/api/player-view/${encodeURIComponent(playerName)}`;
+    const view = await api(path);
+    renderPlayerView(view);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function submitLogin(confirmExisting = false) {
+  const name = qs('playerNameInput').value.trim() || playerName;
+  if (!name) {
+    setStatus('请输入你的选手名称。', 'warn');
+    return;
+  }
+  hideLoginAux();
+  const res = await api('/api/player-login', { playerName: name, confirmExisting, tournamentId });
+  if (res.ok) {
+    playerName = name;
+    playerId = res.playerId || (res.player && res.player.playerId) || playerId;
+    localStorage.setItem(storageNameKey, playerName);
+    if (playerId) localStorage.setItem(storageIdKey, playerId);
+    const url = new URL(location.href);
+    if (playerId) url.searchParams.set('playerId', playerId);
+    history.replaceState({}, '', url.toString());
+    renderPlayerView(res.player);
+    return;
+  }
+  if (res.code === 'NAME_EXISTS') {
+    qs('nameExistsBox').classList.remove('hidden');
+    return;
+  }
+  setStatus(res.message || res.err || '进入比赛失败。', 'warn');
+}
+
+async function submitWin() {
+  if (!playerName) return;
+  if (!confirm('确认提交本场胜利吗？提交后将同步到后台。')) return;
+  const res = await api('/api/player-report-win', { playerName, tournamentId });
+  if (!res.ok) {
+    alert(res.err || '提交失败');
+    return;
+  }
+  renderPlayerView(res.player);
+}
+
+function exportPlayerReport() {
+  if (!playerName) return;
+  const url = `/api/export-player-report?playerName=${encodeURIComponent(playerName)}${tournamentId ? `&tournamentId=${encodeURIComponent(tournamentId)}` : ''}`;
+  window.open(url, '_blank');
+}
+
+function logoutPlayer() {
+  localStorage.removeItem(storageNameKey);
+  localStorage.removeItem(storageIdKey);
+  playerName = '';
+  playerId = '';
+  lastView = null;
+  qs('playerCard').classList.add('hidden');
+  qs('loginCard').classList.remove('hidden');
+  qs('playerNameInput').value = '';
+  hideLoginAux();
+  qs('tournamentName').textContent = '本场比赛';
+  qs('heroSub').textContent = '输入选手名称以进入本场比赛个人页。';
+}
+
+qs('loginBtn').addEventListener('click', () => submitLogin(false));
+qs('confirmExistingBtn').addEventListener('click', () => submitLogin(true));
+qs('denyExistingBtn').addEventListener('click', () => {
+  qs('nameExistsBox').classList.add('hidden');
+  setStatus('名称重复，请更换名称或联系裁判。', 'warn');
+});
+qs('reportWinBtn').addEventListener('click', submitWin);
+qs('playerReportBtn').addEventListener('click', exportPlayerReport);
+qs('logoutBtn').addEventListener('click', logoutPlayer);
+qs('playerNameInput').addEventListener('keydown', evt => {
+  if (evt.key === 'Enter') submitLogin(false);
+});
+
+if (playerName || playerId) {
+  refreshPlayerView();
+} else {
+  api('/state').then(state => {
+    qs('tournamentName').textContent = state.tournamentName || '本场比赛';
+  }).catch(() => {});
+}
+
+setInterval(() => {
+  if (playerName) refreshPlayerView();
+}, 3000);
+</script>
+</body>
+</html>
+

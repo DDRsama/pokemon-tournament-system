@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宝可梦月赛管理系统</title>
+<link rel="stylesheet" href="/shared/theme.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--pto-font-sans); background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+  .topbar { background: #1e293b; padding: 8px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #334155; flex-shrink: 0; }
+  .topbar-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .topbar h1 { font-size: 14px; color: #f8fafc; font-weight: 700; white-space: nowrap; }
+  .tournament-select { flex: 1; min-width: 0; position: relative; }
+  .tournament-current {
+    display: flex; align-items: center; gap: 8px;
+    background: #334155; border-radius: 8px; padding: 6px 12px;
+    cursor: pointer; max-width: 320px; overflow: hidden;
+    border: 1px solid transparent; transition: border-color 0.15s;
+  }
+  .tournament-current:hover { border-color: #6366f1; }
+  .tournament-current .tname { font-size: 13px; font-weight: 600; color: #f8fafc; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tournament-current .tarrow { font-size: 11px; color: #64748b; }
+  .tournament-dropdown {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 100;
+    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    width: 320px; max-height: 300px; overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .tournament-dropdown.open { display: block; }
+  .td-item { padding: 9px 14px; cursor: pointer; border-radius: 6px; margin: 3px; font-size: 13px; transition: background 0.1s; }
+  .td-item:hover { background: #334155; }
+  .td-item.active { background: #6366f1; }
+  .td-item-name { font-weight: 600; color: #e2e8f0; }
+  .td-item-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .td-divider { height: 1px; background: #334155; margin: 4px 8px; }
+  .td-new { display: flex; align-items: center; gap: 8px; color: #22c55e; font-weight: 600; }
+  .td-rename { display: flex; align-items: center; gap: 8px; color: #94a3b8; }
+  .phase-badge { padding: 3px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #475569; color: #cbd5e1; white-space: nowrap; }
+  .phase-badge.swiss { background: #7c3aed; color: #f0f0ff; }
+  .phase-badge.swiss-ended { background: #d97706; color: #fff8e1; }
+  .phase-badge.top8 { background: #dc2626; color: white; }
+  .phase-badge.done { background: #22c55e; color: white; }
+  .round-tag { font-size: 11px; color: #94a3b8; font-weight: 600; white-space: nowrap; }
+  .ws-status { font-size: 11px; color: #64748b; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .ws-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; transition: background 0.3s; }
+  .ws-dot.connected { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
+
+  .main { display: flex; height: calc(100vh - 48px); }
+  .panel { padding: 14px; overflow-y: auto; }
+  .panel-left { width: 240px; background: #1e293b; border-right: 1px solid #1e293b; flex-shrink: 0; }
+  .panel-center { flex: 1; background: #0f172a; min-width: 0; }
+  .panel-right { width: 270px; background: #1e293b; border-left: 1px solid #1e293b; flex-shrink: 0; }
+
+  .panel-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+  .player-item { display: flex; align-items: center; padding: 5px 7px; border-radius: 6px; margin-bottom: 3px; background: #273549; transition: background 0.1s; cursor: default; }
+  .player-item:hover { background: #334155; }
+  .player-item .rank { font-size: 11px; color: #475569; width: 18px; text-align: center; flex-shrink: 0; }
+  .player-item .name { flex: 1; font-size: 13px; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .player-item .record { font-size: 11px; color: #94a3b8; min-width: 52px; text-align: center; flex-shrink: 0; font-weight: 600; }
+  .player-item .record .w { color: #22c55e; }
+  .player-item .record .d { color: #94a3b8; }
+  .player-item .record .l { color: #ef4444; }
+  .player-item .del { background: none; border: none; color: #475569; cursor: pointer; font-size: 15px; padding: 0 3px; line-height: 1; flex-shrink: 0; }
+  .player-item .del:hover { color: #f87171; }
+  .player-item.top8-qualify { border-left: 3px solid #d97706; }
+  .player-item.dropped { opacity: 0.55; }
+  .player-item.dropped .name { text-decoration: line-through; color: #64748b; }
+  .wd-badge { font-size: 10px; color: #f59e0b; font-weight: 700; margin-left: 4px; }
+  .drop-btn { background: none; border: none; color: #475569; cursor: pointer; font-size: 13px; padding: 0 2px; flex-shrink: 0; margin-left: 2px; }
+  .drop-btn:hover { color: #f59e0b; }
+  .dropped-section { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #334155; }
+
+  .add-player { display: flex; gap: 5px; margin-bottom: 8px; }
+  .add-player input { flex: 1; padding: 6px 9px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 13px; }
+  .add-player input:focus { outline: none; border-color: #6366f1; }
+  .btn { padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; font-family: inherit; }
+  .btn-sm { padding: 4px 9px; font-size: 11px; }
+  .btn-primary { background: #6366f1; color: white; }
+  .btn-primary:hover { background: #4f46e5; }
+  .btn-secondary { background: #334155; color: #cbd5e1; }
+  .btn-secondary:hover { background: #475569; }
+  .btn-green { background: #16a34a; color: white; }
+  .btn-green:hover { background: #15803d; }
+  .btn-green:disabled { background: #14532d; color: #4a7c59; cursor: not-allowed; }
+  .btn-amber { background: #d97706; color: white; }
+  .btn-amber:hover { background: #b45309; }
+  .btn-amber:disabled { background: #78350f; color: #a16207; cursor: not-allowed; }
+  .btn-red { background: #dc2626; color: white; }
+  .td-item { display: flex; align-items: center; justify-content: space-between; }
+  .td-item-left { flex: 1; min-width: 0; cursor: pointer; padding: 1px 0; }
+  .td-del-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 4px; opacity: 0.4; transition: opacity 0.15s; flex-shrink: 0; }
+  .td-del-btn:hover { opacity: 1; }
+  .btn-red:hover { background: #b91c1c; }
+  .btn-red:disabled { background: #7f1d1d; color: #991b1b; cursor: not-allowed; }
+  .btn:disabled { cursor: not-allowed; opacity: 0.5; }
+
+  .config-box { background: #0f172a; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+  .config-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: #94a3b8; }
+  .config-row:last-child { margin-bottom: 0; }
+  .config-row input { width: 56px; padding: 3px 7px; border-radius: 4px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; text-align: center; font-size: 12px; }
+  .config-row input.wide { width: 120px; }
+  .player-min-warn { font-size: 11px; color: #f59e0b; margin-top: 4px; display: none; }
+  .player-min-warn.show { display: block; }
+
+  .action-stack { display: flex; flex-direction: column; gap: 6px; }
+  .action-stack .btn { width: 100%; padding: 9px; font-size: 13px; }
+
+  .round-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #1e293b; }
+  .round-label { font-size: 15px; font-weight: 700; color: #f8fafc; }
+  .round-progress { font-size: 11px; color: #64748b; font-weight: normal; margin-left: 10px; }
+  .round-progress .done-count { color: #22c55e; font-weight: 700; }
+  .round-progress.done { color: #22c55e; }
+
+  .match-card { background: #1e293b; border-radius: 10px; padding: 9px 13px; margin-bottom: 7px; border: 2px solid transparent; transition: border-color 0.2s, opacity 0.2s; }
+  .match-card.live { border-color: #f59e0b; box-shadow: 0 0 14px rgba(245,158,11,0.2); }
+  .match-card.done { opacity: 0.55; }
+  .match-header { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .match-meta { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: rgba(99,102,241,0.16); color: #c7d2fe; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; white-space: nowrap; }
+  .match-header-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .match-players { display: flex; align-items: center; gap: 8px; }
+  .seat-group { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
+  .seat-group.right { justify-content: flex-end; }
+  .player-side { flex: 1; padding: 5px 7px; border-radius: 6px; background: #273549; cursor: pointer; text-align: center; font-size: 13px; transition: background 0.12s; }
+  .player-side:hover:not(.won):not(.lost):not(.tbd) { background: #334155; color: #fff; }
+  .player-side.won { background: #16a34a; color: white; font-weight: 700; }
+  .player-side.lost { background: #1e293b; color: #475569; text-decoration: line-through; }
+  .player-side.tbd { color: #475569; font-style: italic; cursor: default; }
+  .player-side.tv::after { content: ' 📺'; }
+  .seat-drop-btn { width: 28px; height: 28px; border: none; border-radius: 6px; background: #7f1d1d; color: #fecaca; cursor: pointer; font-size: 11px; flex-shrink: 0; }
+  .seat-drop-btn:hover { background: #991b1b; color: #fff; }
+  .vs { font-size: 11px; color: #475569; font-weight: 700; flex-shrink: 0; }
+  .match-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+  .live-btn { background: #b45309; color: white; flex: 1; font-size: 11px; }
+  .live-btn:hover { background: #d97706; }
+  .live-btn.active { background: #dc2626; }
+  .live-btn.active::before { content: '🔴 '; }
+  .live-btn:not(.active)::before { content: '📺 '; }
+  .score-btn { background: #334155; color: #cbd5e1; font-size: 11px; padding: 5px 8px; }
+  .score-btn:hover { background: #475569; }
+  .score-stack { display: flex; align-items: center; gap: 4px; }
+  .score-stack .score-btn { min-width: 34px; text-align: center; }
+  .match-btn { background: #334155; color: #cbd5e1; font-size: 11px; padding: 5px 8px; }
+  .match-btn:hover { background: #475569; }
+  .match-btn.warn { background: #92400e; color: #fff; }
+  .match-btn.warn:hover { background: #b45309; }
+
+  .bo3-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 5px; font-size: 11px; }
+  .bo3-player { display: flex; align-items: center; gap: 4px; }
+  .bo3-dots { display: flex; gap: 3px; }
+  .bo3-dot { width: 8px; height: 8px; border-radius: 50%; background: #334155; }
+  .bo3-dot.win { background: #22c55e; }
+  .bo3-dot.lose { background: #475569; }
+  .bo3-score-num { font-size: 13px; font-weight: 700; color: #e2e8f0; min-width: 12px; text-align: center; }
+  .bo3-score-num.winning { color: #22c55e; }
+
+  .phase-hint { background: #1e293b; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 3px solid #6366f1; font-size: 12px; color: #94a3b8; line-height: 1.6; }
+  .phase-hint strong { color: #e2e8f0; }
+  .phase-hint.hidden { display: none; }
+
+  /* 排名总览 */
+  #swissEndedScreen { display: none; }
+  #swissEndedScreen.visible { display: block; }
+  .review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .review-title { font-size: 17px; font-weight: 700; color: #f8fafc; }
+  .review-subtitle { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .review-actions { display: flex; gap: 8px; }
+  .review-actions .btn { padding: 8px 18px; font-size: 13px; }
+  .ranking-table { width: 100%; border-collapse: collapse; }
+  .ranking-table th { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 1px; padding: 6px 10px; text-align: left; border-bottom: 1px solid #1e293b; }
+  .ranking-table td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid #1e293b40; vertical-align: middle; }
+  .ranking-table tr.top8 td { background: rgba(217,119,6,0.08); }
+  .rank-num { font-size: 16px; font-weight: 700; color: #475569; min-width: 30px; text-align: center; display: inline-block; }
+  .rank-num.top3 { color: #fbbf24; font-size: 18px; }
+  .rank-num.top8 { color: #d97706; }
+  .rank-name { color: #cbd5e1; font-weight: 500; }
+  .rank-name.t8 { color: #fbbf24; font-weight: 700; }
+  .rank-wdl { font-size: 13px; font-weight: 700; letter-spacing: 1px; }
+  .rank-wdl .w { color: #22c55e; }
+  .rank-wdl .d { color: #94a3b8; }
+  .rank-wdl .l { color: #ef4444; }
+  .rank-pts { font-size: 14px; font-weight: 700; color: #e2e8f0; min-width: 30px; text-align: center; }
+  .t8-badge { display: inline-block; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 700; background: #d97706; color: white; margin-left: 8px; }
+
+  /* 淘汰赛 */
+  #top8Bracket { display: none; }
+  #top8Bracket.visible { display: block; }
+  .bracket-header { font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  .bracket-progress { display: flex; gap: 6px; }
+  .bracket-step { flex: 1; height: 4px; border-radius: 2px; background: #334155; transition: background 0.3s; }
+  .bracket-step.done { background: #22c55e; }
+  .bracket-step.active { background: #d97706; }
+
+  /* 预览 */
+  .overlay-preview { width: 100%; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; border: 2px solid #334155; background: #000; margin-bottom: 10px; position: relative; }
+  .overlay-preview iframe { width: 200%; height: 200%; border: none; transform-origin: top left; transform: scale(0.5); display: block; }
+  .overlay-url-box { background: #0f172a; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+  .overlay-url { font-size: 11px; color: #94a3b8; word-break: break-all; font-family: monospace; }
+  .player-link-box { background: #0f172a; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+  .player-link-label { font-size: 11px; color: #64748b; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .player-link-url { font-size: 11px; color: #cbd5e1; word-break: break-all; font-family: monospace; }
+  .link-box-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .copy-btn { background: #334155; color: #e2e8f0; border: none; border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; flex-shrink: 0; }
+  .copy-btn:hover { background: #475569; }
+  .address-box { background: #0f172a; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+  .address-label { font-size: 11px; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  .address-input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #111827; color: #e2e8f0; font-size: 12px; font-family: monospace; }
+  .address-input:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18); }
+  .player-qr-box { background: #0f172a; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .player-qr-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; align-self: flex-start; }
+  .player-qr-frame { width: 180px; height: 180px; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; padding: 8px; }
+  .player-qr-frame img { width: 100%; height: 100%; object-fit: contain; }
+  .player-qr-tip { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; }
+  .overlay-state-box { background: #0f172a; border-radius: 6px; padding: 10px; min-height: 50px; }
+  .overlay-state-row { font-size: 12px; color: #94a3b8; margin-bottom: 3px; }
+  .overlay-state-row strong { color: #e2e8f0; }
+  .overlay-state-value { font-weight: 700; color: #fbbf24; }
+  .overlay-hint-idle { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #475569; font-size: 14px; gap: 8px; }
+  .obs-hint { font-size: 11px; color: #64748b; background: #0f172a; padding: 10px; border-radius: 6px; line-height: 1.8; }
+
+  /* 弹窗 */
+  #bulkModal, #newTModal, #renameModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; }
+  #bulkModal.open, #newTModal.open, #renameModal.open { display: flex; }
+  .modal-box { background: #1e293b; border-radius: 12px; padding: 24px; width: 460px; border: 1px solid #334155; }
+  .modal-box h2 { font-size: 15px; margin-bottom: 8px; }
+  .modal-box p { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+  .modal-box label { font-size: 12px; color: #94a3b8; margin-bottom: 6px; display: block; }
+  .modal-box input { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 13px; margin-bottom: 10px; }
+  .modal-box input:focus { outline: none; border-color: #6366f1; }
+  #bulkText { width: 100%; height: 200px; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 10px; font-size: 13px; resize: vertical; font-family: inherit; }
+  .modal-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: #475569; font-size: 13px; }
+  .empty-state-icon { font-size: 32px; margin-bottom: 10px; }
+
+  .overlay-tname { font-size: 13px; font-weight: 700; color: #fbbf24; background: rgba(251,191,36,0.1); padding: 4px 10px; border-radius: 6px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<div class="topbar">
+  <div class="topbar-left">
+    <h1>🎮 宝可梦月赛管理系统</h1>
+    <!-- 比赛下拉 -->
+    <div class="tournament-select">
+      <div class="tournament-current" onclick="toggleTourDropdown()" id="tourCurrent">
+        <span class="tname" id="tourName">—</span>
+        <span class="tarrow">▼</span>
+      </div>
+      <div class="tournament-dropdown" id="tourDropdown"></div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-secondary btn-sm" id="btnExportReport" onclick="exportReport()" title="比赛完成后可导出战报" disabled>导出战报</button>
+      <button class="btn btn-secondary btn-sm" onclick="showRename()" title="改名">✏️</button>
+    </div>
+  </div>
+  <span class="phase-badge" id="phaseBadge">等待开始</span>
+  <span class="round-tag" id="roundLabel"></span>
+  <span class="ws-status"><span class="ws-dot" id="wsDot"></span><span id="wsText">未连接</span></span>
+</div>
+
+<div class="main">
+  <!-- 左栏 -->
+  <div class="panel panel-left">
+    <div class="panel-title">📋 选手 <span id="playerCount" style="color:#94a3b8;">0</span>/64</div>
+    <div class="add-player">
+      <input type="text" id="playerInput" placeholder="选手名称..." onkeydown="if(event.key==='Enter')addPlayer()">
+      <button class="btn btn-primary" onclick="addPlayer()">+</button>
+    </div>
+    <button class="btn btn-secondary" style="width:100%;margin-bottom:10px;font-size:11px;" onclick="showBulkAdd()">批量导入</button>
+    <div id="playerList"></div>
+
+    <div class="panel-title" style="margin-top:16px;">⚙️ 赛制</div>
+    <div class="config-box">
+      <div class="config-row">
+        <span>瑞士轮轮数</span>
+        <input type="number" id="swissRounds" value="5" min="1" max="10">
+      </div>
+      <div class="config-row">
+        <span>当前人数</span>
+        <span id="actualPlayers" style="color:#f8fafc;font-weight:700;">0</span>
+      </div>
+      <div class="config-row">
+        <span>进入淘汰赛</span>
+        <span id="top8Ready" style="color:#64748b;">—</span>
+      </div>
+      <div class="config-row">
+        <span>直播房号</span>
+        <input type="text" class="wide" id="liveRoomCodeInput" onblur="saveTournamentConfig()">
+      </div>
+    </div>
+    <p class="player-min-warn" id="top8Warn">⚠ 需要至少 8 名选手</p>
+
+    <div class="action-stack">
+      <button class="btn btn-green" id="btnStart" onclick="startSwiss()" disabled>▶ 开始瑞士轮</button>
+      <button class="btn btn-secondary" id="btnNext" onclick="nextRound()" disabled>→ 下一轮</button>
+      <button class="btn btn-amber" id="btnEndSwiss" onclick="endSwiss()" disabled>🏁 结束瑞士轮</button>
+      <button class="btn btn-gray" id="btnRevert" onclick="revertRound()" disabled>← 回退</button>
+    </div>
+  </div>
+
+  <!-- 中栏 -->
+  <div class="panel panel-center">
+    <div class="phase-hint" id="swissHint">
+      <span id="swissHintText"></span>
+    </div>
+    <div id="swissArena">
+      <div class="round-header" id="roundHeaderArea">
+        <span class="round-label" id="roundHeader">等待开始瑞士轮</span>
+      </div>
+      <div id="matchList"></div>
+    </div>
+    <div id="swissEndedScreen">
+      <div class="review-header">
+        <div>
+          <div class="review-title">🏆 瑞士轮结束</div>
+          <div class="review-subtitle">确认以下 8 强名单，再进入淘汰赛</div>
+        </div>
+        <div class="review-actions">
+          <button class="btn btn-red" onclick="cancelTop8()">← 继续瑞士轮</button>
+          <button class="btn btn-green" onclick="confirmTop8()">✅ 确认进入淘汰赛</button>
+        </div>
+      </div>
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>选手</th>
+            <th style="width:80px;text-align:center;">W-D-L</th>
+            <th style="width:40px;text-align:center;">积分</th>
+            <th style="width:60px;text-align:center;">种子</th>
+          </tr>
+        </thead>
+        <tbody id="rankingBody"></tbody>
+      </table>
+    </div>
+    <div id="top8Bracket">
+      <div class="bracket-header">
+        <span>🏆 淘汰赛阶段</span>
+        <div class="bracket-progress" id="bracketProgress"></div>
+      </div>
+      <div id="top8PhaseHint" class="phase-hint"></div>
+      <div id="top8MatchList"></div>
+    </div>
+  </div>
+
+  <!-- 右栏 -->
+  <div class="panel panel-right">
+    <div class="panel-title">📺 叠加层预览</div>
+    <div class="overlay-preview">
+      <iframe id="overlayFrame" style="display:none;"></iframe>
+    </div>
+    <div class="overlay-url-box">
+      <div class="link-box-top">
+        <div class="player-link-label">Overlay URL</div>
+        <button class="copy-btn" onclick="copyText(document.getElementById('overlayUrl').textContent)">复制</button>
+      </div>
+      <div class="overlay-url" id="overlayUrl">—</div>
+    </div>
+    <div class="overlay-state-box" id="overlayStateDisplay">
+      <div class="overlay-hint-idle">
+        <span>🎮</span><span>启动赛事后预览生效</span>
+      </div>
+    </div>
+    <div class="panel-title" style="margin-top:14px;">📡 OBS 设置</div>
+    <div class="obs-hint">
+      1. 添加「浏览器源」<br>
+      2. URL 填上方地址<br>
+      3. 宽高 1920×1080<br>
+      4. ☑ 背景透明
+    </div>
+    <div class="player-qr-box" style="margin-top:14px;">
+      <div class="player-qr-label">Player QR</div>
+      <div class="player-qr-frame"><div id="playerQrImage"></div></div>
+      <div class="player-qr-tip">扫码进入选手个人页</div>
+    </div>
+    <div class="player-link-box">
+      <div class="link-box-top">
+        <div class="player-link-label">Player Entry</div>
+        <button class="copy-btn" onclick="copyText(document.getElementById('playerEntryUrl').textContent)">复制</button>
+      </div>
+      <div class="player-link-url" id="playerEntryUrl">—</div>
+    </div>
+    <div class="address-box">
+      <div class="address-label">Public Base URL</div>
+      <input type="text" class="address-input" id="publicBaseUrlInput" onblur="saveTournamentConfig()">
+    </div>
+  </div>
+</div>
+
+<!-- 批量弹窗 -->
+<div id="bulkModal">
+  <div class="modal-box">
+    <h2>批量导入选手</h2>
+    <p>每行一个名称</p>
+    <textarea id="bulkText" placeholder="张三
+李四
+王五
+赵六"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeBulkAdd()">取消</button>
+      <button class="btn btn-primary" onclick="bulkAdd()">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- 新建比赛弹窗 -->
+<div id="newTModal">
+  <div class="modal-box">
+    <h2>🆕 新建比赛</h2>
+    <label>比赛名称</label>
+    <input type="text" id="newTName" placeholder="例如：2025年6月月赛" onkeydown="if(event.key==='Enter')createTour()">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeNewT()">取消</button>
+      <button class="btn btn-primary" onclick="createTour()">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- 改名弹窗 -->
+<div id="renameModal">
+  <div class="modal-box">
+    <h2>✏️ 修改比赛名称</h2>
+    <label>新名称</label>
+    <input type="text" id="renameInput" onkeydown="if(event.key==='Enter')doRename()">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeRename()">取消</button>
+      <button class="btn btn-primary" onclick="doRename()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="/shared/qrcode.js"></script>
+<script>
+// ── 比赛管理 ─────────────────────────────────────────────
+let currentTourId = null;
+let tourList = [];
+let currentState = null;
+
+function toggleTourDropdown() {
+  document.getElementById('tourDropdown').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.tournament-select')) {
+    document.getElementById('tourDropdown').classList.remove('open');
+  }
+});
+
+async function loadTourList() {
+  tourList = await apiGet('/api/tournaments') || [];
+  renderTourDropdown();
+}
+
+function renderTourDropdown() {
+  const drop = document.getElementById('tourDropdown');
+  const cur = document.getElementById('tourName');
+  if (!currentTourId && currentState && currentState.tournamentId) {
+    currentTourId = currentState.tournamentId;
+  }
+  cur.textContent = currentTourId ? (tourList.find(t => t.id === currentTourId)?.name || currentState?.tournamentName || '—') : (currentState?.tournamentName || '—');
+
+  drop.innerHTML = tourList.map(t => `
+    <div class="td-item ${t.id === currentTourId ? 'active' : ''}">
+      <div class="td-item-left" onclick="loadTour('${t.id}')">
+        <div class="td-item-name">${t.name}</div>
+        <div class="td-item-meta">${t.phase || 'setup'} · ${new Date(t.date).toLocaleDateString('zh-CN')}</div>
+      </div>
+      <button class="td-del-btn" onclick="event.stopPropagation();deleteTour('${t.id}','${t.name.replace(/'/g,"\\'")}')" title="删除比赛">🗑</button>
+    </div>`).join('') + `
+    <div class="td-divider"></div>
+    <div class="td-item td-new" onclick="showNewT()">➕ 新建比赛</div>`;
+}
+
+function showNewT() {
+  document.getElementById('tourDropdown').classList.remove('open');
+  document.getElementById('newTName').value = '';
+  document.getElementById('newTModal').classList.add('open');
+  setTimeout(() => document.getElementById('newTName').focus(), 50);
+}
+function closeNewT() { document.getElementById('newTModal').classList.remove('open'); }
+
+async function createTour() {
+  const name = document.getElementById('newTName').value.trim() || '未命名比赛';
+  const res = await api('/api/tournaments', { action: 'create', name });
+  if (res.state) { currentTourId = res.id; await loadTourList(); render(res.state); }
+  closeNewT();
+}
+
+async function loadTour(id) {
+  document.getElementById('tourDropdown').classList.remove('open');
+  const res = await api('/api/tournaments', { action: 'load', id });
+  if (res.state) { currentTourId = id; render(res.state); }
+}
+
+async function deleteTour(id, name) {
+  if (!confirm('删除比赛「' + name + '」？此操作不可恢复。')) return;
+  await api('/api/tournaments', { action: 'delete', id });
+  await loadTourList();
+  // Reload fresh state (handles auto-switch to next or empty state)
+  const state = await apiGet('/state');
+  if (state && state.phase) render(state);
+}
+
+function showRename() {
+  document.getElementById('renameInput').value = currentState.tournamentName || '';
+  document.getElementById('renameModal').classList.add('open');
+  setTimeout(() => document.getElementById('renameInput').focus(), 50);
+}
+function closeRename() { document.getElementById('renameModal').classList.remove('open'); }
+
+async function doRename() {
+  const name = document.getElementById('renameInput').value.trim() || '未命名比赛';
+  await api('/api/tournaments', { action: 'rename', name });
+  closeRename();
+  await loadTourList();
+}
+
+async function saveTournamentConfig() {
+  const publicBaseUrlOverride = document.getElementById('publicBaseUrlInput').value.trim();
+  const liveRoomCode = document.getElementById('liveRoomCodeInput').value.trim();
+  const res = await api('/api/tournament-config', { publicBaseUrlOverride, liveRoomCode });
+  if (res.state) render(res.state);
+}
+
+function isTournamentFinished(s) {
+  if (!s) return false;
+  if (s.phase === 'done') return true;
+  const matches = s.matches || [];
+  const finalsDone = matches.some(m => m.phase === 'Finals' && m.done);
+  const bronzeDone = matches.some(m => m.phase === 'Bronze Match' && m.done);
+  return finalsDone && bronzeDone;
+}
+
+function renderQrInto(containerId, text) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  if (!text) return;
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  container.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  const svg = container.querySelector('svg');
+  if (svg) {
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.display = 'block';
+  }
+}
+
+async function exportReport() {
+  const btn = document.getElementById('btnExportReport');
+  if (!currentState || !isTournamentFinished(currentState)) return;
+  btn.disabled = true;
+  try {
+    const url = currentState && currentState.tournamentId
+      ? `/api/export-report?tournamentId=${encodeURIComponent(currentState.tournamentId)}`
+      : '/api/export-report';
+    window.open(url, '_blank');
+  } finally {
+    if (currentState) {
+      const canExport = isTournamentFinished(currentState);
+      btn.disabled = !canExport;
+    }
+  }
+}
+
+// ── WebSocket ─────────────────────────────────────────────
+let ws;
+function connect() {
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = protocol + '//' + location.host;
+  console.log('[WS] connecting to', wsUrl);
+  ws = new WebSocket(wsUrl);
+  ws.onopen = () => { console.log('[WS] connected'); document.getElementById('wsDot').classList.add('connected'); document.getElementById('wsText').textContent = '已连接'; };
+  ws.onclose = () => { console.log('[WS] disconnected'); document.getElementById('wsDot').classList.remove('connected'); document.getElementById('wsText').textContent = '重连中…'; setTimeout(connect, 3000); };
+  ws.onerror = (e) => { console.error('[WS] error', e); };
+  ws.onmessage = evt => {
+    const d = JSON.parse(evt.data);
+    if (!d.data) return;
+    if (currentTourId && d.data.tournamentId && d.data.tournamentId !== currentTourId) return;
+    render(d.data);
+  };
+}
+connect();
+
+// ── REST ─────────────────────────────────────────────────
+function withTournamentQuery(path) {
+  if (!currentTourId) return `${path}`;
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}tournamentId=${encodeURIComponent(currentTourId)}`;
+}
+function apiGet(path) { return fetch(withTournamentQuery(path)).then(r => r.json()).catch(() => []); }
+async function copyText(text) {
+  const value = (text || '').trim();
+  if (!value || value === '—') return;
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch (err) {
+    const ta = document.createElement('textarea');
+    ta.value = value;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+}
+function api(path, data = {}) {
+  const payload = currentTourId ? { ...data, tournamentId: currentTourId } : data;
+  return fetch(`${path}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).then(r => r.json()).catch(() => ({ ok: false }));
+}
+
+// ── 选手 ─────────────────────────────────────────────────
+async function addPlayer() {
+  const name = document.getElementById('playerInput').value.trim();
+  if (!name) return;
+  const res = await api('/api/players', { action: 'add', name });
+  if (res.state) render(res.state);
+  document.getElementById('playerInput').value = '';
+  document.getElementById('playerInput').focus();
+}
+async function dropPlayer(name) {
+  if (!confirm('确认将「' + name + '」标记为退赛？')) return;
+  const res = await api('/api/drop-player', { name });
+  if (res.state) render(res.state);
+}
+async function removePlayer(name) { const res = await api('/api/players', { action: 'remove', name }); if (res.state) render(res.state); }
+async function bulkAdd() {
+  for (const line of document.getElementById('bulkText').value.split('\n')) {
+    const n = line.trim(); if (n) await api('/api/players', { action: 'add', name: n });
+  }
+  closeBulkAdd();
+  // 批量添加后获取最新状态刷新
+  const s = await fetch(withTournamentQuery('/state')).then(r => r.json()).catch(() => null);
+  if (s) render(s);
+}
+function showBulkAdd() { document.getElementById('bulkModal').classList.add('open'); }
+function closeBulkAdd() { document.getElementById('bulkModal').classList.remove('open'); document.getElementById('bulkText').value = ''; }
+
+// ── 赛程 ─────────────────────────────────────────────────
+async function startSwiss() {
+  const res = await api('/api/start-swiss', { rounds: parseInt(document.getElementById('swissRounds').value) || 5 });
+  if (res.state) render(res.state);
+  // 开始瑞士轮后自动生成第一轮对位
+  const matchRes = await api('/api/generate-matches');
+  if (matchRes.state) render(matchRes.state);
+}
+async function nextRound() {
+  // 下一轮：先递增轮次，再生成对位
+  const res = await api('/api/next-round');
+  if (res.state) render(res.state);
+  const matchRes = await api('/api/generate-matches');
+  if (matchRes.state) render(matchRes.state);
+}
+async function endSwiss() { const res = await api('/api/end-swiss'); if (res.state) render(res.state); }
+async function revertRound() {
+  if (!confirm('确定要退回到上一轮吗？当前轮的对局结果将被清除。')) return;
+  await api('/api/revert-round');
+}
+async function confirmTop8() { const res = await api('/api/enter-top8'); if (res.state) render(res.state); }
+async function cancelTop8() { const res = await api('/api/cancel-top8'); if (res.state) render(res.state); }
+async function setLive(id) {
+  const res = await api('/api/set-live', { matchId: id });
+  if (res.state) render(res.state);
+}
+async function setResult(id, winner) { const res = await api('/api/result', { matchId: id, winnerId: winner }); if (res.state) render(res.state); }
+async function setDraw(id) { const res = await api('/api/draw', { matchId: id }); if (res.state) render(res.state); }
+async function swapSeats(id) { const res = await api('/api/swap-seats', { matchId: id }); if (res.state) render(res.state); }
+async function dropPlayerFromMatchAction(matchId, playerName) {
+  if (!confirm(`确认将「${playerName}」标记为退赛？未录入结果则按赛前退赛处理，已录入结果则按赛后退赛处理。`)) return;
+  const res = await api('/api/drop-player-from-match', { matchId, playerName });
+  if (res.state) render(res.state);
+}
+async function setBo3Score(id, pw1, pw2) { const res = await api('/api/bo3-score', { matchId: id, p1Wins: pw1, p2Wins: pw2 }); if (res.state) render(res.state); }
+
+// ── 辅助 ─────────────────────────────────────────────────
+function roundStats(round, matches) {
+  const rms = matches.filter(m => m.round === round);
+  return { total: rms.length, done: rms.filter(m => m.done).length, allDone: rms.length > 0 && rms.every(m => m.done) };
+}
+function top8PhaseStats(matches) {
+  return ['Quarter Finals', 'Semi Finals', 'Finals', 'Bronze Match'].map(p => {
+    const ms = matches.filter(m => m.phase === p);
+    return { phase: p, total: ms.length, done: ms.filter(m => m.done).length, allDone: ms.length > 0 && ms.every(m => m.done) };
+  });
+}
+function wdlHtml(w, d, l) { return `<span class="rank-wdl"><span class="w">${w}</span>-<span class="d">${d}</span>-<span class="l">${l}</span></span>`; }
+function getRecord2(player, s) {
+  let w = 0, d = 0, l = 0;
+  for (const m of s.matches) {
+    if (!m.done) continue;
+    if (m.draw) { if (m.p1 === player || m.p2 === player) d++; continue; }
+    if (m.winner === player) w++; else if (m.p1 === player || m.p2 === player) l++;
+  }
+  return { w, d, l, points: w * 3 + d };
+}
+function hasOpponent(m, a, b) { return (m.p1 === a && m.p2 === b) || (m.p1 === b && m.p2 === a); }
+
+// ── 渲染 ─────────────────────────────────────────────────
+function render(s) {
+  currentState = s;
+  const n = s.players.length;
+  const p8 = s.pendingTop8 || [];
+  const p8Set = new Set(p8);
+
+  // 顶栏
+  const badge = document.getElementById('phaseBadge');
+  const labels = { setup:'等待开始', swiss:'瑞士轮', 'swiss-ended':'瑞士轮结束', top8:'淘汰赛', done:'已完成' };
+  badge.className = 'phase-badge ' + (s.phase === 'swiss' ? 'swiss' : s.phase === 'swiss-ended' ? 'swiss-ended' : s.phase === 'top8' ? 'top8' : s.phase === 'done' ? 'done' : '');
+  badge.textContent = labels[s.phase] || '—';
+  document.getElementById('roundLabel').textContent = s.phase === 'swiss' ? `第 ${s.round} 轮` : '';
+
+  // 比赛名
+  const tCur = document.getElementById('tourName');
+  tCur.textContent = s.tournamentName || '—';
+  const baseUrl = s.publicBaseUrl || location.origin;
+  const playerEntryUrl = s.tournamentId
+    ? `${baseUrl}/player-login?tournamentId=${encodeURIComponent(s.tournamentId)}`
+    : `${baseUrl}/player-login`;
+  document.getElementById('playerEntryUrl').textContent = playerEntryUrl;
+  renderQrInto('playerQrImage', playerEntryUrl);
+
+  // 统计
+  document.getElementById('playerCount').textContent = n;
+  document.getElementById('actualPlayers').textContent = n;
+  document.getElementById('top8Ready').textContent = n >= 8 ? '✅' : '❌';
+  document.getElementById('top8Warn').classList.toggle('show', n > 0 && n < 8);
+  document.getElementById('publicBaseUrlInput').value = s.publicBaseUrlOverride || s.publicBaseUrl || '';
+  document.getElementById('liveRoomCodeInput').value = s.liveRoomCode || '';
+
+  const rs = roundStats(s.round, s.matches);
+  const allSwissDone = s.phase === 'swiss' && rs.allDone;
+
+  document.getElementById('btnStart').disabled = n < 2 || s.phase !== 'setup';
+  document.getElementById('btnNext').disabled = s.phase !== 'swiss' || !allSwissDone || s.round >= s.swissRounds;
+  document.getElementById('btnEndSwiss').disabled = s.phase !== 'swiss' || !allSwissDone;
+  document.getElementById('btnRevert').disabled = s.phase !== 'swiss' || s.round <= 0;
+  const canExport = isTournamentFinished(s);
+  const exportBtn = document.getElementById('btnExportReport');
+  exportBtn.disabled = !canExport;
+  exportBtn.title = canExport ? '导出战报' : '比赛完成后可导出战报';
+
+  renderPlayers(s, p8Set);
+  renderSwissHint(s, rs);
+  renderSwissArena(s);
+  renderSwissEndedScreen(s);
+  renderTop8Bracket(s);
+  renderOverlay(s);
+}
+
+// ── 选手列表 ─────────────────────────────────────────────
+function renderPlayers(s, p8Set) {
+  const list = document.getElementById('playerList');
+  const dropped = new Set(s.droppedPlayers || []);
+  if (s.phase === 'setup') {
+    list.innerHTML = s.players.length === 0
+      ? `<div class="empty-state"><div class="empty-state-icon">👥</div>暂无选手</div>`
+      : s.players.map(p => {
+          const esc = p.replace(/'/g, "\\'");
+           const dropped = new Set(s.droppedPlayers || []);
+   const isDropped = dropped.has(p);
+   return `<div class="player-item${isDropped ? ' dropped' : ''}"><span class="rank">—</span><span class="name" title="${p}">${p}</span>${isDropped ? '<span class="wd-badge">WD</span>' : ''}<button class="drop-btn" onclick="removePlayer('${esc}')" title="移除">×</button></div>`;
+        }).join('');
+    return;
+  }
+  const sorted = [...s.players].sort((a, b) => {
+    const ra = getRecord2(a, s), rb = getRecord2(b, s);
+    if (rb.points !== ra.points) return rb.points - ra.points;
+    return s.matches.filter(m => m.done && !m.draw && m.winner === a && hasOpponent(m, a, b)).length
+         - s.matches.filter(m => m.done && !m.draw && m.winner === b && hasOpponent(m, a, b)).length;
+  });
+  // active players (not dropped) for ranking
+  const activeSorted = sorted.filter(p => !dropped.has(p));
+  list.innerHTML = activeSorted.map(function(p, i) {
+    var rec = getRecord2(p, s);
+    var isT8 = p8Set.has(p);
+    var isDropped = dropped.has(p);
+    var dropBtn = (!isDropped && s.phase === 'swiss') ? ' <button class="drop-btn" onclick="dropPlayer(\'' + p.replace(/'/g, '\\\'') + '\')" style="margin-left:4px;background:none;border:none;color:#f87171;cursor:pointer;font-size:11px;">退赛</button>' : '';
+    return '<div class="player-item' + (isT8 ? ' top8-qualify' : '') + (isDropped ? ' dropped' : '') + '">' +
+      '<span class="rank">' + (i+1) + '</span>' +
+      '<span class="name" title="' + p + '" style="flex:1;">' + p + '</span>' +
+      '<span class="record">' + wdlHtml(rec.w, rec.d, rec.l) + '</span>' +
+      dropBtn +
+      '</div>';
+  }).join('');
+
+  // dropped players section
+  const droppedList = sorted.filter(p => dropped.has(p));
+  if (droppedList.length > 0) {
+    const section = document.createElement('div');
+    section.className = 'dropped-section';
+    section.innerHTML = '<div style="font-size:11px;color:#64748b;margin-bottom:4px;">退赛选手</div>' +
+      droppedList.map(p => `<div class="player-item dropped"><span class="rank">—</span><span class="name">${p}</span><span class="wd-badge">WD</span></div>`).join('');
+    list.appendChild(section);
+  }
+}
+
+// ── 瑞士轮提示 ───────────────────────────────────────────
+function renderSwissHint(s, rs) {
+  const el = document.getElementById('swissHint');
+  const txt = document.getElementById('swissHintText');
+  if (s.phase === 'setup' || s.phase === 'swiss-ended' || s.phase === 'top8' || s.phase === 'done') { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  if (s.phase === 'swiss') {
+    if (rs.allDone) {
+      if (s.round >= s.swissRounds) txt.innerHTML = '✅ 本轮已结束！已达预设轮数 — 点击 <strong>「结束瑞士轮」</strong> 进入排名确认';
+      else txt.innerHTML = '✅ 本轮全部结束！可以 <strong>「下一轮」</strong> 或 <strong>「结束瑞士轮」</strong>';
+    } else {
+      txt.innerHTML = `⏳ <strong>第 ${s.round} 轮</strong> 进行中（${rs.done}/${rs.total} 桌已完成）`;
+    }
+  }
+}
+
+// ── 瑞士轮对战场 ─────────────────────────────────────────
+function renderSwissArena(s) {
+  const el = document.getElementById('swissArena');
+  if (s.phase !== 'swiss') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const rs = roundStats(s.round, s.matches);
+  document.getElementById('roundHeaderArea').innerHTML = `
+    <span class="round-label">🏁 第 ${s.round} 轮</span>
+    <span class="round-progress ${rs.allDone ? 'done' : ''}">
+      <span class="done-count">${rs.done}</span><span>/${rs.total}</span> 已完成 ${rs.allDone ? '✅' : ''}
+    </span>`;
+  const rms = s.matches.filter(m => m.round === s.round);
+  document.getElementById('matchList').innerHTML = rms.map(m => matchCard(s, m, false)).join('');
+}
+
+// ── 瑞士轮结束排名 ───────────────────────────────────────
+function renderSwissEndedScreen(s) {
+  const el = document.getElementById('swissEndedScreen');
+  if (s.phase !== 'swiss-ended') { el.classList.remove('visible'); return; }
+  el.classList.add('visible');
+  const p8 = new Set(s.pendingTop8 || []);
+  document.getElementById('rankingBody').innerHTML = (s.swissRanking || []).map(r => {
+    const isT8 = p8.has(r.player);
+    const rc = r.rank <= 3 ? 'top3' : r.rank <= 8 ? 'top8' : '';
+    return `<tr class="${isT8 ? 'top8' : ''}">
+      <td><span class="rank-num ${rc}">${r.rank}</span></td>
+      <td><span class="rank-name${isT8 ? ' t8' : ''}">${r.player}</span>${isT8 ? '<span class="t8-badge">8强</span>' : ''}</td>
+      <td>${wdlHtml(r.wins, r.draws, r.losses)}</td>
+      <td><span class="rank-pts">${r.points}</span></td>
+      <td><span style="color:#475569;">${r.rank}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── 淘汰赛 ───────────────────────────────────────────────
+function renderTop8Bracket(s) {
+  const el = document.getElementById('top8Bracket');
+  if (s.phase !== 'top8') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const phases = top8PhaseStats(s.matches);
+  document.getElementById('bracketProgress').innerHTML = phases.map(p =>
+    `<div class="bracket-step${p.allDone ? ' done' : p.done > 0 ? ' active' : ''}" title="${p.phase}"></div>`
+  ).join('');
+  // 显示当前未完成的 phase，但 Finals 和 Bronze Match 同时显示
+  const activePhases = phases.filter(p => !p.allDone);
+  const pms = activePhases.length > 0
+    ? s.matches.filter(m => activePhases.some(p => p.phase === m.phase))
+    : s.matches.filter(m => m.phase === 'Finals' || m.phase === 'Bronze Match');
+  const phaseLabels = activePhases.length > 0 ? activePhases.map(p => p.phase).join(' / ') : 'Finals / Bronze Match';
+  document.getElementById('top8PhaseHint').innerHTML = `<strong>${phaseLabels}</strong>`;
+  document.getElementById('top8MatchList').innerHTML = pms.map(m => matchCard(s, m, true)).join('');
+}
+
+// ── 对局卡片 ─────────────────────────────────────────────
+function matchCard(s, m, isTop8) {
+  const isLive = s.currentLiveMatch && s.currentLiveMatch.id === m.id;
+  const hasOtherLiveMatch = s.currentLiveMatch && s.currentLiveMatch.id !== m.id;
+  const liveClosedThisScope = s.matches.some(other =>
+    other.id !== m.id &&
+    other.wasLive &&
+    other.done &&
+    (
+      (typeof m.round === 'number' && other.round === m.round) ||
+      (m.phase && other.phase === m.phase)
+    ),
+  ) || (m.wasLive && m.done);
+  const cardClass = `match-card${isLive ? ' live' : ''}${m.done ? ' done' : ''}`;
+  const p1Won = m.winner === m.p1, p2Won = m.winner === m.p2;
+  const featured = new Set(s.featuredSwissPlayers || []);
+  const p1Featured = !isTop8 && featured.has(m.p1);
+  const p2Featured = !isTop8 && featured.has(m.p2);
+  const canOperate = m.p1 && m.p2 && m.p1 !== 'BYE' && m.p2 !== 'BYE';
+  const escP1 = (m.p1 || '').replace(/'/g, "\\'");
+  const escP2 = (m.p2 || '').replace(/'/g, "\\'");
+  let bo3Html = '';
+  if (isTop8 && (m.p1Wins > 0 || m.p2Wins > 0)) {
+    const pw1 = m.p1Wins || 0, pw2 = m.p2Wins || 0;
+    bo3Html = `<div class="bo3-row">
+      <div class="bo3-player"><span class="bo3-score-num${pw1 >= 2 ? ' winning' : ''}">${pw1}</span><div class="bo3-dots">${[0,1].map(i => `<div class="bo3-dot${i < pw1 ? ' win' : ''}"></div>`).join('')}</div></div>
+      <span style="color:#475569;font-size:10px;">—</span>
+      <div class="bo3-player"><div class="bo3-dots">${[0,1].map(i => `<div class="bo3-dot${i < pw2 ? ' win' : ''}"></div>`).join('')}</div><span class="bo3-score-num${pw2 >= 2 ? ' winning' : ''}">${pw2}</span></div>
+    </div>`;
+  }
+  return `<div class="${cardClass}">
+    <div class="match-header">
+      <span class="match-meta">桌 ${m.table}</span>
+      <div class="match-header-actions">
+        ${isLive
+          ? `<button class="btn live-btn active" onclick="setLive('${m.id}')">取消直播</button>`
+          : (!hasOtherLiveMatch && !liveClosedThisScope
+              ? `<button class="btn live-btn" onclick="setLive('${m.id}')">${m.liveRoomCode ? `设为直播(${m.liveRoomCode})` : '设为直播'}</button>`
+              : '')}
+        ${canOperate && !m.done ? `<button class="btn match-btn" onclick="swapSeats('${m.id}')">换座</button>` : ''}
+        ${!isTop8 && canOperate && !m.done ? `<button class="btn match-btn warn" onclick="setDraw('${m.id}')">平局</button>` : ''}
+        ${m.done ? '<span style="color:#22c55e;font-weight:700;">✅</span>' : ''}
+      </div>
+    </div>
+    <div class="match-players">
+      <div class="seat-group">
+        ${!isTop8 && canOperate ? `<button class="seat-drop-btn" onclick="dropPlayerFromMatchAction('${m.id}','${escP1}')" title="左侧选手退赛">退</button>` : ''}
+        ${isTop8 ? `<div class="score-stack"><button class="btn score-btn" onclick="adjustScore('${m.id}','p1',-1)">-1</button><button class="btn score-btn" onclick="adjustScore('${m.id}','p1',1)">+1</button></div>` : ''}
+        <div class="player-side ${p1Won ? 'won' : p2Won ? 'lost' : ''}${!m.p1?' tbd':''}${p1Featured ? ' tv' : ''}" onclick="${m.p1?`setResult('${m.id}','${m.p1}')`:''}">${m.p1 || 'TBD'}</div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="seat-group right">
+        <div class="player-side ${p2Won ? 'won' : p1Won ? 'lost' : ''}${!m.p2?' tbd':''}${p2Featured ? ' tv' : ''}" onclick="${m.p2?`setResult('${m.id}','${m.p2}')`:''}">${m.p2 || 'TBD'}</div>
+        ${isTop8 ? `<div class="score-stack"><button class="btn score-btn" onclick="adjustScore('${m.id}','p2',1)">+1</button><button class="btn score-btn" onclick="adjustScore('${m.id}','p2',-1)">-1</button></div>` : ''}
+        ${!isTop8 && canOperate ? `<button class="seat-drop-btn" onclick="dropPlayerFromMatchAction('${m.id}','${escP2}')" title="右侧选手退赛">退</button>` : ''}
+      </div>
+    </div>
+    ${bo3Html}
+  </div>`;
+}
+
+function adjustScore(matchId, side, delta) {
+  const m = currentState.matches.find(x => x.id === matchId);
+  if (!m) return;
+  const pw1 = Math.max(0, m.p1Wins || 0);
+  const pw2 = Math.max(0, m.p2Wins || 0);
+  if (side === 'p1') {
+    const next = Math.max(0, Math.min(2, pw1 + delta));
+    setBo3Score(matchId, next, pw2);
+  } else {
+    const next = Math.max(0, Math.min(2, pw2 + delta));
+    setBo3Score(matchId, pw1, next);
+  }
+}
+
+// ── 叠加层预览 ──────────────────────────────────────────
+function renderOverlay(s) {
+  const baseUrl = s.publicBaseUrl || location.origin;
+  const previewUrl = s.tournamentId
+    ? `/overlay/?tournamentId=${encodeURIComponent(s.tournamentId)}`
+    : '/overlay/';
+  const url = s.tournamentId
+    ? `${baseUrl}/overlay/?tournamentId=${encodeURIComponent(s.tournamentId)}`
+    : `${baseUrl}/overlay/`;
+  document.getElementById('overlayUrl').textContent = url;
+  const frame = document.getElementById('overlayFrame');
+  if (!frame.src || frame.src !== previewUrl) { frame.src = previewUrl; frame.style.display = 'block'; }
+  const names = { idle:'空闲', live:'直播中', result:'胜者展示(直播桌)', overview:'全场总览', 'top8-live':'淘汰赛直播', 'top8-result':'胜者展示(BO3)', 'top8-bracket':'淘汰赛对阵图', 'swiss-ended':'瑞士轮排名' };
+  const live = s.currentLiveMatch;
+  document.getElementById('overlayStateDisplay').innerHTML = `
+    <div class="overlay-state-row"><strong>叠加层：</strong><span class="overlay-state-value">${names[s.overlayState] || s.overlayState}</span></div>
+    <div class="overlay-state-row"><strong>比赛：</strong>${s.tournamentName || '—'}</div>
+    ${live ? `<div class="overlay-state-row"><strong>直播桌：</strong>${live.p1} vs ${live.p2} · 桌${live.table}</div>` : ''}
+    ${s.phase === 'top8' && live ? `<div class="overlay-state-row"><strong>BO3：</strong>${live.p1Wins||0} — ${live.p2Wins||0}</div>` : ''}
+  `;
+}
+
+// ── 启动 ─────────────────────────────────────────────────
+loadTourList();
+</script>
+</body>
+</html>
+

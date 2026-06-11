@@ -1,0 +1,11 @@
+:root {
+  --pto-font-sans: "UD Shin Go SC R", "UD新黑体 简体字 R", "UD新黑体 简体字", "Segoe UI Emoji", "Microsoft YaHei", sans-serif;
+}
+
+@font-face {
+  font-family: "UD Shin Go SC R";
+  src: url("/shared/fonts/ud-shin-go-sc-r.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
