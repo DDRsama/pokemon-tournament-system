@@ -3,6 +3,10 @@
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-ddrsama%2Fpokemon--tournament--system-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/ddrsama/pokemon-tournament-system)
 [![Docker Pulls](https://img.shields.io/docker/pulls/ddrsama/pokemon-tournament-system?logo=docker&label=pulls)](https://hub.docker.com/r/ddrsama/pokemon-tournament-system)
 [![Docker Image Size](https://img.shields.io/docker/image-size/ddrsama/pokemon-tournament-system/latest?logo=docker&label=image%20size)](https://hub.docker.com/r/ddrsama/pokemon-tournament-system/tags)
+[![Docker Build](https://github.com/DDRsama/pokemon-tournament-system/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/DDRsama/pokemon-tournament-system/actions/workflows/docker-publish.yml)
+[![Release](https://img.shields.io/github/v/release/DDRsama/pokemon-tournament-system?label=release)](https://github.com/DDRsama/pokemon-tournament-system/releases)
+[![License](https://img.shields.io/github/license/DDRsama/pokemon-tournament-system)](https://github.com/DDRsama/pokemon-tournament-system/blob/main/LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/DDRsama/pokemon-tournament-system)](https://github.com/DDRsama/pokemon-tournament-system/commits/main)
 
 `Pokemon Tournament System`，简称 `PTS`，是一套面向宝可梦线下赛事的管理系统。  
 它最初以宝可梦 VGC 线下赛事为主要开发目标，但由于核心流程围绕瑞士轮、淘汰赛、直播桌管理与战报整理展开，因此同样适用于 PTCG、游戏王等采用瑞士轮结构的对战赛事。  
