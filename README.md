@@ -71,10 +71,10 @@ PTS 并不是一个单纯的直播 overlay 页面，而是一套完整的赛事�
 ## 页面组成
 
 ### 1. 后台管理页
-<img width="480" alt="9db23c63095214fc6f1f6b920fb604b7" src="https://github.com/user-attachments/assets/36940de0-4a06-4884-8de9-1228a10d306e" />
-<img width="480" alt="1fa0fd0e84800e3b265950fd8a96de99" src="https://github.com/user-attachments/assets/925e794a-7872-4e8b-9cff-bd4ef447a61a" />
-<img width="480" alt="7b1fe3cc82c40723908c8356811eb53a" src="https://github.com/user-attachments/assets/3c1fd3e7-c616-4d7e-803b-84eab073fcd3" />
-<img width="480" alt="9e52f9a95489344e06d3365a546434e7" src="https://github.com/user-attachments/assets/7676ad6f-c6fb-4ab7-90a3-20c0549f9376" />
+<img width="48%" alt="9db23c63095214fc6f1f6b920fb604b7" src="https://github.com/user-attachments/assets/36940de0-4a06-4884-8de9-1228a10d306e" />
+<img width="48%" alt="1fa0fd0e84800e3b265950fd8a96de99" src="https://github.com/user-attachments/assets/925e794a-7872-4e8b-9cff-bd4ef447a61a" />
+<img width="48%" alt="7b1fe3cc82c40723908c8356811eb53a" src="https://github.com/user-attachments/assets/3c1fd3e7-c616-4d7e-803b-84eab073fcd3" />
+<img width="48%" alt="9e52f9a95489344e06d3365a546434e7" src="https://github.com/user-attachments/assets/7676ad6f-c6fb-4ab7-90a3-20c0549f9376" />
 
 
 
@@ -94,10 +94,10 @@ PTS 并不是一个单纯的直播 overlay 页面，而是一套完整的赛事�
 - 生成战报
 
 ### 2. 直播叠加层
-<img width="480" alt="63fdc6d2103c6c3eea4dff7cee980d54" src="https://github.com/user-attachments/assets/872f54ca-6444-4357-98b9-92be58d93ffd" />
-<img width="480" alt="17661dc3368ace4f0a3a295cc4be86da" src="https://github.com/user-attachments/assets/1d36aeb7-8f91-4b9e-b290-fba2eb1874aa" />
-<img width="480" alt="4db845f08c3fcb9ed0f86f9c082b53d7" src="https://github.com/user-attachments/assets/91a9801e-1c5d-4392-a5f0-93b021715eab" />
-<img width="480" alt="d0bf62aa570a61bb13e4887b1a0c3d9b" src="https://github.com/user-attachments/assets/714afa6e-13a2-44e4-9724-92f1dc738417" />
+<img width="48%" alt="63fdc6d2103c6c3eea4dff7cee980d54" src="https://github.com/user-attachments/assets/872f54ca-6444-4357-98b9-92be58d93ffd" />
+<img width="48%" alt="17661dc3368ace4f0a3a295cc4be86da" src="https://github.com/user-attachments/assets/1d36aeb7-8f91-4b9e-b290-fba2eb1874aa" />
+<img width="48%" alt="4db845f08c3fcb9ed0f86f9c082b53d7" src="https://github.com/user-attachments/assets/91a9801e-1c5d-4392-a5f0-93b021715eab" />
+<img width="48%" alt="d0bf62aa570a61bb13e4887b1a0c3d9b" src="https://github.com/user-attachments/assets/714afa6e-13a2-44e4-9724-92f1dc738417" />
 
 
 路径：
@@ -114,10 +114,10 @@ PTS 并不是一个单纯的直播 overlay 页面，而是一套完整的赛事�
 - 展示 Top 8 对阵图
 
 ### 3. 选手端页面
-<img width="300" alt="6fd5c6c946f36c5d603eb69007a363f3" src="https://github.com/user-attachments/assets/459c4488-be7a-4555-ba20-a4fd29c77994" />
-<img width="300" alt="e1f19c336a7d36595f8cf785d24385d7" src="https://github.com/user-attachments/assets/5d651856-cb23-4ce5-8a21-e51f90bdd7af" />
-<img width="300" alt="6950d5353197098fce891d8717221347" src="https://github.com/user-attachments/assets/bdfe0a30-5c33-44da-91e4-e54e8d769864" />
-<img width="300" alt="d4a4a63033ab082f7b9a856fbd90c1b5" src="https://github.com/user-attachments/assets/1da1c121-dad0-40c1-84a9-434d56bde1f2" />
+<img width="48%" alt="6fd5c6c946f36c5d603eb69007a363f3" src="https://github.com/user-attachments/assets/459c4488-be7a-4555-ba20-a4fd29c77994" />
+<img width="48%" alt="e1f19c336a7d36595f8cf785d24385d7" src="https://github.com/user-attachments/assets/5d651856-cb23-4ce5-8a21-e51f90bdd7af" />
+<img width="48%" alt="6950d5353197098fce891d8717221347" src="https://github.com/user-attachments/assets/bdfe0a30-5c33-44da-91e4-e54e8d769864" />
+<img width="48%" alt="d4a4a63033ab082f7b9a856fbd90c1b5" src="https://github.com/user-attachments/assets/1da1c121-dad0-40c1-84a9-434d56bde1f2" />
 
 
 路径：
