@@ -138,7 +138,7 @@
   .ov-rank.t3 { color: #fbbf24; }
   .ov-rank.t8 { color: #d97706; }
   .ov-pname { font-size: 18px; color: #e2e8f0; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ov-record { font-size: 15px; font-weight: 700; letter-spacing: 0.4px; }
+  .ov-record { font-size: 15px; font-weight: 700; letter-spacing: 0.4px; color: #94a3b8; }
   .ov-record .w { color: #22c55e; }
   .ov-record .d { color: #94a3b8; }
   .ov-record .l { color: #ef4444; }
@@ -633,7 +633,7 @@
   .se-pname { font-size: 14px; font-weight: 700; color: #e2e8f0;  min-width: 80px;     text-align: center;
 }
   .se-card.top8 .se-pname { color: #fbbf24; }
-  .se-record { font-size: 13px; font-weight: 700; }
+  .se-record { font-size: 13px; font-weight: 700; color: #94a3b8; }
   .se-record .w { color: #22c55e; }
   .se-record .d { color: #94a3b8; }
   .se-record .l { color: #ef4444; }
@@ -753,28 +753,26 @@
 <script src="/shared/qrcode.js"></script>
 <script>
 let clockInterval;
-const overlayParams = new URLSearchParams(location.search);
-const overlayTournamentId = overlayParams.get('tournamentId') || '';
+const overlayRouteMatch = location.pathname.match(/^\/t\/([^/]+)\/overlay\/?$/);
+const overlayTournamentId = overlayRouteMatch ? decodeURIComponent(overlayRouteMatch[1]) : '';
+if (!overlayTournamentId) {
+  document.body.innerHTML = '<div style="padding:40px;color:#fff;font-family:sans-serif;">Tournament not found</div>';
+}
 let top8AnimatedPhase = null;
 let top8BridgeTimer = null;
 
 // ── 轮询 ─────────────────────────────────────────────────
 let currentState = null;
 async function poll() {
-  console.log('[poll] triggered', new Date().toLocaleTimeString());
   try {
-    console.log('[poll] fetching /state...');
-    const stateUrl = overlayTournamentId ? `/state?tournamentId=${encodeURIComponent(overlayTournamentId)}` : '/state';
+    const stateUrl = `/api/tournaments/${encodeURIComponent(overlayTournamentId)}/state`;
     const res = await fetch(stateUrl);
-    console.log('[poll] status:', res.status);
     const s = await res.json();
-    console.log('[poll] got state:', s.phase, s.overlayState, 'liveMatch:', s.currentLiveMatch?.id);
     if (JSON.stringify(s) !== JSON.stringify(currentState)) {
-      console.log('[poll] state changed, rendering');
       currentState = s;
       render(currentState);
     }
-  } catch(e) { console.error('[poll] error:', e); }
+  } catch(e) {}
 }
 const POLL_INTERVAL = 2000;
 setInterval(poll, POLL_INTERVAL);
@@ -829,8 +827,6 @@ function recCmp(a, b, matches) {
 // ── 渲染入口 ─────────────────────────────────────────────
 function render(s) {
 
-  // === DEBUG ===
-  console.log('[render] phase=' + s.phase + ' overlayState=' + s.overlayState);
   try { // try-catch 防止静默失败
       const allIds = [
     'topBar','state-live','state-result','state-overview',
@@ -852,9 +848,7 @@ function render(s) {
   // 空闲（top8 阶段不进入 idle，显示总览）
   if (s.phase === 'setup' || (ov === 'idle' && s.phase !== 'top8')) {
     const baseUrl = s.publicBaseUrl || location.origin;
-    const playerUrl = s.tournamentId
-      ? `${baseUrl}/player-login?tournamentId=${encodeURIComponent(s.tournamentId)}`
-      : `${baseUrl}/player-login`;
+    const playerUrl = `${baseUrl}/t/${encodeURIComponent(s.tournamentId)}/player-login`;
     document.getElementById('idleTitle').textContent = s.tournamentName || '等待开始';
     document.getElementById('idleSub').textContent = '报名阶段';
     renderQrInto('idleQrImage', playerUrl);
@@ -951,7 +945,6 @@ function render(s) {
         renderTop8Bracket(s);
         document.getElementById('state-top8-bracket').style.display = 'flex';
       } catch (e) {
-        console.error('[top8-bracket render error overview]', e);
         renderTop8Overview(s);
         document.getElementById('state-overview').style.display = 'flex';
       }
@@ -962,7 +955,6 @@ function render(s) {
       renderTop8Bracket(s);
       document.getElementById('state-top8-bracket').style.display = 'flex';
     } catch (e) {
-      console.error('[top8-bracket render error default]', e);
       renderTop8Overview(s);
       document.getElementById('state-overview').style.display = 'flex';
     }
@@ -973,7 +965,7 @@ function render(s) {
   document.getElementById('idleTitle').textContent = '🏆 比赛结束';
   document.getElementById('idleSub').textContent = s.tournamentName || '';
   document.getElementById('state-idle').style.display = 'flex';
-  } catch(e) { console.error("[render error]", e); document.getElementById("state-idle").style.display="flex"; document.getElementById("idleTitle").textContent="JS错误"; document.getElementById("idleSub").textContent=e.message; }
+  } catch(e) { document.getElementById("state-idle").style.display="flex"; document.getElementById("idleTitle").textContent="JS错误"; document.getElementById("idleSub").textContent=e.message; }
 }
 
 // ── 全场总览(瑞士轮竖排)───────────────────────────────
@@ -1405,7 +1397,7 @@ function renderTop8Bracket(s) {
         const qf1AnimClass = animateLines ? ' anim-h' : '';
         const qf1AnimStyle = animateLines ? ` animation-duration:${qfHorizontalDur}ms; animation-delay:${baseDelay + qfVerticalDur}ms;` : '';
         bridgeLayer.insertAdjacentHTML('beforeend',
-          `<div class="bridge-box${qf1AnimClass}${qf1?.winner ? ' win-route' : ''}" id="testBridgeWide1" style="left:${left}px; top:${top}px; width:${width}px; height:${height}px;${qf1AnimStyle}"></div>`
+          `<div class="bridge-box${qf1AnimClass}${qf1?.winner ? ' win-route' : ''}" style="left:${left}px; top:${top}px; width:${width}px; height:${height}px;${qf1AnimStyle}"></div>`
         );
       }
 

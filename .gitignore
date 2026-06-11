@@ -3,6 +3,7 @@ data/tournaments/
 data/reports/
 *.zip
 *.pdf
+*.p2bak-*
 .env
 .DS_Store
 Thumbs.db

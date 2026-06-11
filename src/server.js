@@ -11,7 +11,8 @@ const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data', 'tou
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
 const REPORTS_DIR = process.env.REPORTS_DIR || path.join(__dirname, '..', 'data', 'reports');
-const PYTHON_BIN = process.env.PYTHON_BIN || 'python';
+const CODEX_PYTHON_BIN = path.join(os.homedir(), '.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'python', 'python.exe');
+const PYTHON_BIN = process.env.PYTHON_BIN || process.env.PYTHON || (fs.existsSync(CODEX_PYTHON_BIN) ? CODEX_PYTHON_BIN : (process.platform === 'win32' ? 'python' : 'python3'));
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(REPORTS_DIR, { recursive: true });
@@ -808,6 +809,10 @@ function isTournamentFinished(state = currentState) {
   return finalsDone && bronzeDone;
 }
 
+function displayPhaseForTournament(state = currentState) {
+  return isTournamentFinished(state) ? 'done' : state.phase;
+}
+
 function sanitizeFilePart(text, fallback = 'report') {
   const cleaned = String(text || '')
     .replace(/[<>:"/\\|?*\u0000-\u001F]/g, ' ')
@@ -834,6 +839,14 @@ function formatBeijingDateTime(date = new Date()) {
   }).format(date);
 }
 
+const TOP8_AWARDS = {
+  champion: '冠军',
+  runnerUp: '亚军',
+  third: '季军',
+  fourth: '殿军',
+  top8: '八强',
+};
+
 function getTop8AwardForPlayer(playerName, state = currentState) {
   const playerTop8Matches = (state.matches || []).filter(m => m.phase && (m.p1 === playerName || m.p2 === playerName));
   const lostQuarterFinal = playerTop8Matches.some(m => m.done && m.phase === 'Quarter Finals' && m.winner !== playerName);
@@ -845,16 +858,16 @@ function getTop8AwardForPlayer(playerName, state = currentState) {
   if (finalMatch) {
     const champion = finalMatch.winner;
     const runnerUp = champion === finalMatch.p1 ? finalMatch.p2 : finalMatch.p1;
-    if (playerName === champion) award = '鍐犲啗';
-    else if (playerName === runnerUp) award = '浜氬啗';
+    if (playerName === champion) award = TOP8_AWARDS.champion;
+    else if (playerName === runnerUp) award = TOP8_AWARDS.runnerUp;
   }
   if (bronzeMatch) {
     const third = bronzeMatch.winner;
     const fourth = third === bronzeMatch.p1 ? bronzeMatch.p2 : bronzeMatch.p1;
-    if (playerName === third) award = '瀛ｅ啗';
-    else if (playerName === fourth) award = '娈垮啗';
+    if (playerName === third) award = TOP8_AWARDS.third;
+    else if (playerName === fourth) award = TOP8_AWARDS.fourth;
   }
-  if (!award && lostQuarterFinal) award = '鍏己';
+  if (!award && lostQuarterFinal) award = TOP8_AWARDS.top8;
   return award;
 }
 
@@ -871,22 +884,22 @@ function getPlayerCompletionStatus(playerName, state = currentState) {
   const reachedSwissSummary = state.phase === 'swiss-ended' && !!standing;
 
   if (dropped) {
-    return { finished: true, reason: '閫€璧?, award: top8Award || null, standing };
+    return { finished: true, reason: '退赛', award: top8Award || null, standing };
   }
   if (top8Award) {
     return { finished: true, reason: top8Award, award: top8Award, standing };
   }
   if (state.phase === 'top8' && !isTop8Player && !!standing) {
-    return { finished: true, reason: '姝㈡鐟炲＋杞?, award: null, standing };
+    return { finished: true, reason: '止步瑞士轮', award: null, standing };
   }
   if (state.phase === 'done' && !!standing) {
-    return { finished: true, reason: top8Award || (isTop8Player ? '娣樻卑璧涚粨鏉? : '姝㈡鐟炲＋杞?), award: top8Award || null, standing };
+    return { finished: true, reason: top8Award || (isTop8Player ? '淘汰赛结束' : '止步瑞士轮'), award: top8Award || null, standing };
   }
   if (reachedSwissSummary && !state.pendingTop8?.includes(playerName)) {
-    return { finished: true, reason: '姝㈡鐟炲＋杞?, award: null, standing };
+    return { finished: true, reason: '止步瑞士轮', award: null, standing };
   }
   if (isTop8Player && !hasPendingTop8Match && top8Matches.length > 0 && top8Matches.every(m => m.done)) {
-    return { finished: true, reason: top8Award || '娣樻卑璧涚粨鏉?, award: top8Award || null, standing };
+    return { finished: true, reason: top8Award || '淘汰赛结束', award: top8Award || null, standing };
   }
   return { finished: false, reason: null, award: null, standing };
 }
@@ -898,7 +911,7 @@ function getSwissHistoryForReport(state = currentState) {
   const rounds = [...new Set(swissMatches.map(m => m.round))].sort((a, b) => a - b);
   return rounds.map(round => ({
     kind: 'swiss',
-    label: `鐟炲＋杞?Round ${round}`,
+    label: `瑞士轮 Round ${round}`,
     matches: swissMatches.filter(m => m.round === round).sort((a, b) => (a.table || 0) - (b.table || 0)),
   }));
 }
@@ -915,28 +928,28 @@ function getTop8HistoryForReport(state = currentState) {
 }
 
 function formatMatchResult(match) {
-  if (match.draw) return '骞冲眬';
-  if (match.p2 === 'BYE' || match.p1 === 'BYE') return `${match.winner} 杞┖鑾疯儨`;
+  if (match.draw) return '平局';
+  if (match.p2 === 'BYE' || match.p1 === 'BYE') return `${match.winner} 轮空获胜`;
   if (match.preMatchDroppedPlayer) {
     const opponent = match.preMatchDroppedPlayer === match.p1 ? match.p2 : match.p1;
-    return `${match.preMatchDroppedPlayer} 璧涘墠閫€璧涳紝${opponent} 鍒よ儨`;
+    return `${match.preMatchDroppedPlayer} 赛前退赛，${opponent} 判胜`;
   }
   if (match.postMatchDroppedPlayer) {
-    return `${match.winner || '-'} 鑾疯儨锛?{match.postMatchDroppedPlayer} 璧涘悗閫€璧沗;
+    return `${match.winner || '-'} 获胜，${match.postMatchDroppedPlayer} 赛后退赛`;
   }
   if (match.winner) {
     if ((match.p1Wins || 0) > 0 || (match.p2Wins || 0) > 0) {
-      return `${match.winner} 鑾疯儨锛?{match.p1Wins || 0}-${match.p2Wins || 0}锛塦;
+      return `${match.winner} 获胜，${match.p1Wins || 0}-${match.p2Wins || 0}`;
     }
-    return `${match.winner} 鑾疯儨`;
+    return `${match.winner} 获胜`;
   }
-  return '鏈畬鎴?;
+  return '未完成';
 }
 
 function mapHistoryItemForReport(match, playerName) {
   const opponent = match.p1 === playerName ? match.p2 : match.p1;
-  const result = match.draw ? '骞? : match.winner === playerName ? '鑳? : '璐?;
-  const stage = match.phase || (typeof match.round === 'number' ? `鐟炲＋杞?Round ${match.round}` : '瀵瑰眬');
+  const result = match.draw ? '平' : match.winner === playerName ? '胜' : '负';
+  const stage = match.phase || (typeof match.round === 'number' ? `瑞士轮 Round ${match.round}` : '对局');
   const beforeRecord = typeof match.round === 'number'
     ? (match.p1 === playerName ? match.p1RecordBefore : match.p2RecordBefore)
     : null;
@@ -957,7 +970,7 @@ function buildTournamentReportData(state = currentState) {
     : (state.swissRanking || []);
   return {
     generatedAt: formatBeijingDateTime(),
-    tournamentName: state.tournamentName || '鏈懡鍚嶆瘮璧?,
+    tournamentName: state.tournamentName || '未命名比赛',
     ranking: ranking.map(entry => ({
       rank: entry.rank,
       player: entry.player,
@@ -965,21 +978,21 @@ function buildTournamentReportData(state = currentState) {
       points: entry.points,
       omw: Number(entry.omw || 0).toFixed(3),
       oow: Number(entry.oow || 0).toFixed(3),
-      note: entry.dropped ? '閫€璧? : '',
+      note: entry.dropped ? '退赛' : '',
     })),
     swissRounds: getSwissHistoryForReport(state).map(page => ({
       label: page.label,
       matches: page.matches.map(match => ({
-        tableLabel: `${match.table ?? ''}${match.wasLive ? '锛堢洿鎾锛? : ''}`,
-        p1: match.p1 === 'BYE' ? 'BYE' : `${match.p1}锛?{formatRecordLine(match.p1RecordBefore)}锛塦,
-        p2: match.p2 === 'BYE' ? 'BYE' : `${match.p2}锛?{formatRecordLine(match.p2RecordBefore)}锛塦,
+        tableLabel: `${match.table ?? ''}${match.wasLive ? '（直播桌）' : ''}`,
+        p1: match.p1 === 'BYE' ? 'BYE' : `${match.p1}（${formatRecordLine(match.p1RecordBefore)}）`,
+        p2: match.p2 === 'BYE' ? 'BYE' : `${match.p2}（${formatRecordLine(match.p2RecordBefore)}）`,
         result: formatMatchResult(match),
       })),
     })),
     top8Rounds: getTop8HistoryForReport(state).map(group => ({
       label: group.label,
       matches: group.matches.map(match => ({
-        tableLabel: `${match.table ?? ''}${match.wasLive ? '锛堢洿鎾锛? : ''}`,
+        tableLabel: `${match.table ?? ''}${match.wasLive ? '（直播桌）' : ''}`,
         p1: match.p1 || '',
         p2: match.p2 || '',
         result: formatMatchResult(match),
@@ -1009,9 +1022,9 @@ function buildPlayerReportData(playerName, state = currentState) {
     .map(match => mapHistoryItemForReport(match, playerName));
   return {
     generatedAt: formatBeijingDateTime(),
-    tournamentName: state.tournamentName || '鏈懡鍚嶆瘮璧?,
+    tournamentName: state.tournamentName || '未命名比赛',
     playerName,
-    finalStatus: completion.reason || completion.award || '姣旇禌缁撴潫',
+    finalStatus: completion.reason || completion.award || '比赛结束',
     finalAward: completion.award || '',
     record: formatRecordLine(playerView.record),
     points: playerView.record ? playerView.record.points || 0 : 0,
@@ -1036,7 +1049,7 @@ from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
-payload = json.loads(sys.stdin.read())
+payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
 report_type = payload.get("type")
 target_path = payload["targetPath"]
 data = payload["data"]
@@ -1091,10 +1104,10 @@ story = []
 
 if report_type == "tournament":
     story.append(Paragraph(data["tournamentName"], styles["TitleCN"]))
-    story.append(Paragraph(f'瀵煎嚭鏃堕棿锛歿data["generatedAt"]}', styles["MetaCN"]))
+    story.append(Paragraph("导出时间：{}".format(data["generatedAt"]), styles["MetaCN"]))
     story.append(Spacer(1, 6))
-    story.append(Paragraph("鐟炲＋杞€绘帓鍚?, styles["HeadingCN"]))
-    ranking_rows = [["鍚嶆", "閫夋墜", "鎴樼哗", "绉垎", "瀵规墜鑳滅巼", "瀵规墜鐨勫鎵嬭儨鐜?, "澶囨敞"]]
+    story.append(Paragraph("瑞士轮总排名", styles["HeadingCN"]))
+    ranking_rows = [["名次", "选手", "战绩", "积分", "对手胜率", "对手的对手胜率", "备注"]]
     for row in data.get("ranking", []):
         ranking_rows.append([row["rank"], row["player"], row["record"], row["points"], row["omw"], row["oow"], row["note"]])
     story.append(make_table(ranking_rows, [16*mm, 46*mm, 22*mm, 16*mm, 24*mm, 28*mm, 24*mm]))
@@ -1102,36 +1115,36 @@ if report_type == "tournament":
     for page in data.get("swissRounds", []):
         story.append(PageBreak())
         story.append(Paragraph(page["label"], styles["HeadingCN"]))
-        rows = [["妗屽彿", "閫夋墜A", "閫夋墜B", "缁撴灉"]]
+        rows = [["桌号", "选手A", "选手B", "结果"]]
         for match in page.get("matches", []):
             rows.append([match["tableLabel"], match["p1"], match["p2"], match["result"]])
         story.append(make_table(rows, [20*mm, 60*mm, 60*mm, 34*mm]))
 
     if data.get("top8Rounds"):
         story.append(PageBreak())
-        story.append(Paragraph("娣樻卑璧?, styles["HeadingCN"]))
+        story.append(Paragraph("淘汰赛", styles["HeadingCN"]))
         for group in data.get("top8Rounds", []):
             story.append(Paragraph(group["label"], styles["BodyCN"]))
-            rows = [["妗屽彿", "閫夋墜A", "閫夋墜B", "缁撴灉"]]
+            rows = [["桌号", "选手A", "选手B", "结果"]]
             for match in group.get("matches", []):
                 rows.append([match["tableLabel"], match["p1"], match["p2"], match["result"]])
             story.append(make_table(rows, [20*mm, 60*mm, 60*mm, 34*mm]))
             story.append(Spacer(1, 8))
 
 elif report_type == "player":
-    story.append(Paragraph(f'{data["tournamentName"]} - 涓汉鎴樻姤', styles["TitleCN"]))
-    story.append(Paragraph(f'瀵煎嚭鏃堕棿锛歿data["generatedAt"]}', styles["MetaCN"]))
+    story.append(Paragraph("{} - 个人战报".format(data["tournamentName"]), styles["TitleCN"]))
+    story.append(Paragraph("导出时间：{}".format(data["generatedAt"]), styles["MetaCN"]))
     story.append(Spacer(1, 6))
     meta_rows = [
-        ["閫夋墜", data["playerName"], "鏈€缁堢粨鏋?, data["finalStatus"]],
-        ["鎴樼哗", data["record"], "绉垎", data["points"]],
-        ["鐟炲＋杞帓鍚?, data["swissRank"] if data["swissRank"] is not None else "-", "瀵规墜鑳滅巼", data["omw"] if data["omw"] is not None else "-"],
-        ["瀵规墜鐨勫鎵嬭儨鐜?, data["oow"] if data["oow"] is not None else "-", "", ""],
+        ["选手", data["playerName"], "最终结果", data["finalStatus"]],
+        ["战绩", data["record"], "积分", data["points"]],
+        ["瑞士轮排名", data["swissRank"] if data["swissRank"] is not None else "-", "对手胜率", data["omw"] if data["omw"] is not None else "-"],
+        ["对手的对手胜率", data["oow"] if data["oow"] is not None else "-", "", ""],
     ]
-    story.append(make_table([["椤圭洰", "鍐呭", "椤圭洰", "鍐呭"], *meta_rows], [24*mm, 62*mm, 24*mm, 62*mm]))
+    story.append(make_table([["项目", "内容", "项目", "内容"], *meta_rows], [24*mm, 62*mm, 24*mm, 62*mm]))
     story.append(Spacer(1, 10))
-    story.append(Paragraph("涓汉瀵瑰眬璁板綍", styles["HeadingCN"]))
-    history_rows = [["闃舵", "妗屽彿", "瀵规墜", "鏈疆鍓嶆垬缁?, "缁撴灉", "璇︽儏"]]
+    story.append(Paragraph("个人对局记录", styles["HeadingCN"]))
+    history_rows = [["阶段", "桌号", "对手", "本轮前战绩", "结果", "详情"]]
     for item in data.get("history", []):
         history_rows.append([
             item["stage"],
@@ -1229,9 +1242,11 @@ function saveCurrentAsCache() {
 
 function broadcast() {
   saveCurrentAsCache();
-  const msg = JSON.stringify({ type: 'state', data: buildClientState() });
+  const state = buildClientState();
+  const msg = JSON.stringify({ type: 'state', data: state });
   if (!wss) return;
   wss.clients.forEach(ws => {
+    if (ws.tournamentId !== state.tournamentId) return;
     try { ws.send(msg); } catch (e) {}
   });
 }
@@ -1245,7 +1260,7 @@ function listTournaments() {
   return files
     .map(f => {
       const d = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), 'utf8'));
-      return { id: f.replace('.json', ''), name: d.tournamentName, phase: d.phase, date: d._createdAt };
+      return { id: f.replace('.json', ''), name: d.tournamentName, phase: displayPhaseForTournament(d), date: d._createdAt };
     })
     .sort((a, b) => b.date - a.date);
 }
@@ -1264,7 +1279,7 @@ function createTournament(name) {
   const nextState = freshState({
     _id: `t_${Date.now()}`,
     _createdAt: Date.now(),
-    tournamentName: (name || '鏈懡鍚嶆瘮璧?).trim(),
+    tournamentName: (name || '未命名比赛').trim(),
   });
   currentTournamentId = nextState._id;
   resetCurrentState(nextState);
@@ -1383,24 +1398,9 @@ function buildPlayerView(playerNameOrId) {
   } else if (currentState.phase === 'done') mode = 'final-result';
   else if (currentState.phase === 'swiss' && inPool) mode = 'round-summary';
 
-  let award = null;
-  if (currentState.phase === 'top8' || currentState.phase === 'done') {
-    const finalMatch = currentState.matches.find(m => m.phase === 'Finals' && m.done);
-    const bronzeMatch = currentState.matches.find(m => m.phase === 'Bronze Match' && m.done);
-    if (finalMatch) {
-      const champion = finalMatch.winner;
-      const runnerUp = champion === finalMatch.p1 ? finalMatch.p2 : finalMatch.p1;
-      if (playerName === champion) award = '鍐犲啗';
-      else if (playerName === runnerUp) award = '浜氬啗';
-    }
-    if (bronzeMatch) {
-      const third = bronzeMatch.winner;
-      const fourth = third === bronzeMatch.p1 ? bronzeMatch.p2 : bronzeMatch.p1;
-      if (playerName === third) award = '瀛ｅ啗';
-      else if (playerName === fourth) award = '娈垮啗';
-    }
-    if (!award && lostQuarterFinal) award = '鍏己';
-  }
+  const award = (currentState.phase === 'top8' || currentState.phase === 'done')
+    ? getTop8AwardForPlayer(playerName, currentState)
+    : null;
 
   const completion = getPlayerCompletionStatus(playerName, currentState);
   const liveRoomCode = activeMatch && activeMatch.liveRoomCode ? activeMatch.liveRoomCode : null;
@@ -1437,32 +1437,44 @@ function loadLatestTournamentIfAny() {
 loadLatestTournamentIfAny();
 
 function syncTournamentRequest(tournamentId) {
-  if (!tournamentId) return true;
-  if (currentState._id === tournamentId) return true;
-  return loadTournament(tournamentId);
+  const id = (tournamentId || '').trim();
+  if (!id) return false;
+  if (currentState._id === id) return true;
+  return loadTournament(id);
 }
 
-app.use('/admin', express.static(path.join(PUBLIC_DIR, 'admin')));
-app.use('/overlay', express.static(path.join(PUBLIC_DIR, 'overlay')));
-app.use('/player', express.static(path.join(PUBLIC_DIR, 'player')));
-app.use('/shared', express.static(path.join(PUBLIC_DIR, 'shared')));
-app.get('/player-login', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'player', 'index.html')));
-app.get('/', (req, res) => res.redirect('/admin/'));
+function tournamentExists(tournamentId) {
+  const id = (tournamentId || '').trim();
+  return !!id && fs.existsSync(tournamentFilePath(id));
+}
 
-app.get('/state', (req, res) => {
-  const ok = syncTournamentRequest(req.query.tournamentId);
+function sendTournamentPage(req, res, folder) {
+  if (!tournamentExists(req.params.id)) return res.status(404).send('Tournament not found');
+  return res.sendFile(path.join(PUBLIC_DIR, folder, 'index.html'));
+}
+
+app.use('/home', express.static(path.join(PUBLIC_DIR, 'home')));
+app.use('/shared', express.static(path.join(PUBLIC_DIR, 'shared')));
+app.use(['/admin', '/overlay', '/player', '/player-login'], (req, res) => res.redirect(302, '/'));
+app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'home', 'index.html')));
+app.get('/t/:id/admin', (req, res) => sendTournamentPage(req, res, 'admin'));
+app.get('/t/:id/overlay', (req, res) => sendTournamentPage(req, res, 'overlay'));
+app.get('/t/:id/player-login', (req, res) => sendTournamentPage(req, res, 'player'));
+
+app.get('/api/tournaments/:tournamentId/state', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   res.json(buildClientState());
 });
 app.get('/api/tournaments', (req, res) => res.json(listTournaments()));
-app.get('/api/player-view/:playerName', (req, res) => {
-  const ok = syncTournamentRequest(req.query.tournamentId);
+app.get('/api/tournaments/:tournamentId/player-view/:playerName', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const playerName = decodeURIComponent(req.params.playerName || '').trim();
   res.json(buildPlayerView(playerName));
 });
-app.get('/api/player-view-by-id/:playerId', (req, res) => {
-  const ok = syncTournamentRequest(req.query.tournamentId);
+app.get('/api/tournaments/:tournamentId/player-view-by-id/:playerId', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const playerId = decodeURIComponent(req.params.playerId || '').trim();
   res.json(buildPlayerView(playerId));
@@ -1482,13 +1494,15 @@ app.post('/api/tournaments', (req, res) => {
   }
   if (action === 'rename') {
     const targetId = id || req.body.tournamentId;
-    if (targetId && !syncTournamentRequest(targetId)) return res.status(404).json({ ok: false, err: 'tournament not found' });
-    currentState.tournamentName = (name || '鏈懡鍚嶆瘮璧?).trim();
+    if (!targetId) return res.status(400).json({ ok: false, err: 'missing tournament id' });
+    if (!syncTournamentRequest(targetId)) return res.status(404).json({ ok: false, err: 'tournament not found' });
+    currentState.tournamentName = (name || '未命名比赛').trim();
     saveState();
     broadcast();
     return res.json({ ok: true, state: buildClientState() });
   }
   if (action === 'delete') {
+    if (!id) return res.status(400).json({ ok: false, err: 'missing tournament id' });
     const filePath = tournamentFilePath(id);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     if (currentState._id === id) {
@@ -1503,8 +1517,8 @@ app.post('/api/tournaments', (req, res) => {
   return res.status(400).json({ ok: false, err: 'unknown action' });
 });
 
-app.post('/api/players', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/players', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const { action, name } = req.body || {};
   if (action === 'add') addPlayer(name);
@@ -1514,8 +1528,8 @@ app.post('/api/players', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/tournament-config', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/config', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   currentState.publicBaseUrlOverride = (req.body.publicBaseUrlOverride || '').trim();
   currentState.liveRoomCode = (req.body.liveRoomCode || '').trim();
@@ -1533,9 +1547,9 @@ app.post('/api/tournament-config', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/player-login', (req, res) => {
-  const { playerName, confirmExisting, tournamentId } = req.body || {};
-  const ok = syncTournamentRequest(tournamentId);
+app.post('/api/tournaments/:tournamentId/player-login', (req, res) => {
+  const { playerName, confirmExisting } = req.body || {};
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const name = (playerName || '').trim();
   if (!name) return res.status(400).json({ ok: false, err: 'missing name' });
@@ -1553,7 +1567,7 @@ app.post('/api/player-login', (req, res) => {
       const session = ensurePlayerSession(name);
       return res.json({ ok: true, existing: true, ...session, player: buildPlayerView(name), state: buildClientState() });
     }
-    return res.json({ ok: false, code: 'NAME_EXISTS', message: '鍚嶇О宸插瓨鍦紝璇风‘璁ゆ槸鍚︿负鏈汉銆? });
+    return res.json({ ok: false, code: 'NAME_EXISTS', message: '名称已存在，请确认是否为本人。' });
   }
 
   if (exists) {
@@ -1561,12 +1575,12 @@ app.post('/api/player-login', (req, res) => {
     return res.json({ ok: true, existing: true, ...session, player: buildPlayerView(name), state: buildClientState() });
   }
 
-  return res.json({ ok: false, code: 'REGISTRATION_CLOSED', message: '姣旇禌宸茬粡寮€濮嬶紝鎶ュ悕宸茬粨鏉熴€? });
+  return res.json({ ok: false, code: 'REGISTRATION_CLOSED', message: '比赛已经开始，报名已结束。' });
 });
 
-app.post('/api/player-report-win', (req, res) => {
-  const { playerName, tournamentId } = req.body || {};
-  const ok = syncTournamentRequest(tournamentId);
+app.post('/api/tournaments/:tournamentId/player-report-win', (req, res) => {
+  const { playerName } = req.body || {};
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const name = (playerName || '').trim();
   if (!name) return res.status(400).json({ ok: false, err: 'missing playerName' });
@@ -1588,8 +1602,8 @@ app.post('/api/player-report-win', (req, res) => {
   broadcast();
   res.json({ ok: true, player: buildPlayerView(name), state: buildClientState() });
 });
-app.post('/api/drop-player', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/drop-player', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   dropPlayer(req.body.name);
   saveState();
@@ -1597,8 +1611,8 @@ app.post('/api/drop-player', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/drop-player-from-match', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/drop-player-from-match', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const applied = dropPlayerFromMatch(req.body.matchId, req.body.playerName);
   if (!applied) return res.json({ ok: false, err: 'match or player not found' });
@@ -1607,8 +1621,8 @@ app.post('/api/drop-player-from-match', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/start-swiss', (req, res) => {
-  const syncOk = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/start-swiss', (req, res) => {
+  const syncOk = syncTournamentRequest(req.params.tournamentId);
   if (!syncOk) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const ok = startSwiss(req.body.rounds || 5);
   if (!ok) return res.json({ ok: false, err: 'not enough players' });
@@ -1617,8 +1631,8 @@ app.post('/api/start-swiss', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/next-round', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/next-round', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   nextRound();
   saveState();
@@ -1626,14 +1640,14 @@ app.post('/api/next-round', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/generate-matches', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/generate-matches', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/end-swiss', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/end-swiss', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   endSwiss();
   saveState();
@@ -1641,8 +1655,8 @@ app.post('/api/end-swiss', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/revert-round', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/revert-round', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   revertRound();
   saveState();
@@ -1650,8 +1664,8 @@ app.post('/api/revert-round', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/enter-top8', (req, res) => {
-  const syncOk = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/enter-top8', (req, res) => {
+  const syncOk = syncTournamentRequest(req.params.tournamentId);
   if (!syncOk) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const ok = enterTop8();
   if (!ok) return res.json({ ok: false, err: 'not enough top8 players' });
@@ -1660,8 +1674,8 @@ app.post('/api/enter-top8', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/cancel-top8', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/cancel-top8', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   cancelTop8Confirm();
   saveState();
@@ -1669,8 +1683,8 @@ app.post('/api/cancel-top8', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/set-live', (req, res) => {
-  const ok = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/set-live', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const { matchId } = req.body || {};
   if (currentState.currentLiveMatch && currentState.currentLiveMatch.id === matchId) {
@@ -1699,8 +1713,8 @@ app.post('/api/set-live', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/swap-seats', (req, res) => {
-  const syncOk = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/swap-seats', (req, res) => {
+  const syncOk = syncTournamentRequest(req.params.tournamentId);
   if (!syncOk) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const ok = swapMatchSeats(req.body.matchId);
   if (!ok) return res.json({ ok: false, err: 'match not found' });
@@ -1709,8 +1723,8 @@ app.post('/api/swap-seats', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/result', (req, res) => {
-  const syncOk = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/result', (req, res) => {
+  const syncOk = syncTournamentRequest(req.params.tournamentId);
   if (!syncOk) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const ok = applyResult(req.body.matchId, req.body.winnerId);
   if (!ok) return res.json({ ok: false, err: 'match not found' });
@@ -1719,8 +1733,8 @@ app.post('/api/result', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/draw', (req, res) => {
-  const syncOk = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/draw', (req, res) => {
+  const syncOk = syncTournamentRequest(req.params.tournamentId);
   if (!syncOk) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const ok = applyDraw(req.body.matchId);
   if (!ok) return res.json({ ok: false, err: 'match not found' });
@@ -1729,8 +1743,8 @@ app.post('/api/draw', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.post('/api/bo3-score', (req, res) => {
-  const syncOk = syncTournamentRequest(req.body.tournamentId);
+app.post('/api/tournaments/:tournamentId/bo3-score', (req, res) => {
+  const syncOk = syncTournamentRequest(req.params.tournamentId);
   if (!syncOk) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const ok = applyBo3Score(req.body.matchId, req.body.p1Wins, req.body.p2Wins);
   if (!ok) return res.json({ ok: false, err: 'match not found' });
@@ -1739,8 +1753,8 @@ app.post('/api/bo3-score', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
-app.get('/api/export-report', (req, res) => {
-  const ok = syncTournamentRequest(req.query.tournamentId);
+app.get('/api/tournaments/:tournamentId/export-report', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   try {
     const filePath = exportTournamentReportFile(currentState);
@@ -1751,8 +1765,8 @@ app.get('/api/export-report', (req, res) => {
   }
 });
 
-app.get('/api/export-player-report', (req, res) => {
-  const ok = syncTournamentRequest(req.query.tournamentId);
+app.get('/api/tournaments/:tournamentId/export-player-report', (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const playerName = decodeURIComponent(req.query.playerName || '').trim();
   if (!playerName) return res.status(400).json({ ok: false, err: 'missing playerName' });
@@ -1767,12 +1781,21 @@ app.get('/api/export-player-report', (req, res) => {
 
 const server = http.createServer(app);
 wss = new WebSocketServer({ server });
-wss.on('connection', ws => {
+wss.on('connection', (ws, req) => {
+  const url = new URL(req.url || '/', 'http://localhost');
+  const routeMatch = url.pathname.match(/^\/t\/([^/]+)\/ws\/?$/);
+  const tournamentId = routeMatch ? decodeURIComponent(routeMatch[1]).trim() : '';
+  ws.tournamentId = tournamentId;
+  if (!tournamentId || !syncTournamentRequest(tournamentId)) {
+    ws.send(JSON.stringify({ type: 'error', err: 'tournament not found' }));
+    ws.close();
+    return;
+  }
   ws.send(JSON.stringify({ type: 'state', data: buildClientState() }));
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`2.0 server running on ${getPublicBaseUrl()}`);
+  console.log(`2.1 server running on ${getPublicBaseUrl()}`);
 });
 
 

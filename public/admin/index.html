@@ -227,8 +227,8 @@
   .obs-hint { font-size: 11px; color: #64748b; background: #0f172a; padding: 10px; border-radius: 6px; line-height: 1.8; }
 
   /* 弹窗 */
-  #bulkModal, #newTModal, #renameModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; }
-  #bulkModal.open, #newTModal.open, #renameModal.open { display: flex; }
+  #bulkModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; }
+  #bulkModal.open { display: flex; }
   .modal-box { background: #1e293b; border-radius: 12px; padding: 24px; width: 460px; border: 1px solid #334155; }
   .modal-box h2 { font-size: 15px; margin-bottom: 8px; }
   .modal-box p { font-size: 12px; color: #64748b; margin-bottom: 12px; }
@@ -250,17 +250,12 @@
 <div class="topbar">
   <div class="topbar-left">
     <h1>🎮 宝可梦月赛管理系统</h1>
-    <!-- 比赛下拉 -->
-    <div class="tournament-select">
-      <div class="tournament-current" onclick="toggleTourDropdown()" id="tourCurrent">
-        <span class="tname" id="tourName">—</span>
-        <span class="tarrow">▼</span>
-      </div>
-      <div class="tournament-dropdown" id="tourDropdown"></div>
+    <div class="tournament-current single">
+      <span class="tname" id="tourName">—</span>
     </div>
     <div class="topbar-actions">
+      <button class="btn btn-secondary btn-sm" onclick="location.href='/'">返回主页</button>
       <button class="btn btn-secondary btn-sm" id="btnExportReport" onclick="exportReport()" title="比赛完成后可导出战报" disabled>导出战报</button>
-      <button class="btn btn-secondary btn-sm" onclick="showRename()" title="改名">✏️</button>
     </div>
   </div>
   <span class="phase-badge" id="phaseBadge">等待开始</span>
@@ -413,121 +408,24 @@
   </div>
 </div>
 
-<!-- 新建比赛弹窗 -->
-<div id="newTModal">
-  <div class="modal-box">
-    <h2>🆕 新建比赛</h2>
-    <label>比赛名称</label>
-    <input type="text" id="newTName" placeholder="例如：2025年6月月赛" onkeydown="if(event.key==='Enter')createTour()">
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeNewT()">取消</button>
-      <button class="btn btn-primary" onclick="createTour()">创建</button>
-    </div>
-  </div>
-</div>
-
-<!-- 改名弹窗 -->
-<div id="renameModal">
-  <div class="modal-box">
-    <h2>✏️ 修改比赛名称</h2>
-    <label>新名称</label>
-    <input type="text" id="renameInput" onkeydown="if(event.key==='Enter')doRename()">
-    <div class="modal-actions">
-      <button class="btn btn-secondary" onclick="closeRename()">取消</button>
-      <button class="btn btn-primary" onclick="doRename()">保存</button>
-    </div>
-  </div>
-</div>
-
 <script src="/shared/qrcode.js"></script>
 <script>
 // ── 比赛管理 ─────────────────────────────────────────────
-let currentTourId = null;
-let tourList = [];
+const routeMatch = location.pathname.match(/^\/t\/([^/]+)\/admin\/?$/);
+const currentTourId = routeMatch ? decodeURIComponent(routeMatch[1]) : '';
 let currentState = null;
-
-function toggleTourDropdown() {
-  document.getElementById('tourDropdown').classList.toggle('open');
-}
-document.addEventListener('click', e => {
-  if (!e.target.closest('.tournament-select')) {
-    document.getElementById('tourDropdown').classList.remove('open');
-  }
-});
-
-async function loadTourList() {
-  tourList = await apiGet('/api/tournaments') || [];
-  renderTourDropdown();
+if (!currentTourId) {
+  location.replace('/');
 }
 
-function renderTourDropdown() {
-  const drop = document.getElementById('tourDropdown');
-  const cur = document.getElementById('tourName');
-  if (!currentTourId && currentState && currentState.tournamentId) {
-    currentTourId = currentState.tournamentId;
-  }
-  cur.textContent = currentTourId ? (tourList.find(t => t.id === currentTourId)?.name || currentState?.tournamentName || '—') : (currentState?.tournamentName || '—');
-
-  drop.innerHTML = tourList.map(t => `
-    <div class="td-item ${t.id === currentTourId ? 'active' : ''}">
-      <div class="td-item-left" onclick="loadTour('${t.id}')">
-        <div class="td-item-name">${t.name}</div>
-        <div class="td-item-meta">${t.phase || 'setup'} · ${new Date(t.date).toLocaleDateString('zh-CN')}</div>
-      </div>
-      <button class="td-del-btn" onclick="event.stopPropagation();deleteTour('${t.id}','${t.name.replace(/'/g,"\\'")}')" title="删除比赛">🗑</button>
-    </div>`).join('') + `
-    <div class="td-divider"></div>
-    <div class="td-item td-new" onclick="showNewT()">➕ 新建比赛</div>`;
-}
-
-function showNewT() {
-  document.getElementById('tourDropdown').classList.remove('open');
-  document.getElementById('newTName').value = '';
-  document.getElementById('newTModal').classList.add('open');
-  setTimeout(() => document.getElementById('newTName').focus(), 50);
-}
-function closeNewT() { document.getElementById('newTModal').classList.remove('open'); }
-
-async function createTour() {
-  const name = document.getElementById('newTName').value.trim() || '未命名比赛';
-  const res = await api('/api/tournaments', { action: 'create', name });
-  if (res.state) { currentTourId = res.id; await loadTourList(); render(res.state); }
-  closeNewT();
-}
-
-async function loadTour(id) {
-  document.getElementById('tourDropdown').classList.remove('open');
-  const res = await api('/api/tournaments', { action: 'load', id });
-  if (res.state) { currentTourId = id; render(res.state); }
-}
-
-async function deleteTour(id, name) {
-  if (!confirm('删除比赛「' + name + '」？此操作不可恢复。')) return;
-  await api('/api/tournaments', { action: 'delete', id });
-  await loadTourList();
-  // Reload fresh state (handles auto-switch to next or empty state)
-  const state = await apiGet('/state');
-  if (state && state.phase) render(state);
-}
-
-function showRename() {
-  document.getElementById('renameInput').value = currentState.tournamentName || '';
-  document.getElementById('renameModal').classList.add('open');
-  setTimeout(() => document.getElementById('renameInput').focus(), 50);
-}
-function closeRename() { document.getElementById('renameModal').classList.remove('open'); }
-
-async function doRename() {
-  const name = document.getElementById('renameInput').value.trim() || '未命名比赛';
-  await api('/api/tournaments', { action: 'rename', name });
-  closeRename();
-  await loadTourList();
+function tournamentApi(path) {
+  return `/api/tournaments/${encodeURIComponent(currentTourId)}${path}`;
 }
 
 async function saveTournamentConfig() {
   const publicBaseUrlOverride = document.getElementById('publicBaseUrlInput').value.trim();
   const liveRoomCode = document.getElementById('liveRoomCodeInput').value.trim();
-  const res = await api('/api/tournament-config', { publicBaseUrlOverride, liveRoomCode });
+  const res = await api(tournamentApi('/config'), { publicBaseUrlOverride, liveRoomCode });
   if (res.state) render(res.state);
 }
 
@@ -562,10 +460,7 @@ async function exportReport() {
   if (!currentState || !isTournamentFinished(currentState)) return;
   btn.disabled = true;
   try {
-    const url = currentState && currentState.tournamentId
-      ? `/api/export-report?tournamentId=${encodeURIComponent(currentState.tournamentId)}`
-      : '/api/export-report';
-    window.open(url, '_blank');
+    window.open(tournamentApi('/export-report'), '_blank');
   } finally {
     if (currentState) {
       const canExport = isTournamentFinished(currentState);
@@ -578,12 +473,10 @@ async function exportReport() {
 let ws;
 function connect() {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = protocol + '//' + location.host;
-  console.log('[WS] connecting to', wsUrl);
+  const wsUrl = protocol + '//' + location.host + '/t/' + encodeURIComponent(currentTourId) + '/ws';
   ws = new WebSocket(wsUrl);
-  ws.onopen = () => { console.log('[WS] connected'); document.getElementById('wsDot').classList.add('connected'); document.getElementById('wsText').textContent = '已连接'; };
-  ws.onclose = () => { console.log('[WS] disconnected'); document.getElementById('wsDot').classList.remove('connected'); document.getElementById('wsText').textContent = '重连中…'; setTimeout(connect, 3000); };
-  ws.onerror = (e) => { console.error('[WS] error', e); };
+  ws.onopen = () => { document.getElementById('wsDot').classList.add('connected'); document.getElementById('wsText').textContent = '已连接'; };
+  ws.onclose = () => { document.getElementById('wsDot').classList.remove('connected'); document.getElementById('wsText').textContent = '重连中…'; setTimeout(connect, 3000); };
   ws.onmessage = evt => {
     const d = JSON.parse(evt.data);
     if (!d.data) return;
@@ -594,12 +487,7 @@ function connect() {
 connect();
 
 // ── REST ─────────────────────────────────────────────────
-function withTournamentQuery(path) {
-  if (!currentTourId) return `${path}`;
-  const sep = path.includes('?') ? '&' : '?';
-  return `${path}${sep}tournamentId=${encodeURIComponent(currentTourId)}`;
-}
-function apiGet(path) { return fetch(withTournamentQuery(path)).then(r => r.json()).catch(() => []); }
+function apiGet(path) { return fetch(tournamentApi(path)).then(r => r.json()).catch(() => null); }
 async function copyText(text) {
   const value = (text || '').trim();
   if (!value || value === '—') return;
@@ -615,10 +503,9 @@ async function copyText(text) {
   }
 }
 function api(path, data = {}) {
-  const payload = currentTourId ? { ...data, tournamentId: currentTourId } : data;
   return fetch(`${path}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(data)
   }).then(r => r.json()).catch(() => ({ ok: false }));
 }
 
@@ -626,24 +513,24 @@ function api(path, data = {}) {
 async function addPlayer() {
   const name = document.getElementById('playerInput').value.trim();
   if (!name) return;
-  const res = await api('/api/players', { action: 'add', name });
+  const res = await api(tournamentApi('/players'), { action: 'add', name });
   if (res.state) render(res.state);
   document.getElementById('playerInput').value = '';
   document.getElementById('playerInput').focus();
 }
 async function dropPlayer(name) {
   if (!confirm('确认将「' + name + '」标记为退赛？')) return;
-  const res = await api('/api/drop-player', { name });
+  const res = await api(tournamentApi('/drop-player'), { name });
   if (res.state) render(res.state);
 }
-async function removePlayer(name) { const res = await api('/api/players', { action: 'remove', name }); if (res.state) render(res.state); }
+async function removePlayer(name) { const res = await api(tournamentApi('/players'), { action: 'remove', name }); if (res.state) render(res.state); }
 async function bulkAdd() {
   for (const line of document.getElementById('bulkText').value.split('\n')) {
-    const n = line.trim(); if (n) await api('/api/players', { action: 'add', name: n });
+    const n = line.trim(); if (n) await api(tournamentApi('/players'), { action: 'add', name: n });
   }
   closeBulkAdd();
   // 批量添加后获取最新状态刷新
-  const s = await fetch(withTournamentQuery('/state')).then(r => r.json()).catch(() => null);
+  const s = await apiGet('/state');
   if (s) render(s);
 }
 function showBulkAdd() { document.getElementById('bulkModal').classList.add('open'); }
@@ -651,39 +538,39 @@ function closeBulkAdd() { document.getElementById('bulkModal').classList.remove(
 
 // ── 赛程 ─────────────────────────────────────────────────
 async function startSwiss() {
-  const res = await api('/api/start-swiss', { rounds: parseInt(document.getElementById('swissRounds').value) || 5 });
+  const res = await api(tournamentApi('/start-swiss'), { rounds: parseInt(document.getElementById('swissRounds').value) || 5 });
   if (res.state) render(res.state);
   // 开始瑞士轮后自动生成第一轮对位
-  const matchRes = await api('/api/generate-matches');
+  const matchRes = await api(tournamentApi('/generate-matches'));
   if (matchRes.state) render(matchRes.state);
 }
 async function nextRound() {
   // 下一轮：先递增轮次，再生成对位
-  const res = await api('/api/next-round');
+  const res = await api(tournamentApi('/next-round'));
   if (res.state) render(res.state);
-  const matchRes = await api('/api/generate-matches');
+  const matchRes = await api(tournamentApi('/generate-matches'));
   if (matchRes.state) render(matchRes.state);
 }
-async function endSwiss() { const res = await api('/api/end-swiss'); if (res.state) render(res.state); }
+async function endSwiss() { const res = await api(tournamentApi('/end-swiss')); if (res.state) render(res.state); }
 async function revertRound() {
   if (!confirm('确定要退回到上一轮吗？当前轮的对局结果将被清除。')) return;
-  await api('/api/revert-round');
+  await api(tournamentApi('/revert-round'));
 }
-async function confirmTop8() { const res = await api('/api/enter-top8'); if (res.state) render(res.state); }
-async function cancelTop8() { const res = await api('/api/cancel-top8'); if (res.state) render(res.state); }
+async function confirmTop8() { const res = await api(tournamentApi('/enter-top8')); if (res.state) render(res.state); }
+async function cancelTop8() { const res = await api(tournamentApi('/cancel-top8')); if (res.state) render(res.state); }
 async function setLive(id) {
-  const res = await api('/api/set-live', { matchId: id });
+  const res = await api(tournamentApi('/set-live'), { matchId: id });
   if (res.state) render(res.state);
 }
-async function setResult(id, winner) { const res = await api('/api/result', { matchId: id, winnerId: winner }); if (res.state) render(res.state); }
-async function setDraw(id) { const res = await api('/api/draw', { matchId: id }); if (res.state) render(res.state); }
-async function swapSeats(id) { const res = await api('/api/swap-seats', { matchId: id }); if (res.state) render(res.state); }
+async function setResult(id, winner) { const res = await api(tournamentApi('/result'), { matchId: id, winnerId: winner }); if (res.state) render(res.state); }
+async function setDraw(id) { const res = await api(tournamentApi('/draw'), { matchId: id }); if (res.state) render(res.state); }
+async function swapSeats(id) { const res = await api(tournamentApi('/swap-seats'), { matchId: id }); if (res.state) render(res.state); }
 async function dropPlayerFromMatchAction(matchId, playerName) {
   if (!confirm(`确认将「${playerName}」标记为退赛？未录入结果则按赛前退赛处理，已录入结果则按赛后退赛处理。`)) return;
-  const res = await api('/api/drop-player-from-match', { matchId, playerName });
+  const res = await api(tournamentApi('/drop-player-from-match'), { matchId, playerName });
   if (res.state) render(res.state);
 }
-async function setBo3Score(id, pw1, pw2) { const res = await api('/api/bo3-score', { matchId: id, p1Wins: pw1, p2Wins: pw2 }); if (res.state) render(res.state); }
+async function setBo3Score(id, pw1, pw2) { const res = await api(tournamentApi('/bo3-score'), { matchId: id, p1Wins: pw1, p2Wins: pw2 }); if (res.state) render(res.state); }
 
 // ── 辅助 ─────────────────────────────────────────────────
 function roundStats(round, matches) {
@@ -717,18 +604,17 @@ function render(s) {
 
   // 顶栏
   const badge = document.getElementById('phaseBadge');
-  const labels = { setup:'等待开始', swiss:'瑞士轮', 'swiss-ended':'瑞士轮结束', top8:'淘汰赛', done:'已完成' };
-  badge.className = 'phase-badge ' + (s.phase === 'swiss' ? 'swiss' : s.phase === 'swiss-ended' ? 'swiss-ended' : s.phase === 'top8' ? 'top8' : s.phase === 'done' ? 'done' : '');
-  badge.textContent = labels[s.phase] || '—';
+  const displayPhase = isTournamentFinished(s) ? 'done' : s.phase;
+  const labels = { setup:'等待开始', swiss:'瑞士轮', 'swiss-ended':'瑞士轮结束', top8:'淘汰赛', done:'已结束' };
+  badge.className = 'phase-badge ' + (displayPhase === 'swiss' ? 'swiss' : displayPhase === 'swiss-ended' ? 'swiss-ended' : displayPhase === 'top8' ? 'top8' : displayPhase === 'done' ? 'done' : '');
+  badge.textContent = labels[displayPhase] || '—';
   document.getElementById('roundLabel').textContent = s.phase === 'swiss' ? `第 ${s.round} 轮` : '';
 
   // 比赛名
   const tCur = document.getElementById('tourName');
   tCur.textContent = s.tournamentName || '—';
   const baseUrl = s.publicBaseUrl || location.origin;
-  const playerEntryUrl = s.tournamentId
-    ? `${baseUrl}/player-login?tournamentId=${encodeURIComponent(s.tournamentId)}`
-    : `${baseUrl}/player-login`;
+  const playerEntryUrl = `${baseUrl}/t/${encodeURIComponent(s.tournamentId)}/player-login`;
   document.getElementById('playerEntryUrl').textContent = playerEntryUrl;
   renderQrInto('playerQrImage', playerEntryUrl);
 
@@ -954,15 +840,11 @@ function adjustScore(matchId, side, delta) {
 // ── 叠加层预览 ──────────────────────────────────────────
 function renderOverlay(s) {
   const baseUrl = s.publicBaseUrl || location.origin;
-  const previewUrl = s.tournamentId
-    ? `/overlay/?tournamentId=${encodeURIComponent(s.tournamentId)}`
-    : '/overlay/';
-  const url = s.tournamentId
-    ? `${baseUrl}/overlay/?tournamentId=${encodeURIComponent(s.tournamentId)}`
-    : `${baseUrl}/overlay/`;
+  const previewUrl = `/t/${encodeURIComponent(s.tournamentId)}/overlay`;
+  const url = `${baseUrl}/t/${encodeURIComponent(s.tournamentId)}/overlay`;
   document.getElementById('overlayUrl').textContent = url;
   const frame = document.getElementById('overlayFrame');
-  if (!frame.src || frame.src !== previewUrl) { frame.src = previewUrl; frame.style.display = 'block'; }
+  if (frame.getAttribute('src') !== previewUrl) { frame.src = previewUrl; frame.style.display = 'block'; }
   const names = { idle:'空闲', live:'直播中', result:'胜者展示(直播桌)', overview:'全场总览', 'top8-live':'淘汰赛直播', 'top8-result':'胜者展示(BO3)', 'top8-bracket':'淘汰赛对阵图', 'swiss-ended':'瑞士轮排名' };
   const live = s.currentLiveMatch;
   document.getElementById('overlayStateDisplay').innerHTML = `
@@ -974,7 +856,7 @@ function renderOverlay(s) {
 }
 
 // ── 启动 ─────────────────────────────────────────────────
-loadTourList();
+apiGet('/state').then(state => { if (state && state.phase) render(state); });
 </script>
 </body>
 </html>

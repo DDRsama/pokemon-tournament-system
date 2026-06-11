@@ -472,10 +472,14 @@
 const storageNameKey = 'pto2_player_name';
 const storageIdKey = 'pto2_player_id';
 const params = new URLSearchParams(location.search);
-const tournamentId = params.get('tournamentId') || '';
+const routeMatch = location.pathname.match(/^\/t\/([^/]+)\/player-login\/?$/);
+const tournamentId = routeMatch ? decodeURIComponent(routeMatch[1]) : '';
 let playerName = localStorage.getItem(storageNameKey) || '';
 let playerId = params.get('playerId') || localStorage.getItem(storageIdKey) || '';
 let lastView = null;
+if (!tournamentId) {
+  document.body.innerHTML = '<div style="padding:40px;color:#fff;font-family:sans-serif;">Tournament not found</div>';
+}
 
 function qs(id) { return document.getElementById(id); }
 
@@ -491,10 +495,8 @@ function hideLoginAux() {
   qs('nameExistsBox').classList.add('hidden');
 }
 
-function withTournament(path) {
-  if (!tournamentId) return path;
-  const join = path.includes('?') ? '&' : '?';
-  return `${path}${join}tournamentId=${encodeURIComponent(tournamentId)}`;
+function tournamentApi(path) {
+  return `/api/tournaments/${encodeURIComponent(tournamentId)}${path}`;
 }
 
 async function api(path, data = null) {
@@ -505,7 +507,7 @@ async function api(path, data = null) {
         body: JSON.stringify(data),
       }
     : {};
-  const res = await fetch(withTournament(path), init);
+  const res = await fetch(path, init);
   return await res.json();
 }
 
@@ -641,13 +643,11 @@ async function refreshPlayerView() {
   if (!playerName && !playerId) return;
   try {
     const path = playerId
-      ? `/api/player-view-by-id/${encodeURIComponent(playerId)}`
-      : `/api/player-view/${encodeURIComponent(playerName)}`;
+      ? tournamentApi(`/player-view-by-id/${encodeURIComponent(playerId)}`)
+      : tournamentApi(`/player-view/${encodeURIComponent(playerName)}`);
     const view = await api(path);
     renderPlayerView(view);
-  } catch (err) {
-    console.error(err);
-  }
+  } catch (err) {}
 }
 
 async function submitLogin(confirmExisting = false) {
@@ -657,7 +657,7 @@ async function submitLogin(confirmExisting = false) {
     return;
   }
   hideLoginAux();
-  const res = await api('/api/player-login', { playerName: name, confirmExisting, tournamentId });
+  const res = await api(tournamentApi('/player-login'), { playerName: name, confirmExisting });
   if (res.ok) {
     playerName = name;
     playerId = res.playerId || (res.player && res.player.playerId) || playerId;
@@ -679,7 +679,7 @@ async function submitLogin(confirmExisting = false) {
 async function submitWin() {
   if (!playerName) return;
   if (!confirm('确认提交本场胜利吗？提交后将同步到后台。')) return;
-  const res = await api('/api/player-report-win', { playerName, tournamentId });
+  const res = await api(tournamentApi('/player-report-win'), { playerName });
   if (!res.ok) {
     alert(res.err || '提交失败');
     return;
@@ -689,7 +689,7 @@ async function submitWin() {
 
 function exportPlayerReport() {
   if (!playerName) return;
-  const url = `/api/export-player-report?playerName=${encodeURIComponent(playerName)}${tournamentId ? `&tournamentId=${encodeURIComponent(tournamentId)}` : ''}`;
+  const url = tournamentApi(`/export-player-report?playerName=${encodeURIComponent(playerName)}`);
   window.open(url, '_blank');
 }
 
@@ -723,7 +723,7 @@ qs('playerNameInput').addEventListener('keydown', evt => {
 if (playerName || playerId) {
   refreshPlayerView();
 } else {
-  api('/state').then(state => {
+  api(tournamentApi('/state')).then(state => {
     qs('tournamentName').textContent = state.tournamentName || '本场比赛';
   }).catch(() => {});
 }
