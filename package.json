@@ -1,6 +1,6 @@
 ﻿{
   "name": "pokemon-tournament-system",
-  "version": "2.0",
+  "version": "2.0.1",
   "private": true,
   "description": "Pokemon Tournament System (PTS) for admin, player, overlay, reporting, and Docker deployment.",
   "main": "src/server.js",

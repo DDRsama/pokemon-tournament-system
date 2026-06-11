@@ -996,7 +996,9 @@ function buildPlayerReportData(playerName, state = currentState) {
     ? state.swissRankingArchive
     : (state.swissRanking || []);
   const standing = standings.find(entry => entry.player === playerName) || completion.standing || null;
-  const swissSource = (state.swissMatchesArchive && state.swissMatchesArchive.length > 0)
+  const swissSource = (state.swissMatchHistory && state.swissMatchHistory.length > 0)
+    ? state.swissMatchHistory
+    : (state.swissMatchesArchive && state.swissMatchesArchive.length > 0)
     ? state.swissMatchesArchive
     : (state.matches || []).filter(m => typeof m.round === 'number');
   const swissHistory = swissSource
