@@ -1,5 +1,9 @@
 # Pokemon Tournament System
 
+[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-ddrsama%2Fpokemon--tournament--system-2496ED?logo=docker&logoColor=white)](https://hub.docker.com/r/ddrsama/pokemon-tournament-system)
+[![Docker Pulls](https://img.shields.io/docker/pulls/ddrsama/pokemon-tournament-system?logo=docker&label=pulls)](https://hub.docker.com/r/ddrsama/pokemon-tournament-system)
+[![Docker Image Size](https://img.shields.io/docker/image-size/ddrsama/pokemon-tournament-system/latest?logo=docker&label=image%20size)](https://hub.docker.com/r/ddrsama/pokemon-tournament-system/tags)
+
 `Pokemon Tournament System`，简称 `PTS`，是一套面向宝可梦线下赛事的管理系统。  
 它最初以宝可梦 VGC 线下赛事为主要开发目标，但由于核心流程围绕瑞士轮、淘汰赛、直播桌管理与战报整理展开，因此同样适用于 PTCG、游戏王等采用瑞士轮结构的对战赛事。  
 它将后台管理、直播叠加层、选手端页面、瑞士轮与淘汰赛流程、战报导出，以及 Docker 部署能力整合到同一套系统中，目标是尽可能覆盖一场比赛从报名到赛后整理的完整流程。
