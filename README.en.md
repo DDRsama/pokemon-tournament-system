@@ -13,6 +13,10 @@
 
 PTS combines admin management, livestream overlays, player-facing mobile pages, Swiss rounds, Top 8 playoffs, report export, and Docker deployment in one system.
 
+Current version: `2.2.0`
+
+Roadmap: [ROADMAP.en.md](./ROADMAP.en.md)
+
 ## Purpose
 
 PTS started as a simple livestream overlay, then grew into a full tournament toolchain. It is designed for:
@@ -153,17 +157,17 @@ Used for QR-code entry, registration, login, pairing lookup, history, and win su
 
 ## Project Structure
 
-- `src/`  
+- `src/`
   Server-side logic
-- `public/admin/`  
+- `public/admin/`
   Admin page
-- `public/overlay/`  
+- `public/overlay/`
   Livestream overlay page
-- `public/player/`  
+- `public/player/`
   Player-facing page
-- `public/shared/`  
+- `public/shared/`
   Shared styles, QR-code script, fonts, and assets
-- `data/`  
+- `data/`
   Local tournament data and reports
 
 ## Local Development
@@ -218,6 +222,12 @@ Legacy entries `/admin`, `/overlay`, `/player`, and `/player-login` redirect to 
 docker pull ddrsama/pokemon-tournament-system:latest
 ```
 
+You can also pin a specific version:
+
+```bash
+docker pull ddrsama/pokemon-tournament-system:2.2.0
+```
+
 ### Docker Compose
 
 ```bash
@@ -237,15 +247,15 @@ Docker Compose stores persistent data under the project directory by default:
 
 ## Environment Variables
 
-- `PORT`  
+- `PORT`
   Server port, default `18765`
-- `PUBLIC_BASE_URL`  
+- `PUBLIC_BASE_URL`
   Public access URL used for QR codes and player links
-- `DATA_DIR`  
+- `DATA_DIR`
   Tournament data directory
-- `REPORTS_DIR`  
+- `REPORTS_DIR`
   Report output directory
-- `PYTHON_BIN`  
+- `PYTHON_BIN`
   Python executable path. In Docker, the default is `/usr/local/bin/python`
 
 ## Fonts And Reports

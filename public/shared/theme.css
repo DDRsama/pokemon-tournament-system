@@ -1,5 +1,59 @@
 :root {
-  --pto-font-sans: "UD Shin Go SC R", "UD新黑体 简体字 R", "UD新黑体 简体字", "Segoe UI Emoji", "Microsoft YaHei", sans-serif;
+  --pto-font-sans: "UD Shin Go SC R", "UD新黑体 简体字 R", "UD新黑体 简体字", "Segoe UI Emoji", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --pts-font-sans: var(--pto-font-sans);
+
+  --pts-page-bg: #0f172a;
+  --pts-page-bg-deep: #08111f;
+  --pts-surface: #1e293b;
+  --pts-surface-soft: #273549;
+  --pts-surface-raised: #334155;
+  --pts-surface-hover: #475569;
+  --pts-border: #334155;
+  --pts-border-strong: #475569;
+
+  --pts-text: #e2e8f0;
+  --pts-text-strong: #f8fafc;
+  --pts-text-muted: #94a3b8;
+  --pts-text-dim: #64748b;
+  --pts-text-inverse: #ffffff;
+
+  --pts-brand: #6366f1;
+  --pts-brand-hover: #4f46e5;
+  --pts-brand-soft: rgba(99, 102, 241, 0.16);
+  --pts-success: #16a34a;
+  --pts-success-hover: #15803d;
+  --pts-success-strong: #22c55e;
+  --pts-success-soft: rgba(34, 197, 94, 0.15);
+  --pts-warning: #d97706;
+  --pts-warning-hover: #b45309;
+  --pts-warning-bright: #f59e0b;
+  --pts-warning-soft: rgba(217, 119, 6, 0.16);
+  --pts-danger: #dc2626;
+  --pts-danger-hover: #b91c1c;
+  --pts-danger-dark: #7f1d1d;
+  --pts-danger-soft: rgba(220, 38, 38, 0.16);
+
+  --pts-phase-setup-bg: #475569;
+  --pts-phase-setup-fg: #cbd5e1;
+  --pts-phase-swiss-bg: #7c3aed;
+  --pts-phase-swiss-fg: #f0f0ff;
+  --pts-phase-swiss-ended-bg: #d97706;
+  --pts-phase-swiss-ended-fg: #fff8e1;
+  --pts-phase-top8-bg: #dc2626;
+  --pts-phase-top8-fg: #ffffff;
+  --pts-phase-done-bg: #22c55e;
+  --pts-phase-done-fg: #ffffff;
+
+  --pts-radius-xs: 4px;
+  --pts-radius-sm: 6px;
+  --pts-radius-md: 8px;
+  --pts-radius-lg: 10px;
+  --pts-radius-xl: 12px;
+  --pts-shadow-md: 0 8px 32px rgba(0, 0, 0, 0.35);
+  --pts-shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.35);
+  --pts-focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.28);
+  --pts-transition-fast: 120ms ease;
+  --pts-transition: 160ms ease;
 }
 
 @font-face {
@@ -8,4 +62,118 @@
   font-weight: 400;
   font-style: normal;
   font-display: swap;
+}
+
+.pts-surface {
+  background: var(--pts-surface);
+  border: 1px solid var(--pts-border);
+  border-radius: var(--pts-radius-lg);
+}
+
+.pts-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: var(--pts-radius-sm);
+  padding: 6px 12px;
+  color: var(--pts-text);
+  background: var(--pts-surface-raised);
+  font-family: var(--pts-font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background var(--pts-transition-fast),
+    border-color var(--pts-transition-fast),
+    color var(--pts-transition-fast),
+    opacity var(--pts-transition-fast),
+    transform var(--pts-transition-fast);
+}
+
+.pts-btn:hover {
+  background: var(--pts-surface-hover);
+}
+
+.pts-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--pts-focus-ring);
+}
+
+.pts-btn:disabled,
+.pts-btn.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pts-btn-primary {
+  background: var(--pts-brand);
+  color: var(--pts-text-inverse);
+}
+
+.pts-btn-primary:hover {
+  background: var(--pts-brand-hover);
+}
+
+.pts-btn-success {
+  background: var(--pts-success);
+  color: var(--pts-text-inverse);
+}
+
+.pts-btn-success:hover {
+  background: var(--pts-success-hover);
+}
+
+.pts-btn-warning {
+  background: var(--pts-warning);
+  color: var(--pts-text-inverse);
+}
+
+.pts-btn-warning:hover {
+  background: var(--pts-warning-hover);
+}
+
+.pts-btn-danger {
+  background: var(--pts-danger);
+  color: var(--pts-text-inverse);
+}
+
+.pts-btn-danger:hover {
+  background: var(--pts-danger-hover);
+}
+
+.pts-phase-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 3px 12px;
+  color: var(--pts-phase-setup-fg);
+  background: var(--pts-phase-setup-bg);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.pts-phase-badge.is-swiss {
+  background: var(--pts-phase-swiss-bg);
+  color: var(--pts-phase-swiss-fg);
+}
+
+.pts-phase-badge.is-swiss-ended {
+  background: var(--pts-phase-swiss-ended-bg);
+  color: var(--pts-phase-swiss-ended-fg);
+}
+
+.pts-phase-badge.is-top8 {
+  background: var(--pts-phase-top8-bg);
+  color: var(--pts-phase-top8-fg);
+}
+
+.pts-phase-badge.is-done {
+  background: var(--pts-phase-done-bg);
+  color: var(--pts-phase-done-fg);
 }

@@ -2,87 +2,59 @@
 
 [简体中文](./ROADMAP.md) | English | [日本語](./ROADMAP.ja.md)
 
-## Version 2.2
+## Version 2.2.0
 
-Status: in progress
+Status: released
 
-Theme: visual refresh, overlay stability, and maintainability
+Theme: frontend UI polish, full overlay redraw, and overlay structural modularization
 
-### Main Goals
+### Main Updates
 
-- Improve the frontend UI across the home page, admin page, and player page.
-- Fully redraw the overlay frontend for livestream and venue-screen usage.
-- Modularize the overlay structure so each overlay screen can be maintained independently.
-- Preserve existing external routes, OBS links, backend APIs, and the 1920x1080 transparent overlay contract.
+- Refined the home page and tournament entry management experience.
+- Reworked the admin page into a clearer single-tournament backend.
+- Unified page titles, browser favicon, top branding, and version display.
+- Improved home-page tournament actions, player-entry QR codes, delete confirmation, and rename dialogs.
+- Cleaned up the admin-side Base URL, overlay, player page, and OBS settings modules.
+- Improved Base URL validation to prevent using `localhost` or `127.0.0.1` as a public address by mistake.
 
-### Completed Or Mostly Completed
+### Overlay Updates
 
-- Home and admin visual polish.
-- Unified page titles, favicon, and top branding.
-- Home page tournament actions, QR-code player entry, and in-page modals.
-- Admin right-side overlay/player/OBS information area cleanup.
-- Podium overlay visual redesign.
-- Top 8 bracket visual redesign.
-- Top 8 bracket animation and behavior fixes.
-- Top 8 live table visual redesign.
-- Swiss live table visual redesign.
-- Swiss and Top 8 result splash visual updates.
-- Swiss rollback snapshot behavior, with rollback disabled before round 1.
+- Redesigned the 1920x1080 overlay for OBS and venue-screen usage.
+- Redrew Swiss overview, Swiss live table, Swiss result splash, and Swiss-ended views.
+- Redrew Top 8 bracket, Top 8 live table, Top 8 result splash, and podium views.
+- Improved long player-name handling for both Chinese and English names.
+- Added Swiss overview auto-scroll, ranking motion, and large-player-list display support.
+- Improved Top 8 advancement paths, winner highlights, target-card transitions, and podium information hierarchy.
+- Preserved the transparent-background overlay design for livestream and venue-screen compositing.
 
-### Overlay Modularization Plan
+### Overlay Architecture
 
-- Rebuild `/t/<tournamentId>/overlay` as an Overlay Shell plus independent Views.
-- `index.html` becomes the shell and keeps `#overlay-root`, `#overlay-buffer`, shared containers, and inert view templates.
-- No runtime HTML fetching, no Vue/React, and no build tool.
-- Each View owns `init()`, `update()`, and `destroy()`.
-- View side effects must go through `ViewContext`.
-- Timers, event listeners, animation locks, auto-scroll, and confetti cleanup must be destroyed when a View leaves.
-- View switching uses double buffering to avoid OBS black screen and layout flicker.
-- Repeated state updates within the same View must call `update()` instead of remounting.
+- Rebuilt `/t/<tournamentId>/overlay` as an Overlay Shell + View Registry + lifecycle-managed structure.
+- Uses templates and independent Views to manage overlay screens.
+- Adds double-buffered transitions to reduce OBS black screens, flicker, and stale-view residue.
+- Timers, event listeners, auto-scroll, and animation side effects are cleaned through View lifecycle contexts.
+- Same-View state updates prefer `update()` to avoid unnecessary remounts and repeated entrance animations.
+- Existing external routes, OBS links, backend APIs, and Docker deployment remain compatible.
 
-### Required Views
+### Tournament Flow Fixes
 
-- `idle`
-- `swiss-live`
-- `swiss-result`
-- `swiss-overview`
-- `swiss-ended`
-- `top8-live`
-- `top8-result`
-- `top8-bracket`
-- `podium`
-- `error`
-
-Temporary compatibility:
-
-- `top8-overview` as fallback only.
-
-### Remaining 2.2 Work
-
-- Finish overlay modularization without visual regression.
-- Finish Swiss overview visual tuning after modularization.
-- Refresh Swiss-ended and idle/signup overlay views.
-- Clean duplicated overlay CSS and old `display:none` router logic.
-- Verify key flows in browser and OBS after the architecture change.
+- Added Swiss snapshot rollback and disabled rollback before round 1.
+- Fixed Swiss draw result display.
+- Fixed ended tournaments still showing as playoff stage on the admin and home pages.
+- Fixed report-export paths and APIs under single-tournament routing.
+- Fixed tournament binding for overlay, player, and admin pages, including legacy-entry redirects.
 
 ## Version 2.3
 
 Theme: post-modularization cleanup and component preparation
 
-### Main Goals
-
-- Turn the modularized overlay into a cleaner long-term codebase.
-- Extract reusable overlay components.
-- Prepare for theme and language systems without changing behavior.
-
 ### Planned Work
 
-- Shared components for player nameplates, score blocks, phase labels, logo placement, connector lines, result badges, and QR blocks.
-- Split CSS into base, components, and view-specific files.
-- Reduce duplicated selectors and state-specific special cases.
-- Add stricter naming conventions for overlay classes.
-- Improve state routing tests and view lifecycle checks.
-- Document OBS-safe rendering rules.
+- Continue cleaning the modularized overlay structure and reduce legacy compatibility code.
+- Extract shared components for player nameplates, score blocks, phase labels, logo zones, connector lines, result badges, and QR blocks.
+- Split overlay CSS further into base, components, and view-specific styles.
+- Improve checks around state routing, View lifecycle, and OBS-safe rendering.
+- Prepare the codebase for future theme systems, language systems, and richer tournament settings.
 
 ## Version 2.4
 
@@ -92,8 +64,8 @@ Theme: themes, languages, and tournament setup options
 
 - Separate theme tokens from layout themes.
 - Theme tokens cover colors, shadows, borders, typography, logo assets, transparency, and motion timing.
-- Layout themes may change component structure, not only colors.
-- Official-style scorebug should become a future layout theme, not a simple recolor of the current community-event style.
+- Layout themes may change component structure and information hierarchy, not only colors.
+- Official-style scorebug layouts should become future layout themes, not simple recolors of the current community-event style.
 
 ### Language System
 

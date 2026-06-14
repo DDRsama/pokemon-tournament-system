@@ -3,24 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>宝可梦月赛管理系统</title>
+<title>Backend - Pokemon Tournament System</title>
+<link rel="icon" type="image/svg+xml" href="/shared/favicon.svg">
 <link rel="stylesheet" href="/shared/theme.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: var(--pto-font-sans); background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  body {
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--pts-font-sans);
+    background: var(--pts-page-bg);
+    color: #e2e8f0;
+  }
 
-  .topbar { background: #1e293b; padding: 8px 16px; display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #334155; flex-shrink: 0; }
-  .topbar-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .topbar {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.7);
+    background: rgba(30, 41, 59, 0.92);
+    flex-shrink: 0;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: var(--pts-text-strong);
+    font-size: 15px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .brand-mark {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+  }
+  .brand-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .version {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    color: var(--pts-text-muted);
+    background: rgba(15, 23, 42, 0.45);
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .admin-toolbar {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 24px;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.62);
+    background: rgba(15, 23, 42, 0.52);
+    flex-shrink: 0;
+  }
+  .admin-toolbar-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .admin-toolbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; min-width: 0; }
+  .toolbar-title {
+    flex: 0 0 auto;
+    color: var(--pts-text-strong);
+    font-size: 13px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
   .topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .topbar h1 { font-size: 14px; color: #f8fafc; font-weight: 700; white-space: nowrap; }
   .tournament-select { flex: 1; min-width: 0; position: relative; }
   .tournament-current {
     display: flex; align-items: center; gap: 8px;
-    background: #334155; border-radius: 8px; padding: 6px 12px;
+    min-width: 0; height: 34px;
+    background: rgba(15, 23, 42, 0.45); border-radius: 999px; padding: 0 12px;
     cursor: pointer; max-width: 320px; overflow: hidden;
-    border: 1px solid transparent; transition: border-color 0.15s;
+    border: 1px solid rgba(148, 163, 184, 0.22); transition: border-color 0.15s, background 0.15s;
   }
-  .tournament-current:hover { border-color: #6366f1; }
+  .tournament-current:hover { border-color: #6366f1; background: rgba(15, 23, 42, 0.62); }
   .tournament-current .tname { font-size: 13px; font-weight: 600; color: #f8fafc; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tournament-current .tarrow { font-size: 11px; color: #64748b; }
   .tournament-dropdown {
@@ -38,7 +107,7 @@
   .td-divider { height: 1px; background: #334155; margin: 4px 8px; }
   .td-new { display: flex; align-items: center; gap: 8px; color: #22c55e; font-weight: 600; }
   .td-rename { display: flex; align-items: center; gap: 8px; color: #94a3b8; }
-  .phase-badge { padding: 3px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #475569; color: #cbd5e1; white-space: nowrap; }
+  .phase-badge { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; font-size: 11px; font-weight: bold; background: #475569; color: #cbd5e1; white-space: nowrap; }
   .phase-badge.swiss { background: #7c3aed; color: #f0f0ff; }
   .phase-badge.swiss-ended { background: #d97706; color: #fff8e1; }
   .phase-badge.top8 { background: #dc2626; color: white; }
@@ -48,11 +117,80 @@
   .ws-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; transition: background 0.3s; }
   .ws-dot.connected { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
 
-  .main { display: flex; height: calc(100vh - 48px); }
-  .panel { padding: 14px; overflow-y: auto; }
-  .panel-left { width: 240px; background: #1e293b; border-right: 1px solid #1e293b; flex-shrink: 0; }
-  .panel-center { flex: 1; background: #0f172a; min-width: 0; }
-  .panel-right { width: 270px; background: #1e293b; border-left: 1px solid #1e293b; flex-shrink: 0; }
+  .main {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 12px;
+    padding: 12px;
+    background:
+      linear-gradient(180deg, rgba(30, 41, 59, 0.38) 0, rgba(15, 23, 42, 0) 220px),
+      var(--pts-page-bg);
+  }
+  .panel {
+    padding: 14px;
+    overflow-y: auto;
+    border: 1px solid rgba(71, 85, 105, 0.72);
+    border-radius: var(--pts-radius-lg);
+    background: rgba(30, 41, 59, 0.9);
+    box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2);
+  }
+  .panel-left { width: 248px; flex-shrink: 0; }
+  .panel-center { flex: 1; min-width: 0; background: rgba(15, 23, 42, 0.62); }
+  .panel-right { width: 286px; flex-shrink: 0; }
+
+  @media (max-width: 760px) {
+    .topbar { padding: 0 16px; }
+    .admin-toolbar {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 16px;
+    }
+    .admin-toolbar-left,
+    .admin-toolbar-right {
+      width: 100%;
+    }
+    .admin-toolbar-right {
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .tournament-current {
+      flex: 1;
+      max-width: none;
+    }
+    .main {
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .panel {
+      width: 100%;
+      flex: 0 0 auto;
+      overflow: visible;
+    }
+    .panel-center {
+      order: 1;
+      min-height: 360px;
+    }
+    .panel-left {
+      order: 2;
+    }
+    .panel-right {
+      order: 3;
+    }
+    body[data-admin-phase="setup"] .panel-left {
+      order: 1;
+    }
+    body[data-admin-phase="setup"] .panel-center {
+      order: 2;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .topbar-actions .btn {
+      padding-inline: 8px;
+    }
+  }
 
   .panel-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
 
@@ -82,19 +220,29 @@
   .add-player { display: flex; gap: 5px; margin-bottom: 8px; }
   .add-player input { flex: 1; padding: 6px 9px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 13px; }
   .add-player input:focus { outline: none; border-color: #6366f1; }
-  .btn { padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; font-family: inherit; }
+  .btn {
+    padding: 6px 12px;
+    border-radius: var(--pts-radius-sm);
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    transition: background var(--pts-transition-fast), color var(--pts-transition-fast), transform var(--pts-transition-fast), opacity var(--pts-transition-fast);
+    font-family: inherit;
+  }
   .btn-sm { padding: 4px 9px; font-size: 11px; }
-  .btn-primary { background: #6366f1; color: white; }
-  .btn-primary:hover { background: #4f46e5; }
-  .btn-secondary { background: #334155; color: #cbd5e1; }
-  .btn-secondary:hover { background: #475569; }
-  .btn-green { background: #16a34a; color: white; }
-  .btn-green:hover { background: #15803d; }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn-primary { background: var(--pts-brand); color: white; }
+  .btn-primary:hover { background: var(--pts-brand-hover); }
+  .btn-secondary { background: var(--pts-surface-raised); color: #cbd5e1; }
+  .btn-secondary:hover { background: var(--pts-surface-hover); }
+  .btn-green { background: var(--pts-success); color: white; }
+  .btn-green:hover { background: var(--pts-success-hover); }
   .btn-green:disabled { background: #14532d; color: #4a7c59; cursor: not-allowed; }
-  .btn-amber { background: #d97706; color: white; }
-  .btn-amber:hover { background: #b45309; }
+  .btn-amber { background: var(--pts-warning); color: white; }
+  .btn-amber:hover { background: var(--pts-warning-hover); }
   .btn-amber:disabled { background: #78350f; color: #a16207; cursor: not-allowed; }
-  .btn-red { background: #dc2626; color: white; }
+  .btn-red { background: var(--pts-danger); color: white; }
   .td-item { display: flex; align-items: center; justify-content: space-between; }
   .td-item-left { flex: 1; min-width: 0; cursor: pointer; padding: 1px 0; }
   .td-del-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 4px; opacity: 0.4; transition: opacity 0.15s; flex-shrink: 0; }
@@ -103,7 +251,7 @@
   .btn-red:disabled { background: #7f1d1d; color: #991b1b; cursor: not-allowed; }
   .btn:disabled { cursor: not-allowed; opacity: 0.5; }
 
-  .config-box { background: #0f172a; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+  .config-box { background: rgba(15, 23, 42, 0.66); border: 1px solid rgba(71, 85, 105, 0.62); border-radius: var(--pts-radius-md); padding: 10px; margin-bottom: 10px; }
   .config-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: #94a3b8; }
   .config-row:last-child { margin-bottom: 0; }
   .config-row input { width: 56px; padding: 3px 7px; border-radius: 4px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; text-align: center; font-size: 12px; }
@@ -120,7 +268,8 @@
   .round-progress .done-count { color: #22c55e; font-weight: 700; }
   .round-progress.done { color: #22c55e; }
 
-  .match-card { background: #1e293b; border-radius: 10px; padding: 9px 13px; margin-bottom: 7px; border: 2px solid transparent; transition: border-color 0.2s, opacity 0.2s; }
+  .match-card { background: rgba(30, 41, 59, 0.92); border-radius: var(--pts-radius-lg); padding: 10px 13px; margin-bottom: 8px; border: 1px solid rgba(71, 85, 105, 0.72); transition: border-color 0.2s, opacity 0.2s, background 0.2s; }
+  .match-card:hover { background: rgba(39, 53, 73, 0.92); }
   .match-card.live { border-color: #f59e0b; box-shadow: 0 0 14px rgba(245,158,11,0.2); }
   .match-card.done { opacity: 0.55; }
   .match-header { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -162,7 +311,7 @@
   .bo3-score-num { font-size: 13px; font-weight: 700; color: #e2e8f0; min-width: 12px; text-align: center; }
   .bo3-score-num.winning { color: #22c55e; }
 
-  .phase-hint { background: #1e293b; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 3px solid #6366f1; font-size: 12px; color: #94a3b8; line-height: 1.6; }
+  .phase-hint { background: rgba(99, 102, 241, 0.12); border-radius: var(--pts-radius-md); padding: 12px; margin-bottom: 10px; border-left: 3px solid var(--pts-brand); font-size: 12px; color: #b7c4d6; line-height: 1.6; }
   .phase-hint strong { color: #e2e8f0; }
   .phase-hint.hidden { display: none; }
 
@@ -200,31 +349,69 @@
   .bracket-step.active { background: #d97706; }
 
   /* 预览 */
-  .overlay-preview { width: 100%; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; border: 2px solid #334155; background: #000; margin-bottom: 10px; position: relative; }
-  .overlay-preview iframe { width: 200%; height: 200%; border: none; transform-origin: top left; transform: scale(0.5); display: block; }
-  .overlay-url-box { background: #0f172a; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
-  .overlay-url { font-size: 11px; color: #94a3b8; word-break: break-all; font-family: monospace; }
-  .player-link-box { background: #0f172a; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+  .side-section + .side-section { margin-top: 14px; }
+  .side-module {
+    padding: 10px;
+    border: 1px solid rgba(71, 85, 105, 0.72);
+    border-radius: var(--pts-radius-md);
+    background: rgba(15, 23, 42, 0.42);
+  }
+  .side-module > :last-child { margin-bottom: 0; }
+  .side-subtitle {
+    margin: 0 0 7px;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .overlay-preview { width: 100%; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; border: 2px solid #334155; background: #000; margin-bottom: 10px; position: relative; --overlay-preview-scale: 0.2; }
+  .overlay-preview iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: none; transform-origin: top left; transform: scale(var(--overlay-preview-scale)); display: block; }
+  .overlay-url { margin-top: 3px; font-size: 11px; color: #94a3b8; word-break: break-all; font-family: var(--pts-font-sans); line-height: 1.45; }
   .player-link-label { font-size: 11px; color: #64748b; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-  .player-link-url { font-size: 11px; color: #cbd5e1; word-break: break-all; font-family: monospace; }
   .link-box-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-  .copy-btn { background: #334155; color: #e2e8f0; border: none; border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; flex-shrink: 0; }
+  .copy-btn { background: #334155; color: #e2e8f0; border: none; border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; flex-shrink: 0; transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease; }
   .copy-btn:hover { background: #475569; }
-  .address-box { background: #0f172a; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+  .copy-btn.copied { background: #16a34a; color: #dcfce7; animation: copyPop 0.42s ease; }
+  @keyframes copyPop {
+    0% { transform: scale(1); }
+    45% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
   .address-label { font-size: 11px; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
-  .address-input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #334155; background: #111827; color: #e2e8f0; font-size: 12px; font-family: monospace; }
-  .address-input:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18); }
-  .player-qr-box { background: #0f172a; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .address-control { display: flex; align-items: center; border-radius: 8px; border: 1px solid #334155; background: #111827; overflow: hidden; }
+  .address-control:focus-within { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18); }
+  .address-prefix { flex: 0 0 auto; padding: 8px 0 8px 10px; color: #94a3b8; font-size: 12px; font-family: var(--pts-font-sans); user-select: none; }
+  .address-input { width: 100%; min-width: 0; padding: 8px 10px 8px 2px; border: 0; background: transparent; color: #e2e8f0; font-size: 12px; font-family: var(--pts-font-sans); }
+  .address-input:focus { outline: none; }
+  .address-confirm-btn { align-self: stretch; border: 0; border-left: 1px solid #334155; background: #334155; color: #e2e8f0; padding: 0 10px; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+  .address-confirm-btn:hover { background: #475569; }
+  .address-confirm-btn:disabled { cursor: not-allowed; opacity: 0.58; }
+  .address-message { min-height: 16px; margin-top: 6px; color: #64748b; font-size: 11px; line-height: 1.45; }
+  .address-message.error { color: #fca5a5; }
+  .address-message.success { color: #86efac; }
+  .player-qr-box { display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .player-qr-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; align-self: flex-start; }
+  .player-qr-button { border: 0; background: transparent; padding: 0; cursor: pointer; border-radius: 12px; }
+  .player-qr-button:focus-visible { outline: 2px solid #f59e0b; outline-offset: 3px; }
   .player-qr-frame { width: 180px; height: 180px; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; padding: 8px; }
+  .player-qr-button:hover .player-qr-frame { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22); }
   .player-qr-frame img { width: 100%; height: 100%; object-fit: contain; }
   .player-qr-tip { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; }
-  .overlay-state-box { background: #0f172a; border-radius: 6px; padding: 10px; min-height: 50px; }
+  .hidden-link-value { display: none; }
+  .overlay-state-box { background: rgba(15, 23, 42, 0.76); border: 1px solid rgba(51, 65, 85, 0.86); border-radius: 6px; padding: 10px; min-height: 50px; margin-bottom: 8px; }
   .overlay-state-row { font-size: 12px; color: #94a3b8; margin-bottom: 3px; }
   .overlay-state-row strong { color: #e2e8f0; }
   .overlay-state-value { font-weight: 700; color: #fbbf24; }
   .overlay-hint-idle { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #475569; font-size: 14px; gap: 8px; }
-  .obs-hint { font-size: 11px; color: #64748b; background: #0f172a; padding: 10px; border-radius: 6px; line-height: 1.8; }
+  .obs-hint { font-size: 11px; color: #94a3b8; background: rgba(15, 23, 42, 0.76); border: 1px solid rgba(51, 65, 85, 0.86); padding: 10px; border-radius: 6px; line-height: 1.8; }
+  .obs-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid rgba(51, 65, 85, 0.58); padding-top: 6px; margin-top: 6px; }
+  .obs-row:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+  .obs-row span { color: #64748b; }
+  .obs-row strong { color: #cbd5e1; font-weight: 800; text-align: right; }
+  .obs-url-row { border-top: 1px solid rgba(51, 65, 85, 0.58); padding-top: 6px; margin-top: 6px; }
+  .obs-url-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .obs-url-label { color: #64748b; font-size: 11px; }
 
   /* 弹窗 */
   #bulkModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; }
@@ -247,20 +434,30 @@
 <body>
 
 <!-- 顶部导航 -->
-<div class="topbar">
-  <div class="topbar-left">
-    <h1>🎮 宝可梦月赛管理系统</h1>
+<header class="topbar">
+  <div class="brand">
+    <img class="brand-mark" src="/shared/favicon.svg" alt="">
+    <span class="brand-text">Pokemon Tournament System</span>
+  </div>
+  <div class="version">2.2</div>
+</header>
+
+<div class="admin-toolbar">
+  <div class="admin-toolbar-left">
+    <div class="toolbar-title">🎮赛事管理</div>
     <div class="tournament-current single">
       <span class="tname" id="tourName">—</span>
     </div>
+  </div>
+  <div class="admin-toolbar-right">
     <div class="topbar-actions">
       <button class="btn btn-secondary btn-sm" onclick="location.href='/'">返回主页</button>
       <button class="btn btn-secondary btn-sm" id="btnExportReport" onclick="exportReport()" title="比赛完成后可导出战报" disabled>导出战报</button>
     </div>
+    <span class="phase-badge" id="phaseBadge">等待开始</span>
+    <span class="round-tag" id="roundLabel"></span>
+    <span class="ws-status"><span class="ws-dot" id="wsDot"></span><span id="wsText">未连接</span></span>
   </div>
-  <span class="phase-badge" id="phaseBadge">等待开始</span>
-  <span class="round-tag" id="roundLabel"></span>
-  <span class="ws-status"><span class="ws-dot" id="wsDot"></span><span id="wsText">未连接</span></span>
 </div>
 
 <div class="main">
@@ -350,44 +547,57 @@
 
   <!-- 右栏 -->
   <div class="panel panel-right">
-    <div class="panel-title">📺 叠加层预览</div>
-    <div class="overlay-preview">
-      <iframe id="overlayFrame" style="display:none;"></iframe>
-    </div>
-    <div class="overlay-url-box">
-      <div class="link-box-top">
-        <div class="player-link-label">Overlay URL</div>
-        <button class="copy-btn" onclick="copyText(document.getElementById('overlayUrl').textContent)">复制</button>
-      </div>
-      <div class="overlay-url" id="overlayUrl">—</div>
-    </div>
-    <div class="overlay-state-box" id="overlayStateDisplay">
-      <div class="overlay-hint-idle">
-        <span>🎮</span><span>启动赛事后预览生效</span>
+    <div class="side-section">
+      <div class="panel-title">🌐 访问地址</div>
+      <div class="side-module">
+        <div class="address-label">Public Base URL</div>
+        <div class="address-control">
+          <span class="address-prefix">http://</span>
+          <input type="text" class="address-input" id="publicBaseUrlInput" placeholder="设置访问 IP/域名，缺省则默认内网 IP">
+          <button id="publicBaseUrlConfirmBtn" class="address-confirm-btn" type="button">确认</button>
+        </div>
+        <div id="publicBaseUrlMessage" class="address-message"></div>
       </div>
     </div>
-    <div class="panel-title" style="margin-top:14px;">📡 OBS 设置</div>
-    <div class="obs-hint">
-      1. 添加「浏览器源」<br>
-      2. URL 填上方地址<br>
-      3. 宽高 1920×1080<br>
-      4. ☑ 背景透明
-    </div>
-    <div class="player-qr-box" style="margin-top:14px;">
-      <div class="player-qr-label">Player QR</div>
-      <div class="player-qr-frame"><div id="playerQrImage"></div></div>
-      <div class="player-qr-tip">扫码进入选手个人页</div>
-    </div>
-    <div class="player-link-box">
-      <div class="link-box-top">
-        <div class="player-link-label">Player Entry</div>
-        <button class="copy-btn" onclick="copyText(document.getElementById('playerEntryUrl').textContent)">复制</button>
+
+    <div class="side-section">
+      <div class="panel-title">📺 叠加层</div>
+      <div class="side-module">
+        <div class="overlay-preview">
+          <iframe id="overlayFrame" style="display:none;"></iframe>
+        </div>
+        <div class="overlay-state-box" id="overlayStateDisplay">
+          <div class="overlay-hint-idle">
+            <span>🎮</span><span>启动赛事后预览生效</span>
+          </div>
+        </div>
+        <div class="obs-hint">
+          <div class="side-subtitle">OBS 设置</div>
+          <div class="obs-row"><span>来源</span><strong>浏览器源</strong></div>
+          <div class="obs-url-row">
+            <div class="obs-url-top">
+              <span class="obs-url-label">URL</span>
+              <button class="copy-btn" onclick="copyOverlayUrl(this)">复制</button>
+            </div>
+            <div class="hidden-link-value" id="overlayUrl">—</div>
+          </div>
+          <div class="obs-row"><span>尺寸</span><strong>1920 × 1080</strong></div>
+        </div>
       </div>
-      <div class="player-link-url" id="playerEntryUrl">—</div>
     </div>
-    <div class="address-box">
-      <div class="address-label">Public Base URL</div>
-      <input type="text" class="address-input" id="publicBaseUrlInput" onblur="saveTournamentConfig()">
+
+    <div class="side-section">
+      <div class="panel-title">📱 选手端</div>
+      <div class="side-module">
+        <div class="player-qr-box">
+          <div class="player-qr-label">Player QR</div>
+          <button class="player-qr-button" type="button" onclick="copyPlayerEntryUrl()" title="点击复制选手入口链接" aria-label="复制选手入口链接">
+            <span class="player-qr-frame"><span id="playerQrImage"></span></span>
+          </button>
+          <div class="player-qr-tip">扫码进入选手个人页</div>
+          <div class="hidden-link-value" id="playerEntryUrl">—</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -414,19 +624,127 @@
 const routeMatch = location.pathname.match(/^\/t\/([^/]+)\/admin\/?$/);
 const currentTourId = routeMatch ? decodeURIComponent(routeMatch[1]) : '';
 let currentState = null;
+let committedPublicBaseUrlInput = '';
+let publicBaseUrlConfirming = false;
+const OVERLAY_CANVAS_WIDTH = 1920;
+const OVERLAY_CANVAS_HEIGHT = 1080;
+const overlayPreviewEl = document.querySelector('.overlay-preview');
 if (!currentTourId) {
   location.replace('/');
 }
+
+function updateOverlayPreviewScale() {
+  if (!overlayPreviewEl) return;
+  const scale = Math.min(
+    overlayPreviewEl.clientWidth / OVERLAY_CANVAS_WIDTH,
+    overlayPreviewEl.clientHeight / OVERLAY_CANVAS_HEIGHT
+  );
+  overlayPreviewEl.style.setProperty('--overlay-preview-scale', String(scale || 0.2));
+}
+
+if (overlayPreviewEl && 'ResizeObserver' in window) {
+  new ResizeObserver(updateOverlayPreviewScale).observe(overlayPreviewEl);
+}
+window.addEventListener('resize', updateOverlayPreviewScale);
+updateOverlayPreviewScale();
 
 function tournamentApi(path) {
   return `/api/tournaments/${encodeURIComponent(currentTourId)}${path}`;
 }
 
-async function saveTournamentConfig() {
-  const publicBaseUrlOverride = document.getElementById('publicBaseUrlInput').value.trim();
+function stripBaseUrlProtocol(value) {
+  return String(value || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+}
+
+function buildPublicBaseUrlOverride(value) {
+  const host = stripBaseUrlProtocol(value);
+  return host ? `http://${host}` : '';
+}
+
+function publicBaseUrlHost(value) {
+  const url = buildPublicBaseUrlOverride(value);
+  if (!url) return '';
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  } catch (err) {
+    return null;
+  }
+}
+
+function isBlockedPublicBaseUrl(value) {
+  const host = publicBaseUrlHost(value);
+  return host === 'localhost'
+    || host === '127.0.0.1'
+    || /^127\./.test(host || '')
+    || host === '::1'
+    || host === '0:0:0:0:0:0:0:1';
+}
+
+function setPublicBaseUrlMessage(text, type = '') {
+  const el = document.getElementById('publicBaseUrlMessage');
+  if (!el) return;
+  el.textContent = text || '';
+  el.className = `address-message ${type}`.trim();
+}
+
+function cancelPublicBaseUrlEdit() {
+  document.getElementById('publicBaseUrlInput').value = committedPublicBaseUrlInput;
+  setPublicBaseUrlMessage('');
+}
+
+async function saveTournamentConfig(options = {}) {
+  const publicBaseUrlOverride = Object.prototype.hasOwnProperty.call(options, 'publicBaseUrlOverride')
+    ? options.publicBaseUrlOverride
+    : buildPublicBaseUrlOverride(committedPublicBaseUrlInput);
   const liveRoomCode = document.getElementById('liveRoomCodeInput').value.trim();
   const res = await api(tournamentApi('/config'), { publicBaseUrlOverride, liveRoomCode });
   if (res.state) render(res.state);
+}
+
+async function confirmPublicBaseUrl() {
+  const input = document.getElementById('publicBaseUrlInput');
+  const btn = document.getElementById('publicBaseUrlConfirmBtn');
+  const candidate = buildPublicBaseUrlOverride(input.value);
+  if (!candidate) {
+    btn.disabled = true;
+    try {
+      await saveTournamentConfig({ publicBaseUrlOverride: '' });
+      committedPublicBaseUrlInput = '';
+      input.value = '';
+      setPublicBaseUrlMessage('已清空，将使用默认内网地址', 'success');
+    } finally {
+      btn.disabled = false;
+    }
+    return;
+  }
+  if (publicBaseUrlHost(input.value) === null) {
+    setPublicBaseUrlMessage('地址格式不正确', 'error');
+    input.focus();
+    return;
+  }
+  if (isBlockedPublicBaseUrl(input.value)) {
+    setPublicBaseUrlMessage('不能使用 localhost 或 127.0.0.1 这类自机地址', 'error');
+    input.focus();
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '检查';
+  setPublicBaseUrlMessage('正在检查地址...', '');
+  try {
+    const checked = await api(tournamentApi('/validate-base-url'), { publicBaseUrlOverride: candidate });
+    if (!checked.ok) {
+      setPublicBaseUrlMessage(checked.err || '地址无法访问', 'error');
+      input.focus();
+      return;
+    }
+    await saveTournamentConfig({ publicBaseUrlOverride: checked.publicBaseUrlOverride || candidate });
+    committedPublicBaseUrlInput = stripBaseUrlProtocol(checked.publicBaseUrlOverride || candidate);
+    input.value = committedPublicBaseUrlInput;
+    setPublicBaseUrlMessage('地址可访问，已保存', 'success');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '确认';
+  }
 }
 
 function isTournamentFinished(s) {
@@ -502,6 +820,27 @@ async function copyText(text) {
     ta.remove();
   }
 }
+async function copyOverlayUrl(btn) {
+  await copyText(document.getElementById('overlayUrl').textContent);
+  if (!btn) return;
+  btn.textContent = '已复制';
+  btn.classList.add('copied');
+  window.clearTimeout(copyOverlayUrl.timer);
+  copyOverlayUrl.timer = window.setTimeout(() => {
+    btn.textContent = '复制';
+    btn.classList.remove('copied');
+  }, 1200);
+}
+async function copyPlayerEntryUrl() {
+  await copyText(document.getElementById('playerEntryUrl').textContent);
+  const tip = document.querySelector('.player-qr-tip');
+  if (!tip) return;
+  tip.textContent = '已复制选手入口链接';
+  window.clearTimeout(copyPlayerEntryUrl.timer);
+  copyPlayerEntryUrl.timer = window.setTimeout(() => {
+    tip.textContent = '扫码进入选手个人页';
+  }, 1200);
+}
 function api(path, data = {}) {
   return fetch(`${path}`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -547,14 +886,15 @@ async function startSwiss() {
 async function nextRound() {
   // 下一轮：先递增轮次，再生成对位
   const res = await api(tournamentApi('/next-round'));
+  if (!res.ok) { alert(res.err || '无法进入下一轮'); if (res.state) render(res.state); return; }
   if (res.state) render(res.state);
-  const matchRes = await api(tournamentApi('/generate-matches'));
-  if (matchRes.state) render(matchRes.state);
 }
 async function endSwiss() { const res = await api(tournamentApi('/end-swiss')); if (res.state) render(res.state); }
 async function revertRound() {
   if (!confirm('确定要退回到上一轮吗？当前轮的对局结果将被清除。')) return;
-  await api(tournamentApi('/revert-round'));
+  const res = await api(tournamentApi('/revert-round'));
+  if (!res.ok) alert(res.err || '无法回退瑞士轮');
+  if (res.state) render(res.state);
 }
 async function confirmTop8() { const res = await api(tournamentApi('/enter-top8')); if (res.state) render(res.state); }
 async function cancelTop8() { const res = await api(tournamentApi('/cancel-top8')); if (res.state) render(res.state); }
@@ -605,6 +945,7 @@ function render(s) {
   // 顶栏
   const badge = document.getElementById('phaseBadge');
   const displayPhase = isTournamentFinished(s) ? 'done' : s.phase;
+  document.body.dataset.adminPhase = displayPhase || '';
   const labels = { setup:'等待开始', swiss:'瑞士轮', 'swiss-ended':'瑞士轮结束', top8:'淘汰赛', done:'已结束' };
   badge.className = 'phase-badge ' + (displayPhase === 'swiss' ? 'swiss' : displayPhase === 'swiss-ended' ? 'swiss-ended' : displayPhase === 'top8' ? 'top8' : displayPhase === 'done' ? 'done' : '');
   badge.textContent = labels[displayPhase] || '—';
@@ -623,7 +964,8 @@ function render(s) {
   document.getElementById('actualPlayers').textContent = n;
   document.getElementById('top8Ready').textContent = n >= 8 ? '✅' : '❌';
   document.getElementById('top8Warn').classList.toggle('show', n > 0 && n < 8);
-  document.getElementById('publicBaseUrlInput').value = s.publicBaseUrlOverride || s.publicBaseUrl || '';
+  committedPublicBaseUrlInput = stripBaseUrlProtocol(s.publicBaseUrlOverride);
+  document.getElementById('publicBaseUrlInput').value = committedPublicBaseUrlInput;
   document.getElementById('liveRoomCodeInput').value = s.liveRoomCode || '';
 
   const rs = roundStats(s.round, s.matches);
@@ -632,7 +974,7 @@ function render(s) {
   document.getElementById('btnStart').disabled = n < 2 || s.phase !== 'setup';
   document.getElementById('btnNext').disabled = s.phase !== 'swiss' || !allSwissDone || s.round >= s.swissRounds;
   document.getElementById('btnEndSwiss').disabled = s.phase !== 'swiss' || !allSwissDone;
-  document.getElementById('btnRevert').disabled = s.phase !== 'swiss' || s.round <= 0;
+  document.getElementById('btnRevert').disabled = s.phase !== 'swiss' || s.round <= 1;
   const canExport = isTournamentFinished(s);
   const exportBtn = document.getElementById('btnExportReport');
   exportBtn.disabled = !canExport;
@@ -844,18 +1186,45 @@ function renderOverlay(s) {
   const url = `${baseUrl}/t/${encodeURIComponent(s.tournamentId)}/overlay`;
   document.getElementById('overlayUrl').textContent = url;
   const frame = document.getElementById('overlayFrame');
+  updateOverlayPreviewScale();
   if (frame.getAttribute('src') !== previewUrl) { frame.src = previewUrl; frame.style.display = 'block'; }
   const names = { idle:'空闲', live:'直播中', result:'胜者展示(直播桌)', overview:'全场总览', 'top8-live':'淘汰赛直播', 'top8-result':'胜者展示(BO3)', 'top8-bracket':'淘汰赛对阵图', 'swiss-ended':'瑞士轮排名' };
   const live = s.currentLiveMatch;
   document.getElementById('overlayStateDisplay').innerHTML = `
-    <div class="overlay-state-row"><strong>叠加层：</strong><span class="overlay-state-value">${names[s.overlayState] || s.overlayState}</span></div>
-    <div class="overlay-state-row"><strong>比赛：</strong>${s.tournamentName || '—'}</div>
+    <div class="overlay-state-row"><strong>叠加层状态：</strong><span class="overlay-state-value">${names[s.overlayState] || s.overlayState}</span></div>
     ${live ? `<div class="overlay-state-row"><strong>直播桌：</strong>${live.p1} vs ${live.p2} · 桌${live.table}</div>` : ''}
     ${s.phase === 'top8' && live ? `<div class="overlay-state-row"><strong>BO3：</strong>${live.p1Wins||0} — ${live.p2Wins||0}</div>` : ''}
   `;
 }
 
 // ── 启动 ─────────────────────────────────────────────────
+const publicBaseUrlInput = document.getElementById('publicBaseUrlInput');
+const publicBaseUrlConfirmBtn = document.getElementById('publicBaseUrlConfirmBtn');
+publicBaseUrlConfirmBtn.addEventListener('pointerdown', () => { publicBaseUrlConfirming = true; });
+publicBaseUrlConfirmBtn.addEventListener('click', async () => {
+  try {
+    await confirmPublicBaseUrl();
+  } finally {
+    publicBaseUrlConfirming = false;
+  }
+});
+publicBaseUrlInput.addEventListener('blur', () => {
+  window.setTimeout(() => {
+    if (publicBaseUrlConfirming || document.activeElement === publicBaseUrlConfirmBtn) return;
+    cancelPublicBaseUrlEdit();
+  }, 0);
+});
+publicBaseUrlInput.addEventListener('input', () => setPublicBaseUrlMessage(''));
+publicBaseUrlInput.addEventListener('keydown', evt => {
+  if (evt.key === 'Enter') {
+    evt.preventDefault();
+    publicBaseUrlConfirmBtn.click();
+  } else if (evt.key === 'Escape') {
+    evt.preventDefault();
+    cancelPublicBaseUrlEdit();
+    publicBaseUrlInput.blur();
+  }
+});
 apiGet('/state').then(state => { if (state && state.phase) render(state); });
 </script>
 </body>

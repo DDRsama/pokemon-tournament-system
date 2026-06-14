@@ -1,6 +1,7 @@
 ﻿const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const https = require('https');
 const os = require('os');
 const { spawnSync } = require('child_process');
 const express = require('express');
@@ -45,6 +46,66 @@ function getPublicBaseUrl(req = null) {
     if (host) return `${proto}://${host}`;
   }
   return `http://${getLocalNetworkHost()}:${PORT}`;
+}
+
+function normalizePublicBaseUrlCandidate(value) {
+  let raw = String(value || '').trim();
+  if (!raw) return '';
+  if (!/^https?:\/\//i.test(raw)) raw = `http://${raw}`;
+  const parsed = new URL(raw);
+  if (parsed.protocol !== 'http:') throw new Error('目前只支持 http:// 地址');
+  parsed.hash = '';
+  parsed.search = '';
+  return parsed.toString().replace(/\/$/, '');
+}
+
+function isLoopbackHost(hostname) {
+  const host = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '');
+  return host === 'localhost'
+    || host === '::1'
+    || host === '0:0:0:0:0:0:0:1'
+    || host === '127.0.0.1'
+    || /^127\./.test(host);
+}
+
+function requestJson(url, timeoutMs = 3500) {
+  return new Promise((resolve) => {
+    const parsed = new URL(url);
+    const client = parsed.protocol === 'https:' ? https : http;
+    const req = client.get(parsed, { timeout: timeoutMs }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => {
+        body += chunk;
+        if (body.length > 1024 * 1024) req.destroy(new Error('response too large'));
+      });
+      res.on('end', () => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          resolve({ ok: false, err: `访问失败：HTTP ${res.statusCode}` });
+          return;
+        }
+        try {
+          resolve({ ok: true, json: JSON.parse(body) });
+        } catch (err) {
+          resolve({ ok: false, err: '访问成功，但返回内容不是有效状态数据' });
+        }
+      });
+    });
+    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.on('error', err => {
+      resolve({ ok: false, err: err.message === 'timeout' ? '访问超时' : `访问失败：${err.message}` });
+    });
+  });
+}
+
+async function validatePublicBaseUrlAccess(baseUrl, tournamentId) {
+  const stateUrl = `${baseUrl}/api/tournaments/${encodeURIComponent(tournamentId)}/state`;
+  const result = await requestJson(stateUrl);
+  if (!result.ok) return result;
+  if (!result.json || result.json.tournamentId !== tournamentId) {
+    return { ok: false, err: '访问成功，但没有返回当前比赛的状态' };
+  }
+  return { ok: true, checkedUrl: stateUrl };
 }
 
 function normalizeTop8MatchTables(state = currentState) {
@@ -93,6 +154,7 @@ function freshState(overrides = {}) {
     swissMatchHistory: [],
     swissMatchesArchive: [],
     swissRankingArchive: [],
+    swissRollbackSnapshots: [],
     playerProfiles: {},
     playerSessions: {},
     playerReports: {},
@@ -125,6 +187,7 @@ function restoreState(rawState) {
     lastResult: rawState.lastResult || null,
     _byeSet: restoreByeSet(rawState._byeSet),
     swissMatchesArchive: rawState.swissMatchesArchive || [],
+    swissRollbackSnapshots: rawState.swissRollbackSnapshots || [],
     playerProfiles: rawState.playerProfiles || {},
     playerSessions: rawState.playerSessions || {},
     playerReports: rawState.playerReports || {},
@@ -274,6 +337,38 @@ function syncSwissHistoryForRound(round) {
     .filter(m => m.round === round)
     .forEach(upsertSwissMatchHistory);
   rebuildSwissMatchesArchive();
+}
+
+function ensureSwissRollbackSnapshots() {
+  if (!Array.isArray(currentState.swissRollbackSnapshots)) currentState.swissRollbackSnapshots = [];
+  return currentState.swissRollbackSnapshots;
+}
+
+function createSwissRollbackSnapshot(reason) {
+  const snapshot = serializeCurrentState();
+  delete snapshot.swissRollbackSnapshots;
+  return {
+    reason,
+    fromRound: currentState.round,
+    at: Date.now(),
+    state: JSON.parse(JSON.stringify(snapshot)),
+  };
+}
+
+function pushSwissRollbackSnapshot(reason) {
+  const snapshots = ensureSwissRollbackSnapshots();
+  snapshots.push(createSwissRollbackSnapshot(reason));
+  const maxSnapshots = Math.max(8, (currentState.swissRounds || 0) + 2);
+  if (snapshots.length > maxSnapshots) snapshots.splice(0, snapshots.length - maxSnapshots);
+}
+
+function clearSwissRoundTransientState() {
+  clearResultTimer();
+  currentState.currentLiveMatch = null;
+  currentState.lastLiveMatch = null;
+  currentState.lastResult = null;
+  currentState.overlayState = 'overview';
+  currentState.playerReports = {};
 }
 
 function getCompletedSwissMatches() {
@@ -460,6 +555,7 @@ function startSwiss(rounds) {
   currentState.lastResult = null;
   currentState.overlayState = 'overview';
   currentState._byeSet = new Set();
+  currentState.swissRollbackSnapshots = [];
   currentState.playerReports = {};
   rebuildSwissMatchesArchive();
   generateRoundMatches();
@@ -544,22 +640,32 @@ function generateRoundMatches() {
 }
 
 function nextRound() {
+  if (currentState.phase !== 'swiss') return { ok: false, err: 'not in swiss phase' };
+  if (currentState.round >= currentState.swissRounds) return { ok: false, err: 'already at final swiss round' };
+  const roundMatches = currentState.matches.filter(m => m.round === currentState.round);
+  if (roundMatches.length === 0 || !roundMatches.every(m => m.done)) {
+    return { ok: false, err: 'current round is not complete' };
+  }
+  clearSwissRoundTransientState();
+  pushSwissRollbackSnapshot('next-round');
   currentState.round++;
-  currentState.currentLiveMatch = null;
-  currentState.lastResult = null;
-  currentState.overlayState = 'overview';
-  currentState.playerReports = {};
   generateRoundMatches();
+  return { ok: true };
 }
 
 function revertRound() {
-  if (currentState.phase !== 'swiss' || currentState.round <= 0) return;
-  currentState.matches = currentState.matches.filter(m => m.round !== currentState.round);
-  currentState.round--;
-  currentState.currentLiveMatch = null;
-  currentState.lastResult = null;
-  currentState.overlayState = 'overview';
-  currentState.playerReports = {};
+  if (currentState.phase !== 'swiss') return { ok: false, err: 'not in swiss phase' };
+  if (currentState.round <= 1) return { ok: false, err: 'cannot revert the first swiss round' };
+  const snapshots = ensureSwissRollbackSnapshots();
+  if (snapshots.length === 0) return { ok: false, err: 'no rollback snapshot available' };
+  const snapshot = snapshots.pop();
+  const remainingSnapshots = snapshots;
+  resetCurrentState({
+    ...snapshot.state,
+    swissRollbackSnapshots: remainingSnapshots,
+  });
+  clearSwissRoundTransientState();
+  return { ok: true };
 }
 
 function endSwiss() {
@@ -578,6 +684,7 @@ function endSwiss() {
   }));
   currentState.pendingTop8 = standings.filter(entry => !entry.dropped).slice(0, 8).map(entry => entry.player);
   currentState.swissRankingArchive = currentState.swissRanking.map(entry => ({ ...entry }));
+  currentState.swissRollbackSnapshots = [];
   currentState.phase = 'swiss-ended';
   currentState.currentLiveMatch = null;
   currentState.lastLiveMatch = null;
@@ -681,6 +788,7 @@ function applyDraw(matchId) {
       p1: match.p1,
       p2: match.p2,
       phase: currentState.phase,
+      draw: true,
       p1Wins: 0,
       p2Wins: 0,
     };
@@ -712,7 +820,7 @@ function applyResult(matchId, winnerId) {
       winner: match.winner,
       p1: match.p1,
       p2: match.p2,
-      phase: currentState.phase,
+      phase: match.phase || currentState.phase,
       p1Wins: match.p1Wins,
       p2Wins: match.p2Wins,
     };
@@ -744,6 +852,9 @@ function applyBo3Score(matchId, p1Wins, p2Wins) {
     match.done = true;
   }
   const isLive = currentState.currentLiveMatch && currentState.currentLiveMatch.id === matchId;
+  if (isLive) {
+    currentState.currentLiveMatch = { ...match };
+  }
   if (isLive && match.done) {
     clearResultTimer();
     currentState.overlayState = 'top8-result';
@@ -751,7 +862,7 @@ function applyBo3Score(matchId, p1Wins, p2Wins) {
       winner: match.winner,
       p1: match.p1,
       p2: match.p2,
-      phase: currentState.phase,
+      phase: match.phase || currentState.phase,
       p1Wins: match.p1Wins,
       p2Wins: match.p2Wins,
     };
@@ -771,30 +882,55 @@ function advanceBracket() {
   if (currentState.phase !== 'top8') return;
   const ms = currentState.matches;
   let changed = false;
-  const qfDone = ms.filter(m => m.phase === 'Quarter Finals').length > 0 && ms.filter(m => m.phase === 'Quarter Finals').every(m => m.done);
-  const sfDone = ms.filter(m => m.phase === 'Semi Finals').length > 0 && ms.filter(m => m.phase === 'Semi Finals').every(m => m.done);
-  if (qfDone && !ms.some(m => m.phase === 'Semi Finals')) {
-    const qf = ms.filter(m => m.phase === 'Quarter Finals');
-    ms.push(
-      { id: 'sf1', table: 1, p1: qf.find(m => m.id === 'qf1').winner, p2: qf.find(m => m.id === 'qf2').winner, winner: null, done: false, phase: 'Semi Finals', bracketRound: 2, p1Wins: 0, p2Wins: 0, liveRoomCode: null, wasLive: false },
-      { id: 'sf2', table: 2, p1: qf.find(m => m.id === 'qf3').winner, p2: qf.find(m => m.id === 'qf4').winner, winner: null, done: false, phase: 'Semi Finals', bracketRound: 2, p1Wins: 0, p2Wins: 0, liveRoomCode: null, wasLive: false },
-    );
+
+  const ensureMatch = (id, phase, table, bracketRound) => {
+    let match = ms.find(m => m.id === id);
+    if (!match) {
+      match = { id, table, p1: null, p2: null, winner: null, done: false, phase, bracketRound, p1Wins: 0, p2Wins: 0, liveRoomCode: null, wasLive: false };
+      ms.push(match);
+      changed = true;
+    }
+    return match;
+  };
+  const setSlot = (match, slot, player) => {
+    if (!match || !player || match[slot] === player) return;
+    if (match.done) return;
+    match[slot] = player;
     changed = true;
+  };
+  const loserOf = (match) => {
+    if (!match || !match.done || !match.winner) return null;
+    if (match.winner === match.p1) return match.p2;
+    if (match.winner === match.p2) return match.p1;
+    return null;
+  };
+
+  const qf1 = ms.find(m => m.id === 'qf1');
+  const qf2 = ms.find(m => m.id === 'qf2');
+  const qf3 = ms.find(m => m.id === 'qf3');
+  const qf4 = ms.find(m => m.id === 'qf4');
+  if ([qf1, qf2].some(m => m && m.done && m.winner)) {
+    const sf1 = ensureMatch('sf1', 'Semi Finals', 1, 2);
+    setSlot(sf1, 'p1', qf1 && qf1.done ? qf1.winner : null);
+    setSlot(sf1, 'p2', qf2 && qf2.done ? qf2.winner : null);
   }
-  if (sfDone && !ms.some(m => m.phase === 'Finals')) {
-    const sf = ms.filter(m => m.phase === 'Semi Finals');
-    const sf1 = sf.find(m => m.id === 'sf1');
-    const sf2 = sf.find(m => m.id === 'sf2');
-    const finalP1 = sf1.winner;
-    const finalP2 = sf2.winner;
-    const bronzeP1 = sf1.p1 === finalP1 ? sf1.p2 : sf1.p1;
-    const bronzeP2 = sf2.p1 === finalP2 ? sf2.p2 : sf2.p1;
-    ms.push(
-      { id: 'final', table: 1, p1: finalP1, p2: finalP2, winner: null, done: false, phase: 'Finals', bracketRound: 3, p1Wins: 0, p2Wins: 0, liveRoomCode: null, wasLive: false },
-      { id: 'bronze', table: 2, p1: bronzeP1, p2: bronzeP2, winner: null, done: false, phase: 'Bronze Match', bracketRound: 3, p1Wins: 0, p2Wins: 0, liveRoomCode: null, wasLive: false },
-    );
-    changed = true;
+  if ([qf3, qf4].some(m => m && m.done && m.winner)) {
+    const sf2 = ensureMatch('sf2', 'Semi Finals', 2, 2);
+    setSlot(sf2, 'p1', qf3 && qf3.done ? qf3.winner : null);
+    setSlot(sf2, 'p2', qf4 && qf4.done ? qf4.winner : null);
   }
+
+  const sf1 = ms.find(m => m.id === 'sf1');
+  const sf2 = ms.find(m => m.id === 'sf2');
+  if ([sf1, sf2].some(m => m && m.done && m.winner)) {
+    const final = ensureMatch('final', 'Finals', 1, 3);
+    const bronze = ensureMatch('bronze', 'Bronze Match', 2, 3);
+    setSlot(final, 'p1', sf1 && sf1.done ? sf1.winner : null);
+    setSlot(final, 'p2', sf2 && sf2.done ? sf2.winner : null);
+    setSlot(bronze, 'p1', loserOf(sf1));
+    setSlot(bronze, 'p2', loserOf(sf2));
+  }
+
   if (changed) {
     saveState();
     broadcast();
@@ -1528,6 +1664,26 @@ app.post('/api/tournaments/:tournamentId/players', (req, res) => {
   res.json({ ok: true, state: buildClientState() });
 });
 
+app.post('/api/tournaments/:tournamentId/validate-base-url', async (req, res) => {
+  const ok = syncTournamentRequest(req.params.tournamentId);
+  if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
+  let candidate = '';
+  try {
+    candidate = normalizePublicBaseUrlCandidate(req.body.publicBaseUrlOverride || '');
+    if (!candidate) return res.json({ ok: true, publicBaseUrlOverride: '' });
+    const parsed = new URL(candidate);
+    if (isLoopbackHost(parsed.hostname)) {
+      return res.json({ ok: false, err: '不能使用 localhost 或 127.0.0.1 这类自机地址' });
+    }
+  } catch (err) {
+    return res.json({ ok: false, err: err.message || '地址格式不正确' });
+  }
+
+  const result = await validatePublicBaseUrlAccess(candidate, req.params.tournamentId);
+  if (!result.ok) return res.json({ ok: false, err: result.err || '地址无法访问' });
+  res.json({ ok: true, publicBaseUrlOverride: candidate, checkedUrl: result.checkedUrl });
+});
+
 app.post('/api/tournaments/:tournamentId/config', (req, res) => {
   const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
@@ -1634,7 +1790,8 @@ app.post('/api/tournaments/:tournamentId/start-swiss', (req, res) => {
 app.post('/api/tournaments/:tournamentId/next-round', (req, res) => {
   const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
-  nextRound();
+  const result = nextRound();
+  if (!result.ok) return res.json({ ok: false, err: result.err, state: buildClientState() });
   saveState();
   broadcast();
   res.json({ ok: true, state: buildClientState() });
@@ -1658,7 +1815,8 @@ app.post('/api/tournaments/:tournamentId/end-swiss', (req, res) => {
 app.post('/api/tournaments/:tournamentId/revert-round', (req, res) => {
   const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
-  revertRound();
+  const result = revertRound();
+  if (!result.ok) return res.json({ ok: false, err: result.err, state: buildClientState() });
   saveState();
   broadcast();
   res.json({ ok: true, state: buildClientState() });

@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>选手端</title>
+<title>Pokemon Tournament System</title>
+<link rel="icon" type="image/svg+xml" href="/shared/favicon.svg">
 <link rel="stylesheet" href="/shared/theme.css">
 <style>
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: var(--pto-font-sans);
+    font-family: var(--pts-font-sans);
     background:
       radial-gradient(circle at top, rgba(251,191,36,0.18), transparent 28%),
       linear-gradient(180deg, #08111f 0%, #101a2e 100%);
@@ -478,7 +479,7 @@ let playerName = localStorage.getItem(storageNameKey) || '';
 let playerId = params.get('playerId') || localStorage.getItem(storageIdKey) || '';
 let lastView = null;
 if (!tournamentId) {
-  document.body.innerHTML = '<div style="padding:40px;color:#fff;font-family:sans-serif;">Tournament not found</div>';
+  document.body.innerHTML = '<div style="padding:40px;color:#fff;font-family:var(--pts-font-sans),sans-serif;">Tournament not found</div>';
 }
 
 function qs(id) { return document.getElementById(id); }
@@ -550,8 +551,14 @@ function renderHistory(history) {
     .join('');
 }
 
+function setTournamentTitle(name) {
+  const title = (name || '').trim();
+  document.title = title || 'Pokemon Tournament System';
+}
+
 function renderPlayerView(view) {
   lastView = view;
+  setTournamentTitle(view.tournamentName);
   qs('tournamentName').textContent = view.tournamentName || '本场比赛';
   qs('heroSub').textContent = '本页面会根据比赛进程自动刷新状态。';
   qs('loginCard').classList.add('hidden');
@@ -724,6 +731,7 @@ if (playerName || playerId) {
   refreshPlayerView();
 } else {
   api(tournamentApi('/state')).then(state => {
+    setTournamentTitle(state.tournamentName);
     qs('tournamentName').textContent = state.tournamentName || '本场比赛';
   }).catch(() => {});
 }

@@ -7,3 +7,9 @@ data/reports/
 .env
 .DS_Store
 Thumbs.db
+backups/
+.codex-server.*.log
+obs-program-screenshot.png
+AGENTS.md
+public/overlay/index.before-split-*.html
+public/overlay/index.html.backup-*
