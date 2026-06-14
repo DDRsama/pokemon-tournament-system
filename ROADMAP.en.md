@@ -44,6 +44,19 @@ Theme: frontend UI polish, full overlay redraw, and overlay structural modulariz
 - Fixed report-export paths and APIs under single-tournament routing.
 - Fixed tournament binding for overlay, player, and admin pages, including legacy-entry redirects.
 
+## Version 2.2.5-dev.0
+
+Status: source development snapshot, no GitHub Release, no Docker image published
+
+Theme: server-side engineering refactor and unit test expansion
+
+### Planned Scope
+
+- Split the server from one large entry file into app, config, core, storage, reports, realtime, and routes modules.
+- Keep user-visible behavior, frontend routes, API paths, and JSON data format compatible with 2.2.0.
+- Add native Node.js unit tests for Swiss rounds, standings, Top 8, storage, player views, and report data.
+- Tighten low-risk validation for safe tournament IDs, BO3 score ranges, and legal match winners.
+- Use this as a source-only foundation for later development; push source and tag only, without publishing Docker Hub images.
 ## Version 2.3
 
 Theme: post-modularization cleanup and component preparation

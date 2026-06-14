@@ -13,7 +13,9 @@
 
 PTS combines admin management, livestream overlays, player-facing mobile pages, Swiss rounds, Top 8 playoffs, report export, and Docker deployment in one system.
 
-Current version: `2.2.0`
+Latest stable version: `2.2.0`
+
+Current source development snapshot: `2.2.5-dev.0` (source-only engineering refactor, no Docker image published)
 
 Roadmap: [ROADMAP.en.md](./ROADMAP.en.md)
 
