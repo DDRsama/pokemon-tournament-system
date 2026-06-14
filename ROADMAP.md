@@ -44,6 +44,19 @@
 - 修复战报导出路径和接口跟随单场比赛路由的问题。
 - 修复叠加层、选手端、后台端的比赛绑定和旧入口跳转。
 
+## Version 2.2.5-dev.0
+
+状态：源码开发快照，不创建 GitHub Release，不发布 Docker 镜像
+
+主题：服务端工程重构与单元测试补强
+
+### 计划内容
+
+- 将服务端从单一大型入口拆分为 app、config、core、storage、reports、realtime 和 routes 模块。
+- 保持 2.2.0 的用户可见行为、前端路由、API 路径和 JSON 数据格式不变。
+- 增加 Node 原生 unit test，覆盖瑞士轮、排名、Top 8、存储、玩家视图和战报数据。
+- 收紧低风险输入校验，包括安全 tournamentId、BO3 分数范围和 winner 合法性。
+- 作为后续版本开发基础，仅上传源码与 tag，不发布 Docker Hub 镜像。
 ## Version 2.3
 
 主题：模块化后的维护性整理与组件准备
