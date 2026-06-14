@@ -59,7 +59,21 @@ Theme: server-side engineering refactor and unit test expansion
 - Use this as a source-only foundation for later development; push source and tag only, without publishing Docker Hub images.
 ## Version 2.3
 
-Theme: post-modularization cleanup and component preparation
+Theme: tournament rules and flow configuration
+
+### Planned Work
+
+- Add structured tournament rule settings during creation.
+- Cover Swiss, group stage, and playoff stage configuration.
+- Support BO counts, plus single-elimination and double-elimination playoff modes.
+- Add baseline fields for singles and team events.
+- Let the admin, player, overlay, and report flows read the same rule data.
+- Backfill default settings for older JSON files to stay compatible.
+- Add coverage for rule-related flows so advancement, match handling, and reports stay stable.
+
+## Version 2.3.5-dev
+
+Theme: overlay componentization and theme preparation
 
 ### Planned Work
 
@@ -67,18 +81,11 @@ Theme: post-modularization cleanup and component preparation
 - Extract shared components for player nameplates, score blocks, phase labels, logo zones, connector lines, result badges, and QR blocks.
 - Split overlay CSS further into base, components, and view-specific styles.
 - Improve checks around state routing, View lifecycle, and OBS-safe rendering.
-- Prepare the codebase for future theme systems, language systems, and richer tournament settings.
+- Prepare the structure for future theme work, without introducing full theme switching yet.
 
 ## Version 2.4
 
-Theme: themes, languages, and tournament setup options
-
-### Theme System
-
-- Separate theme tokens from layout themes.
-- Theme tokens cover colors, shadows, borders, typography, logo assets, transparency, and motion timing.
-- Layout themes may change component structure and information hierarchy, not only colors.
-- Official-style scorebug layouts should become future layout themes, not simple recolors of the current community-event style.
+Theme: language system and theme system
 
 ### Language System
 
@@ -86,7 +93,9 @@ Theme: themes, languages, and tournament setup options
 - Keep tournament names and player names unchanged while translating system labels.
 - Prepare home, admin, player, and overlay pages for language switching.
 
-### Tournament Creation Settings
+### Theme System
 
-- Add structured tournament settings during creation.
-- Planned settings include Swiss BO count, Top 8 enabled/disabled, Top 8 BO count, open/hidden team-list mode, and future entertainment-event formats.
+- Separate theme tokens from layout themes.
+- Theme tokens cover colors, shadows, borders, typography, logo assets, transparency, and motion timing.
+- Layout themes may change component structure and information hierarchy, not only colors.
+- Official-style scorebug layouts should become future layout themes, not simple recolors of the current community-event style.
