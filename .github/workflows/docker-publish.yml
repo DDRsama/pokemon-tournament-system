@@ -3,13 +3,63 @@ name: Build and Push Docker Image
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: Optional beta version tag, for example 3.0.0-beta
+        required: false
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Resolve publish channel
+        id: channel
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          INPUT_VERSION_TAG: ${{ inputs.version_tag }}
+          DOCKER_IMAGE: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}
+        run: |
+          set -euo pipefail
+
+          image="${DOCKER_IMAGE}"
+          if [ "${EVENT_NAME}" = "release" ]; then
+            version="${RELEASE_TAG_NAME#v}"
+            if [ "${RELEASE_PRERELEASE}" = "true" ]; then
+              channel="beta"
+              floating_tag="beta"
+            else
+              channel="stable"
+              floating_tag="latest"
+            fi
+          else
+            channel="beta"
+            floating_tag="beta"
+            version="${INPUT_VERSION_TAG#v}"
+            if [ -z "${version}" ]; then
+              short_sha="$(git rev-parse --short HEAD)"
+              version="manual-beta-${short_sha}"
+            fi
+          fi
+
+          {
+            echo "channel=${channel}"
+            echo "version=${version}"
+            echo "floating_tag=${floating_tag}"
+            echo "image=${image}"
+            echo "tags<<EOF"
+            echo "${image}:${version}"
+            echo "${image}:${floating_tag}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -21,15 +71,12 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=raw,value=latest
+          images: ${{ steps.channel.outputs.image }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.channel.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

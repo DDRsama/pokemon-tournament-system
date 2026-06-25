@@ -5,6 +5,7 @@ const {
   hasPlayedEachOther,
   pairPlayersWithinGroup,
   createRoundMatches,
+  recommendedSwissRoundsForPlayerCount,
   startSwiss,
   canAdvanceRound,
   endSwiss,
@@ -53,6 +54,19 @@ test('createRoundMatches assigns BYE for odd player count and avoids repeat BYE'
   assert.equal(byeMatch.done, true);
 });
 
+test('recommendedSwissRoundsForPlayerCount follows entrant-count buckets', () => {
+  assert.equal(recommendedSwissRoundsForPlayerCount(1), 0);
+  assert.equal(recommendedSwissRoundsForPlayerCount(2), 1);
+  assert.equal(recommendedSwissRoundsForPlayerCount(8), 3);
+  assert.equal(recommendedSwissRoundsForPlayerCount(16), 4);
+  assert.equal(recommendedSwissRoundsForPlayerCount(32), 5);
+  assert.equal(recommendedSwissRoundsForPlayerCount(64), 6);
+  assert.equal(recommendedSwissRoundsForPlayerCount(128), 7);
+  assert.equal(recommendedSwissRoundsForPlayerCount(226), 8);
+  assert.equal(recommendedSwissRoundsForPlayerCount(409), 9);
+  assert.equal(recommendedSwissRoundsForPlayerCount(410), 10);
+});
+
 test('startSwiss initializes state and first round', () => {
   const state = freshState({ players: ['A', 'B', 'C', 'D'] });
   const ok = startSwiss(state, 3, standings(state.players));
@@ -61,6 +75,26 @@ test('startSwiss initializes state and first round', () => {
   assert.equal(state.round, 1);
   assert.equal(state.swissRounds, 3);
   assert.equal(state.matches.length, 2);
+});
+
+test('startSwiss keeps stage metadata on generated matches', () => {
+  const state = freshState({
+    players: ['A', 'B', 'C', 'D'],
+    stages: [
+      {
+        id: 'stage_swiss_1',
+        type: 'swiss',
+        role: 'qualification',
+        name: 'Swiss',
+        matchRules: { bestOf: 1, allowDraw: true, scoreMode: 'match' },
+        swiss: { rounds: 3 },
+      },
+    ],
+  });
+  const ok = startSwiss(state, 5, standings(state.players), { stageId: 'stage_swiss_1' });
+  assert.equal(ok, true);
+  assert.equal(state.swissRounds, 3);
+  assert.equal(state.matches.every(match => match.stageId === 'stage_swiss_1'), true);
 });
 
 test('canAdvanceRound blocks incomplete current round', () => {
@@ -79,6 +113,16 @@ test('canAdvanceRound allows completed current round', () => {
     round: 1,
     swissRounds: 3,
     matches: [{ round: 1, done: true }],
+  });
+  assert.equal(canAdvanceRound(state).ok, true);
+});
+
+test('canAdvanceRound allows adding a round after the planned final round is complete', () => {
+  const state = freshState({
+    phase: 'swiss',
+    round: 3,
+    swissRounds: 3,
+    matches: [{ round: 3, done: true }],
   });
   assert.equal(canAdvanceRound(state).ok, true);
 });

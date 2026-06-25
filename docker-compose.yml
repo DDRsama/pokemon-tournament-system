@@ -2,7 +2,7 @@
 services:
   app:
     build: .
-    image: pokemon-tournament-system:2.2.5-dev.0
+    image: pokemon-tournament-system:3.0.0-beta
     environment:
       PORT: "18765"
       PUBLIC_BASE_URL: ""

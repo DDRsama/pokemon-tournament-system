@@ -16,6 +16,50 @@
       linear-gradient(180deg, #08111f 0%, #101a2e 100%);
     color: #e6edf8;
     min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .topbar {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 24px;
+    border-bottom: 1px solid rgba(71, 85, 105, 0.7);
+    background: rgba(30, 41, 59, 0.92);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: var(--pts-text-strong);
+    font-size: 15px;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  .brand-mark {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+  }
+  .brand-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .version {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    color: var(--pts-text-muted);
+    background: rgba(15, 23, 42, 0.45);
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
   }
   .wrap {
     width: min(100%, 520px);
@@ -29,6 +73,7 @@
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
     padding: 20px;
     backdrop-filter: blur(12px);
+    min-width: 0;
   }
   .hero {
     text-align: center;
@@ -123,12 +168,31 @@
     border: 1px solid rgba(34, 197, 94, 0.35);
     color: #bbf7d0;
   }
+  .prompt-box {
+    margin-top: 14px;
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(96, 165, 250, 0.28);
+    color: #cbd5e1;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .prompt-title {
+    color: #f8fafc;
+    font-size: 15px;
+    font-weight: 900;
+    margin-bottom: 5px;
+  }
   .player-name {
     font-size: 34px;
     font-weight: 900;
     text-align: center;
     margin: 6px 0 12px;
     letter-spacing: 0.02em;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
   .meta-grid {
     display: grid;
@@ -170,7 +234,7 @@
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.08));
     border: 1px solid rgba(245, 158, 11, 0.3);
   }
-  .live-room .meta-label { color: #fbbf24; }
+  .live-room .meta-label { color: #c7d2fe; }
   .live-room .meta-label {
     font-size: 11px;
     letter-spacing: 0.06em;
@@ -348,9 +412,92 @@
     color: #94a3b8;
     font-size: 12px;
   }
+  .identity-box {
+    margin-top: 16px;
+    padding: 14px;
+    border-radius: 16px;
+    background: rgba(15,23,42,0.94);
+    border: 1px solid rgba(148,163,184,0.14);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .identity-main {
+    min-width: 0;
+  }
+  .identity-title {
+    margin-top: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #f8fafc;
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .identity-action {
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 12px;
+    background: #334155;
+    color: #e2e8f0;
+    padding: 10px 12px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .identity-action.is-primary {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #fff;
+  }
+  .player-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(2, 6, 23, 0.72);
+    backdrop-filter: blur(10px);
+  }
+  .player-confirm-box {
+    width: min(100%, 360px);
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: #111827;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+    padding: 18px;
+  }
+  .player-confirm-box h2 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 18px;
+    line-height: 1.35;
+  }
+  .player-confirm-box p {
+    margin: 10px 0 0;
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  @media (max-width: 620px) {
+    .topbar {
+      padding: 0 16px;
+    }
+  }
 </style>
 </head>
 <body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-mark" src="/shared/favicon.svg" alt="">
+      <span class="brand-text">Pokemon Tournament System</span>
+    </div>
+    <div class="version">3.0-beta</div>
+  </header>
+
   <div class="wrap">
     <div class="hero">
       <div class="eyebrow">PLAYER PORTAL</div>
@@ -365,6 +512,14 @@
         <button class="btn btn-primary" id="loginBtn">进入比赛</button>
       </div>
       <div class="status-box hidden" id="loginStatus"></div>
+      <div class="prompt-box hidden" id="profilePromptBox">
+        <div class="prompt-title">未找到选手档案</div>
+        <div>你可以登记为长期选手档案，也可以只临时参加本场比赛。临时参赛不会获得联赛积分。</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="registerProfileBtn">登记档案并参赛</button>
+          <button class="btn btn-secondary" id="guestLoginBtn">临时参赛</button>
+        </div>
+      </div>
       <div class="status-box warn hidden" id="nameExistsBox">
         该名称已经存在。<br>如果这是你本人，请确认返回个人页。
         <div class="btn-row">
@@ -377,6 +532,15 @@
     <div class="card hidden" id="playerCard">
       <div class="player-name" id="playerNameLabel">选手</div>
       <div class="sub" id="phaseSummary">等待比赛开始</div>
+
+      <div class="identity-box" id="identityBox">
+        <div class="identity-main">
+          <div class="meta-label">参赛身份</div>
+          <div class="identity-title" id="identityLabel">本场比赛选手</div>
+        </div>
+        <a class="identity-action" href="/player/" id="playerCenterLink">选手中心</a>
+        <button class="identity-action is-primary hidden" type="button" id="upgradeProfileBtn">登记档案</button>
+      </div>
 
       <div class="live-room hidden" id="liveRoomBox">
         <div class="meta-label">直播房号</div>
@@ -470,12 +634,24 @@
   </div>
 
 <script>
-const storageNameKey = 'pto2_player_name';
-const storageIdKey = 'pto2_player_id';
+const legacyStorageNameKey = 'pto2_player_name';
+const legacyStorageIdKey = 'pto2_player_id';
+const centerProfileIdKey = 'pts_player_center_profile_id';
 const params = new URLSearchParams(location.search);
 const routeMatch = location.pathname.match(/^\/t\/([^/]+)\/player-login\/?$/);
 const tournamentId = routeMatch ? decodeURIComponent(routeMatch[1]) : '';
-let playerName = localStorage.getItem(storageNameKey) || '';
+const storageScope = tournamentId ? `pto2_${tournamentId}` : 'pto2_unknown';
+const storageNameKey = `${storageScope}_player_name`;
+const storageIdKey = `${storageScope}_player_id`;
+const launchName = (params.get('name') || params.get('playerName') || '').trim();
+const launchProfileId = (params.get('profileId') || '').trim();
+const storedName = localStorage.getItem(storageNameKey) || '';
+const safeStoredName = looksLikePlayerId(storedName) ? '' : storedName;
+const suggestedLoginName = looksLikePlayerId(launchName) ? '' : launchName;
+if (storedName && !safeStoredName) localStorage.removeItem(storageNameKey);
+if (launchProfileId) localStorage.setItem(centerProfileIdKey, launchProfileId);
+let activeProfileId = launchProfileId || localStorage.getItem(centerProfileIdKey) || '';
+let playerName = safeStoredName;
 let playerId = params.get('playerId') || localStorage.getItem(storageIdKey) || '';
 let lastView = null;
 if (!tournamentId) {
@@ -483,6 +659,16 @@ if (!tournamentId) {
 }
 
 function qs(id) { return document.getElementById(id); }
+
+function escHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[ch]));
+}
 
 function setStatus(text, cls = '') {
   const el = qs('loginStatus');
@@ -494,6 +680,12 @@ function setStatus(text, cls = '') {
 function hideLoginAux() {
   qs('loginStatus').classList.add('hidden');
   qs('nameExistsBox').classList.add('hidden');
+  qs('profilePromptBox').classList.add('hidden');
+}
+
+function forgetCenterProfile() {
+  activeProfileId = '';
+  localStorage.removeItem(centerProfileIdKey);
 }
 
 function tournamentApi(path) {
@@ -512,14 +704,73 @@ async function api(path, data = null) {
   return await res.json();
 }
 
+function playerConfirm(message, options = {}) {
+  const {
+    title = '请确认',
+    okText = '确认',
+    cancelText = '取消',
+  } = options;
+  document.getElementById('playerConfirmOverlay')?.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'playerConfirmOverlay';
+  overlay.className = 'player-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="player-confirm-box" role="dialog" aria-modal="true" aria-labelledby="playerConfirmTitle">
+      <h2 id="playerConfirmTitle"></h2>
+      <p id="playerConfirmMessage"></p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-player-confirm-cancel></button>
+        <button class="btn btn-primary" type="button" data-player-confirm-ok></button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#playerConfirmTitle').textContent = title;
+  overlay.querySelector('#playerConfirmMessage').textContent = message || '';
+  overlay.querySelector('[data-player-confirm-cancel]').textContent = cancelText;
+  overlay.querySelector('[data-player-confirm-ok]').textContent = okText;
+  return new Promise(resolve => {
+    const cleanup = value => {
+      overlay.remove();
+      resolve(value);
+    };
+    overlay.addEventListener('click', evt => {
+      if (evt.target === overlay) cleanup(false);
+    });
+    overlay.querySelector('[data-player-confirm-cancel]').addEventListener('click', () => cleanup(false));
+    overlay.querySelector('[data-player-confirm-ok]').addEventListener('click', () => cleanup(true));
+    overlay.querySelector('[data-player-confirm-cancel]').focus();
+  });
+}
+
 function phaseText(phase) {
   return {
     setup: '报名阶段',
     swiss: '瑞士轮',
     'swiss-ended': '瑞士轮已结束',
+    groups: '小组赛',
+    'groups-ended': '小组赛已结束',
     top8: '淘汰赛',
+    double_elimination: '双败淘汰',
+    'double_elimination-ended': '双败淘汰已结束',
     done: '比赛结束',
   }[phase] || phase || '-';
+}
+
+function stageLabel(label) {
+  return {
+    groups: '小组赛',
+    double_elimination: '双败淘汰',
+    winners: '胜者组',
+    losers: '败者组',
+    grand_final: '总决赛',
+    'Grand Final': '总决赛',
+    'Grand Final Reset': '总决赛加赛',
+    'Quarter Finals': '八强赛',
+    'Semi Finals': '半决赛',
+    'Bronze Match': '季军赛',
+    Finals: '决赛',
+  }[label] || label || '对局';
 }
 
 function renderRecord(record) {
@@ -535,25 +786,88 @@ function renderHistory(history) {
   }
   list.innerHTML = history
     .map(item => {
-      const label = item.phase || (item.round ? `第 ${item.round} 轮` : '对局');
+      const label = stageLabel(item.phase || (item.round ? `第 ${item.round} 轮` : '对局'));
       const resultText = item.result === 'win' ? '胜' : item.result === 'loss' ? '负' : '平';
       const resultClass = item.result === 'win' ? 'win' : item.result === 'loss' ? 'loss' : 'draw';
       return `
         <div class="history-item">
           <div class="history-top">
-            <span>${label}</span>
+            <span>${escHtml(label)}</span>
             <span>桌 ${item.table || '-'}${item.wasLive ? ' 📺' : ''}</span>
           </div>
-          <div class="history-main">对手：${item.opponent || '-'} · <span class="${resultClass}">${resultText}</span></div>
+          <div class="history-main">对手：${escHtml(item.opponent || '-')} · <span class="${resultClass}">${resultText}</span></div>
         </div>
       `;
     })
     .join('');
 }
 
+function renderIdentitySummary(view) {
+  const hasProfile = !!view.globalProfileId;
+  qs('identityLabel').textContent = hasProfile
+    ? `已绑定档案：${view.playerName || playerName || '选手'}`
+    : '临时参赛：本场可比赛，不计入联赛积分';
+  qs('playerCenterLink').href = hasProfile
+    ? `/player/?profileId=${encodeURIComponent(view.globalProfileId)}`
+    : '/player/';
+  qs('playerCenterLink').classList.toggle('hidden', !hasProfile);
+  qs('upgradeProfileBtn').classList.toggle('hidden', hasProfile);
+}
+
 function setTournamentTitle(name) {
   const title = (name || '').trim();
   document.title = title || 'Pokemon Tournament System';
+}
+
+function looksLikePlayerId(value) {
+  return /^pl_\d+_[a-z0-9]+$/i.test(String(value || ''));
+}
+
+function isUsablePlayerView(view) {
+  if (!view || !(view.ok !== false)) return false;
+  if (!view.playerName || looksLikePlayerId(view.playerName)) return false;
+  if (!view.inPool) return false;
+  return true;
+}
+
+function removePlayerIdFromUrl() {
+  const url = new URL(location.href);
+  if (!url.searchParams.has('playerId')) return;
+  url.searchParams.delete('playerId');
+  history.replaceState({}, '', url.toString());
+}
+
+function resetPlayerIdentity() {
+  localStorage.removeItem(storageNameKey);
+  localStorage.removeItem(storageIdKey);
+  localStorage.removeItem(legacyStorageNameKey);
+  localStorage.removeItem(legacyStorageIdKey);
+  removePlayerIdFromUrl();
+  playerName = '';
+  playerId = '';
+  lastView = null;
+}
+
+function showLoginCard(message = '', options = {}) {
+  const suggestedName = options.suggestedName && !looksLikePlayerId(options.suggestedName)
+    ? options.suggestedName
+    : '';
+  resetPlayerIdentity();
+  qs('playerCard').classList.add('hidden');
+  qs('loginCard').classList.remove('hidden');
+  qs('playerNameInput').value = suggestedName;
+  hideLoginAux();
+  if (message) setStatus(message, options.statusClass || 'warn');
+}
+
+async function loadTournamentHeader() {
+  try {
+    const state = await api(tournamentApi('/state'));
+    setTournamentTitle(state.tournamentName);
+    qs('tournamentName').textContent = state.tournamentName || '本场比赛';
+    qs('heroSub').textContent = '输入选手名称以进入本场比赛个人页。';
+    if (!playerName && !playerId && suggestedLoginName) qs('playerNameInput').value = suggestedLoginName;
+  } catch (err) {}
 }
 
 function renderPlayerView(view) {
@@ -567,6 +881,7 @@ function renderPlayerView(view) {
   qs('phaseLabel').textContent = phaseText(view.phase);
   renderRecord(view.record);
   renderHistory(view.history);
+  renderIdentitySummary(view);
 
   qs('activeMatchBox').classList.add('hidden');
   qs('swissSummaryBox').classList.add('hidden');
@@ -576,7 +891,8 @@ function renderPlayerView(view) {
   qs('liveTablePill').classList.add('hidden');
   qs('liveRoomBox').classList.toggle('hidden', !view.liveRoomCode);
   if (view.liveRoomCode) qs('liveRoomCode').textContent = view.liveRoomCode;
-  qs('recordLabel').textContent = view.phase === 'top8' ? '瑞士轮战绩' : '当前战绩';
+  const stagePhases = ['top8', 'groups', 'groups-ended', 'double_elimination', 'double_elimination-ended'];
+  qs('recordLabel').textContent = stagePhases.includes(view.phase) ? '阶段前战绩' : '当前战绩';
 
   if (view.mode === 'registration') {
     qs('phaseSummary').textContent = '比赛尚未开始，当前可以报名。';
@@ -586,11 +902,12 @@ function renderPlayerView(view) {
     const match = view.activeMatch;
     const opponent = match.p1 === view.playerName ? match.p2 : match.p1;
     qs('phaseSummary').textContent = '本轮对局进行中。';
-    qs('roundPill').textContent = match.phase || `ROUND ${match.round || view.round}`;
+    qs('roundPill').textContent = stageLabel(match.phase || match.groupLabel || match.bracket || (match.round ? `ROUND ${match.round || view.round}` : phaseText(view.phase)));
     qs('liveTablePill').classList.toggle('hidden', !view.isLiveTable);
     qs('tableNumber').textContent = match.table || '-';
     qs('opponentName').textContent = opponent || '-';
-    if (view.phase === 'top8') {
+    const usesGameScore = !!match.usesGameScore || view.phase === 'top8' || view.phase === 'double_elimination' || !!match.phase || !!match.bracket || match.stagePhase === 'double_elimination';
+    if (usesGameScore) {
       const myWins = match.p1 === view.playerName ? (match.p1Wins || 0) : (match.p2Wins || 0);
       const oppWins = match.p1 === view.playerName ? (match.p2Wins || 0) : (match.p1Wins || 0);
       qs('bo3ScoreGrid').classList.remove('hidden');
@@ -609,6 +926,11 @@ function renderPlayerView(view) {
     qs('summaryOmw').textContent = Number(view.standings.omw || 0).toFixed(3);
     qs('summaryOow').textContent = Number(view.standings.oow || 0).toFixed(3);
     qs('swissSummaryBox').classList.remove('hidden');
+  } else if (view.mode === 'top8-waiting') {
+    qs('bo3ScoreGrid').classList.add('hidden');
+    qs('phaseSummary').textContent = view.phase === 'groups-ended'
+      ? '小组赛已结束，等待淘汰赛开始。'
+      : '等待下一场对局。';
   } else if (view.mode === 'final-result') {
     qs('bo3ScoreGrid').classList.add('hidden');
     qs('phaseSummary').textContent = '你的本场比赛已经结束。';
@@ -619,19 +941,20 @@ function renderPlayerView(view) {
     qs('playerReportRow').classList.toggle('hidden', !view.canExportReport);
     if (!view.top8 && view.top8Overview && view.top8Overview.stages && view.top8Overview.stages.length > 0) {
       qs('top8Board').classList.remove('hidden');
+      qs('top8Board').querySelector('h3').textContent = '淘汰阶段对局情况';
       qs('top8BoardList').innerHTML = view.top8Overview.stages.map(stage => `
         <div class="top8-stage">
-          <div class="top8-stage-title">${stage.phase}</div>
+          <div class="top8-stage-title">${escHtml(stageLabel(stage.phase))}</div>
           ${stage.matches.map(match => `
             <div class="top8-match">
-              <div class="top8-match-main">桌 ${match.table || '-'} · ${match.p1 || '-'} VS ${match.p2 || '-'}</div>
+              <div class="top8-match-main">桌 ${match.table || '-'} · ${escHtml(match.p1 || '-')} VS ${escHtml(match.p2 || '-')}</div>
               <div class="top8-match-sub">${match.done
                 ? (match.winner
                     ? (() => {
                         const winnerIsP1 = match.winner === match.p1;
                         const winnerScore = winnerIsP1 ? (match.p1Wins || 0) : (match.p2Wins || 0);
                         const loserScore = winnerIsP1 ? (match.p2Wins || 0) : (match.p1Wins || 0);
-                        return `结果：${match.winner} 胜（${winnerScore}-${loserScore}）`;
+                        return `结果：${escHtml(match.winner)} 胜（${winnerScore}-${loserScore}）`;
                       })()
                     : '结果：平局')
                 : '尚未结束'}</div>
@@ -648,30 +971,55 @@ function renderPlayerView(view) {
 
 async function refreshPlayerView() {
   if (!playerName && !playerId) return;
+  const requestedName = playerName || suggestedLoginName;
   try {
     const path = playerId
       ? tournamentApi(`/player-view-by-id/${encodeURIComponent(playerId)}`)
       : tournamentApi(`/player-view/${encodeURIComponent(playerName)}`);
     const view = await api(path);
+    if (!isUsablePlayerView(view)) {
+      showLoginCard(view?.message || '没有找到你在本场比赛的选手身份，请输入名称进入。', {
+        suggestedName: requestedName,
+        statusClass: 'warn',
+      });
+      await loadTournamentHeader();
+      return;
+    }
+    playerName = view.playerName;
+    playerId = view.playerId || playerId;
+    localStorage.setItem(storageNameKey, playerName);
+    if (playerId) localStorage.setItem(storageIdKey, playerId);
     renderPlayerView(view);
   } catch (err) {}
 }
 
-async function submitLogin(confirmExisting = false) {
+async function submitLogin(options = {}) {
+  const { confirmExisting = false, registerProfile = false, continueAsGuest = false } = options;
   const name = qs('playerNameInput').value.trim() || playerName;
   if (!name) {
     setStatus('请输入你的选手名称。', 'warn');
     return;
   }
   hideLoginAux();
-  const res = await api(tournamentApi('/player-login'), { playerName: name, confirmExisting });
+  const profileId = activeProfileId && !registerProfile && !continueAsGuest ? activeProfileId : '';
+  const res = await api(tournamentApi('/player-login'), { playerName: name, profileId, confirmExisting, registerProfile, continueAsGuest });
   if (res.ok) {
-    playerName = name;
-    playerId = res.playerId || (res.player && res.player.playerId) || playerId;
+    if (!isUsablePlayerView(res.player)) {
+      showLoginCard('选手身份已失效，请重新输入名称进入本场比赛。', {
+        suggestedName: name,
+        statusClass: 'warn',
+      });
+      return;
+    }
+    playerName = res.player?.playerName || name;
+    playerId = res.playerId || (res.player && res.player.playerId) || '';
+    activeProfileId = res.player?.globalProfileId || activeProfileId;
     localStorage.setItem(storageNameKey, playerName);
     if (playerId) localStorage.setItem(storageIdKey, playerId);
+    if (res.player?.globalProfileId) localStorage.setItem(centerProfileIdKey, res.player.globalProfileId);
     const url = new URL(location.href);
     if (playerId) url.searchParams.set('playerId', playerId);
+    else url.searchParams.delete('playerId');
     history.replaceState({}, '', url.toString());
     renderPlayerView(res.player);
     return;
@@ -680,18 +1028,65 @@ async function submitLogin(confirmExisting = false) {
     qs('nameExistsBox').classList.remove('hidden');
     return;
   }
+  if (res.code === 'PROFILE_NOT_FOUND') {
+    forgetCenterProfile();
+    qs('profilePromptBox').classList.remove('hidden');
+    return;
+  }
+  if (res.code === 'PROFILE_ID_NOT_FOUND') {
+    forgetCenterProfile();
+  }
   setStatus(res.message || res.err || '进入比赛失败。', 'warn');
 }
 
 async function submitWin() {
   if (!playerName) return;
-  if (!confirm('确认提交本场胜利吗？提交后将同步到后台。')) return;
+  const confirmed = await playerConfirm('提交后会同步到后台。若误报，请联系现场裁判修正。', {
+    title: '提交胜利',
+    okText: '确认提交',
+  });
+  if (!confirmed) return;
   const res = await api(tournamentApi('/player-report-win'), { playerName });
   if (!res.ok) {
-    alert(res.err || '提交失败');
+    setStatus(res.err || '提交失败', 'warn');
     return;
   }
   renderPlayerView(res.player);
+}
+
+async function upgradeGuestProfile(options = {}) {
+  if (!playerName) return;
+  const res = await api(tournamentApi('/player-upgrade-profile'), {
+    playerName,
+    confirmCreate: !!options.confirmCreate,
+    confirmBind: !!options.confirmBind,
+  });
+  if (res.ok) {
+    if (res.player?.globalProfileId) {
+      activeProfileId = res.player.globalProfileId;
+      localStorage.setItem(centerProfileIdKey, res.player.globalProfileId);
+    }
+    renderPlayerView(res.player);
+    return;
+  }
+  if (res.code === 'PROFILE_EXISTS') {
+    const profileName = res.profile?.displayName || playerName;
+    const confirmed = await playerConfirm(`后台已有「${profileName}」的选手档案。确认绑定到当前比赛身份？`, {
+      title: '绑定选手档案',
+      okText: '确认绑定',
+    });
+    if (confirmed) await upgradeGuestProfile({ confirmBind: true });
+    return;
+  }
+  if (res.code === 'CONFIRM_CREATE_PROFILE') {
+    const confirmed = await playerConfirm(`为「${playerName}」登记长期选手档案，并绑定当前比赛身份？`, {
+      title: '登记选手档案',
+      okText: '确认登记',
+    });
+    if (confirmed) await upgradeGuestProfile({ confirmCreate: true });
+    return;
+  }
+  setStatus(res.message || res.err || '登记档案失败。', 'warn');
 }
 
 function exportPlayerReport() {
@@ -701,11 +1096,7 @@ function exportPlayerReport() {
 }
 
 function logoutPlayer() {
-  localStorage.removeItem(storageNameKey);
-  localStorage.removeItem(storageIdKey);
-  playerName = '';
-  playerId = '';
-  lastView = null;
+  resetPlayerIdentity();
   qs('playerCard').classList.add('hidden');
   qs('loginCard').classList.remove('hidden');
   qs('playerNameInput').value = '';
@@ -714,30 +1105,30 @@ function logoutPlayer() {
   qs('heroSub').textContent = '输入选手名称以进入本场比赛个人页。';
 }
 
-qs('loginBtn').addEventListener('click', () => submitLogin(false));
-qs('confirmExistingBtn').addEventListener('click', () => submitLogin(true));
+qs('loginBtn').addEventListener('click', () => submitLogin());
+qs('registerProfileBtn').addEventListener('click', () => submitLogin({ registerProfile: true }));
+qs('guestLoginBtn').addEventListener('click', () => submitLogin({ continueAsGuest: true }));
+qs('confirmExistingBtn').addEventListener('click', () => submitLogin({ confirmExisting: true }));
 qs('denyExistingBtn').addEventListener('click', () => {
   qs('nameExistsBox').classList.add('hidden');
   setStatus('名称重复，请更换名称或联系裁判。', 'warn');
 });
 qs('reportWinBtn').addEventListener('click', submitWin);
 qs('playerReportBtn').addEventListener('click', exportPlayerReport);
+qs('upgradeProfileBtn').addEventListener('click', () => upgradeGuestProfile());
 qs('logoutBtn').addEventListener('click', logoutPlayer);
 qs('playerNameInput').addEventListener('keydown', evt => {
-  if (evt.key === 'Enter') submitLogin(false);
+  if (evt.key === 'Enter') submitLogin();
 });
 
 if (playerName || playerId) {
   refreshPlayerView();
 } else {
-  api(tournamentApi('/state')).then(state => {
-    setTournamentTitle(state.tournamentName);
-    qs('tournamentName').textContent = state.tournamentName || '本场比赛';
-  }).catch(() => {});
+  loadTournamentHeader();
 }
 
 setInterval(() => {
-  if (playerName) refreshPlayerView();
+  if (playerName || playerId) refreshPlayerView();
 }, 3000);
 </script>
 </body>

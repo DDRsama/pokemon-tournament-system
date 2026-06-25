@@ -13,3 +13,7 @@ obs-program-screenshot.png
 AGENTS.md
 public/overlay/index.before-split-*.html
 public/overlay/index.html.backup-*
+data/
+*.log
+.server-*.log
+tmp-visual-audit*/

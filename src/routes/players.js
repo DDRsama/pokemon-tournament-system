@@ -1,3 +1,6 @@
+const { isMatchReady } = require('../core/matches');
+const { usesGameScore } = require('../core/rules');
+
 function registerPlayersRoutes(app, deps) {
   const {
     syncTournamentRequest,
@@ -8,6 +11,10 @@ function registerPlayersRoutes(app, deps) {
     addPlayer,
     removePlayer,
     ensurePlayerSession,
+    getGlobalPlayerProfileById,
+    getGlobalPlayerProfileByName,
+    createGlobalPlayerProfile,
+    bindTournamentPlayerToGlobalProfile,
     dropPlayer,
     dropPlayerFromMatch,
     applyBo3Score,
@@ -16,7 +23,14 @@ function registerPlayersRoutes(app, deps) {
     isLoopbackHost,
     normalizePublicBaseUrlCandidate,
     validatePublicBaseUrlAccess,
+    getMatchStage,
   } = deps;
+
+  function isGameScoreMatch(match) {
+    const stage = typeof getMatchStage === 'function' ? getMatchStage(match) : null;
+    const rules = stage && stage.matchRules ? stage.matchRules : {};
+    return usesGameScore(rules, stage);
+  }
 
   app.post('/api/tournaments/:tournamentId/players', (req, res) => {
     const ok = syncTournamentRequest(req.params.tournamentId);
@@ -69,34 +83,156 @@ function registerPlayersRoutes(app, deps) {
   });
 
   app.post('/api/tournaments/:tournamentId/player-login', (req, res) => {
-    const { playerName, confirmExisting } = req.body || {};
+    const { playerName, profileId, confirmExisting, registerProfile, continueAsGuest } = req.body || {};
     const ok = syncTournamentRequest(req.params.tournamentId);
     if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
     const name = (playerName || '').trim();
     if (!name) return res.status(400).json({ ok: false, err: 'missing name' });
+    const requestedProfileId = String(profileId || '').trim();
+    const requestedProfile = requestedProfileId && typeof getGlobalPlayerProfileById === 'function'
+      ? getGlobalPlayerProfileById(requestedProfileId)
+      : null;
+    if (requestedProfileId && !requestedProfile) {
+      return res.json({
+        ok: false,
+        code: 'PROFILE_ID_NOT_FOUND',
+        message: '选手档案不存在或已被删除，请返回选手中心重新选择。',
+      });
+    }
+    const profileMatchesName = profile => (
+      !!profile
+      && (
+        profile.displayName === name
+        || (Array.isArray(profile.aliases) && profile.aliases.includes(name))
+      )
+    );
+    const requestedProfileMatchesName = profileMatchesName(requestedProfile);
+
+    const buildLoginResponse = (flags = {}) => {
+      const session = ensurePlayerSession(name);
+      return { ok: true, ...flags, ...session, player: buildPlayerView(name), state: buildClientState() };
+    };
 
     const exists = current().players.includes(name);
     if (current().phase === 'setup') {
       if (!exists) {
+        let globalProfile = requestedProfileMatchesName ? requestedProfile : (typeof getGlobalPlayerProfileByName === 'function'
+          ? getGlobalPlayerProfileByName(name)
+          : null);
+        if (!globalProfile && !registerProfile && !continueAsGuest) {
+          return res.json({
+            ok: false,
+            code: 'PROFILE_NOT_FOUND',
+            message: '未找到这个名字的选手档案。你可以登记为长期档案，也可以临时参赛；临时参赛不会获得联赛积分。',
+          });
+        }
+        if (!globalProfile && registerProfile && typeof createGlobalPlayerProfile === 'function') {
+          globalProfile = createGlobalPlayerProfile({ displayName: name });
+        }
         addPlayer(name);
-        const session = ensurePlayerSession(name);
+        if (globalProfile && typeof bindTournamentPlayerToGlobalProfile === 'function') {
+          bindTournamentPlayerToGlobalProfile(name, globalProfile.id);
+        }
         saveState();
         broadcast();
-        return res.json({ ok: true, created: true, ...session, player: buildPlayerView(name), state: buildClientState() });
+        return res.json(buildLoginResponse({
+          created: true,
+          registeredProfile: !!globalProfile,
+          guest: !globalProfile,
+        }));
+      }
+      if (requestedProfileMatchesName) {
+        const currentProfile = current().playerProfiles && current().playerProfiles[name]
+          ? current().playerProfiles[name]
+          : null;
+        if (!currentProfile?.globalProfileId || currentProfile.globalProfileId === requestedProfile.id) {
+          if (typeof bindTournamentPlayerToGlobalProfile === 'function') {
+            bindTournamentPlayerToGlobalProfile(name, requestedProfile.id);
+            saveState();
+            broadcast();
+          }
+          return res.json(buildLoginResponse({ existing: true, registeredProfile: true, guest: false }));
+        }
       }
       if (confirmExisting) {
-        const session = ensurePlayerSession(name);
-        return res.json({ ok: true, existing: true, ...session, player: buildPlayerView(name), state: buildClientState() });
+        return res.json(buildLoginResponse({ existing: true }));
       }
       return res.json({ ok: false, code: 'NAME_EXISTS', message: '名称已存在，请确认是否为本人。' });
     }
 
     if (exists) {
-      const session = ensurePlayerSession(name);
-      return res.json({ ok: true, existing: true, ...session, player: buildPlayerView(name), state: buildClientState() });
+      return res.json(buildLoginResponse({ existing: true }));
     }
 
     return res.json({ ok: false, code: 'REGISTRATION_CLOSED', message: '比赛已经开始，报名已结束。' });
+  });
+
+  app.post('/api/tournaments/:tournamentId/player-upgrade-profile', (req, res) => {
+    const { playerName, confirmCreate, confirmBind } = req.body || {};
+    const ok = syncTournamentRequest(req.params.tournamentId);
+    if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
+    const name = (playerName || '').trim();
+    if (!name) return res.status(400).json({ ok: false, err: 'missing playerName' });
+    if (!current().players.includes(name)) {
+      return res.status(404).json({ ok: false, err: 'player not found' });
+    }
+    const currentProfile = current().playerProfiles && current().playerProfiles[name]
+      ? current().playerProfiles[name]
+      : null;
+    if (currentProfile?.globalProfileId) {
+      return res.json({
+        ok: true,
+        alreadyBound: true,
+        player: buildPlayerView(name),
+        state: buildClientState(),
+      });
+    }
+    const existingGlobalProfile = typeof getGlobalPlayerProfileByName === 'function'
+      ? getGlobalPlayerProfileByName(name)
+      : null;
+    if (existingGlobalProfile && !confirmBind) {
+      return res.json({
+        ok: false,
+        code: 'PROFILE_EXISTS',
+        profile: {
+          id: existingGlobalProfile.id,
+          displayName: existingGlobalProfile.displayName,
+        },
+        message: `后台已有「${existingGlobalProfile.displayName || name}」的选手档案。`,
+      });
+    }
+    let globalProfile = existingGlobalProfile;
+    if (!globalProfile) {
+      if (!confirmCreate) {
+        return res.json({
+          ok: false,
+          code: 'CONFIRM_CREATE_PROFILE',
+          message: `将为「${name}」登记长期选手档案。`,
+        });
+      }
+      if (typeof createGlobalPlayerProfile !== 'function') {
+        return res.status(500).json({ ok: false, err: 'profile registry unavailable' });
+      }
+      globalProfile = createGlobalPlayerProfile({ displayName: name });
+    }
+    if (!globalProfile || typeof bindTournamentPlayerToGlobalProfile !== 'function') {
+      return res.status(500).json({ ok: false, err: 'profile binding unavailable' });
+    }
+    const bound = bindTournamentPlayerToGlobalProfile(name, globalProfile.id);
+    if (!bound) return res.status(404).json({ ok: false, err: 'player or profile not found' });
+    saveState();
+    broadcast();
+    return res.json({
+      ok: true,
+      registeredProfile: !existingGlobalProfile,
+      boundProfile: !!existingGlobalProfile,
+      profile: {
+        id: globalProfile.id,
+        displayName: globalProfile.displayName,
+      },
+      player: buildPlayerView(name),
+      state: buildClientState(),
+    });
   });
 
   app.post('/api/tournaments/:tournamentId/player-report-win', (req, res) => {
@@ -105,19 +241,24 @@ function registerPlayersRoutes(app, deps) {
     if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
     const name = (playerName || '').trim();
     if (!name) return res.status(400).json({ ok: false, err: 'missing playerName' });
-    const match = current().matches.find(m => !m.done && (m.p1 === name || m.p2 === name));
+    const playerMatches = current().matches.filter(m => !m.done && (m.p1 === name || m.p2 === name));
+    const match = playerMatches.find(isMatchReady) || playerMatches[0] || null;
     if (!match) return res.json({ ok: false, err: 'active match not found' });
-    current().playerReports = { ...(current().playerReports || {}), [name]: { type: current().phase === 'top8' ? 'game-win' : 'win', at: Date.now(), matchId: match.id } };
-    if (current().phase === 'top8') {
+    if (!isMatchReady(match)) return res.json({ ok: false, err: '对局尚未就绪，请等待对手确认。' });
+    const usesGameScore = isGameScoreMatch(match);
+    let applied = false;
+    if (usesGameScore) {
       const nextP1Wins = (match.p1Wins || 0) + (match.p1 === name ? 1 : 0);
       const nextP2Wins = (match.p2Wins || 0) + (match.p2 === name ? 1 : 0);
-      applyBo3Score(match.id, nextP1Wins, nextP2Wins);
+      applied = applyBo3Score(match.id, nextP1Wins, nextP2Wins);
     } else {
-      applyResult(match.id, name);
+      applied = applyResult(match.id, name);
     }
+    if (!applied) return res.json({ ok: false, err: '对局尚未就绪，请等待对手确认。' });
+    current().playerReports = { ...(current().playerReports || {}), [name]: { type: usesGameScore ? 'game-win' : 'win', at: Date.now(), matchId: match.id } };
     const other = match.p1 === name ? match.p2 : match.p1;
     if (other && other !== 'BYE') {
-      current().playerReports[other] = { type: current().phase === 'top8' ? 'opponent-scored' : 'opponent-reported', at: Date.now(), matchId: match.id };
+      current().playerReports[other] = { type: usesGameScore ? 'opponent-scored' : 'opponent-reported', at: Date.now(), matchId: match.id };
     }
     saveState();
     broadcast();

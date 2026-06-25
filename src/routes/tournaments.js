@@ -4,6 +4,8 @@ function registerTournamentsRoutes(app, deps) {
     buildClientState,
     listTournaments,
     buildPlayerView,
+    buildPlayerViewById,
+    buildGlobalPlayerSummary,
     createTournament,
     loadTournament,
     saveState,
@@ -33,16 +35,32 @@ app.get('/api/tournaments/:tournamentId/player-view-by-id/:playerId', (req, res)
   const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   const playerId = decodeURIComponent(req.params.playerId || '').trim();
-  res.json(buildPlayerView(playerId));
+  const view = typeof buildPlayerViewById === 'function'
+    ? buildPlayerViewById(playerId)
+    : buildPlayerView(playerId);
+  if (view && view.ok === false) {
+    return res.status(404).json(view);
+  }
+  return res.json(view);
+});
+app.get('/api/player-profiles/:playerId/summary', (req, res) => {
+  const playerId = decodeURIComponent(req.params.playerId || '').trim();
+  const summary = buildGlobalPlayerSummary(playerId);
+  if (!summary) return res.status(404).json({ ok: false, err: 'player profile not found' });
+  return res.json({ ok: true, summary });
 });
 
-app.post('/api/tournaments', (req, res) => {
-  const { action, name, id } = req.body || {};
-  if (action === 'create') {
-    const nextId = createTournament(name);
-    broadcast();
-    return res.json({ ok: true, id: nextId, state: buildClientState() });
-  }
+  app.post('/api/tournaments', (req, res) => {
+    const { action, name, id, settings, tournamentSettings } = req.body || {};
+    if (action === 'create') {
+      try {
+        const nextId = createTournament(name, { settings: settings || tournamentSettings || null });
+        broadcast();
+        return res.json({ ok: true, id: nextId, state: buildClientState() });
+      } catch (err) {
+        return res.status(400).json({ ok: false, err: err.message || 'create tournament failed' });
+      }
+    }
   if (action === 'load') {
     if (!loadTournament(id)) return res.status(404).json({ ok: false, err: 'not found' });
     broadcast();

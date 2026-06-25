@@ -27,7 +27,14 @@ async function poll() {
     let renderState = s;
     if (holdResultPreview && s.lastResult && !s.currentLiveMatch) {
       renderState = JSON.parse(JSON.stringify(s));
-      renderState.overlayState = s.phase === 'top8' ? 'top8-result' : 'result';
+      const resultView = s.overlayState === 'top8-result'
+        || s.phase === 'top8'
+        || s.phase === 'double_elimination'
+        || s.lastResult?.stagePhase === 'double_elimination'
+        || s.lastResult?.bracket
+        ? 'top8-result'
+        : 'result';
+      renderState.overlayState = resultView;
       heldResultState = renderState;
     } else if (holdResultPreview && heldResultState && s.overlayState !== 'result' && s.overlayState !== 'top8-result') {
       renderState = heldResultState;

@@ -6,430 +6,7 @@
 <title>Backend - Pokemon Tournament System</title>
 <link rel="icon" type="image/svg+xml" href="/shared/favicon.svg">
 <link rel="stylesheet" href="/shared/theme.css">
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    font-family: var(--pts-font-sans);
-    background: var(--pts-page-bg);
-    color: #e2e8f0;
-  }
-
-  .topbar {
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    border-bottom: 1px solid rgba(71, 85, 105, 0.7);
-    background: rgba(30, 41, 59, 0.92);
-    flex-shrink: 0;
-  }
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    color: var(--pts-text-strong);
-    font-size: 15px;
-    font-weight: 900;
-    white-space: nowrap;
-  }
-  .brand-mark {
-    width: 24px;
-    height: 24px;
-    flex: 0 0 auto;
-  }
-  .brand-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .version {
-    display: inline-flex;
-    align-items: center;
-    height: 26px;
-    padding: 0 10px;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    border-radius: 999px;
-    color: var(--pts-text-muted);
-    background: rgba(15, 23, 42, 0.45);
-    font-size: 12px;
-    font-weight: 800;
-  }
-  .admin-toolbar {
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 6px 24px;
-    border-bottom: 1px solid rgba(71, 85, 105, 0.62);
-    background: rgba(15, 23, 42, 0.52);
-    flex-shrink: 0;
-  }
-  .admin-toolbar-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-  .admin-toolbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; min-width: 0; }
-  .toolbar-title {
-    flex: 0 0 auto;
-    color: var(--pts-text-strong);
-    font-size: 13px;
-    font-weight: 900;
-    white-space: nowrap;
-  }
-  .topbar-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .tournament-select { flex: 1; min-width: 0; position: relative; }
-  .tournament-current {
-    display: flex; align-items: center; gap: 8px;
-    min-width: 0; height: 34px;
-    background: rgba(15, 23, 42, 0.45); border-radius: 999px; padding: 0 12px;
-    cursor: pointer; max-width: 320px; overflow: hidden;
-    border: 1px solid rgba(148, 163, 184, 0.22); transition: border-color 0.15s, background 0.15s;
-  }
-  .tournament-current:hover { border-color: #6366f1; background: rgba(15, 23, 42, 0.62); }
-  .tournament-current .tname { font-size: 13px; font-weight: 600; color: #f8fafc; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tournament-current .tarrow { font-size: 11px; color: #64748b; }
-  .tournament-dropdown {
-    display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 100;
-    background: #1e293b; border: 1px solid #334155; border-radius: 10px;
-    width: 320px; max-height: 300px; overflow-y: auto;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-  }
-  .tournament-dropdown.open { display: block; }
-  .td-item { padding: 9px 14px; cursor: pointer; border-radius: 6px; margin: 3px; font-size: 13px; transition: background 0.1s; }
-  .td-item:hover { background: #334155; }
-  .td-item.active { background: #6366f1; }
-  .td-item-name { font-weight: 600; color: #e2e8f0; }
-  .td-item-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .td-divider { height: 1px; background: #334155; margin: 4px 8px; }
-  .td-new { display: flex; align-items: center; gap: 8px; color: #22c55e; font-weight: 600; }
-  .td-rename { display: flex; align-items: center; gap: 8px; color: #94a3b8; }
-  .phase-badge { display: inline-flex; align-items: center; height: 26px; padding: 0 12px; border-radius: 999px; font-size: 11px; font-weight: bold; background: #475569; color: #cbd5e1; white-space: nowrap; }
-  .phase-badge.swiss { background: #7c3aed; color: #f0f0ff; }
-  .phase-badge.swiss-ended { background: #d97706; color: #fff8e1; }
-  .phase-badge.top8 { background: #dc2626; color: white; }
-  .phase-badge.done { background: #22c55e; color: white; }
-  .round-tag { font-size: 11px; color: #94a3b8; font-weight: 600; white-space: nowrap; }
-  .ws-status { font-size: 11px; color: #64748b; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-  .ws-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; transition: background 0.3s; }
-  .ws-dot.connected { background: #22c55e; box-shadow: 0 0 4px #22c55e; }
-
-  .main {
-    display: flex;
-    flex: 1 1 auto;
-    min-height: 0;
-    gap: 12px;
-    padding: 12px;
-    background:
-      linear-gradient(180deg, rgba(30, 41, 59, 0.38) 0, rgba(15, 23, 42, 0) 220px),
-      var(--pts-page-bg);
-  }
-  .panel {
-    padding: 14px;
-    overflow-y: auto;
-    border: 1px solid rgba(71, 85, 105, 0.72);
-    border-radius: var(--pts-radius-lg);
-    background: rgba(30, 41, 59, 0.9);
-    box-shadow: 0 14px 42px rgba(0, 0, 0, 0.2);
-  }
-  .panel-left { width: 248px; flex-shrink: 0; }
-  .panel-center { flex: 1; min-width: 0; background: rgba(15, 23, 42, 0.62); }
-  .panel-right { width: 286px; flex-shrink: 0; }
-
-  @media (max-width: 760px) {
-    .topbar { padding: 0 16px; }
-    .admin-toolbar {
-      align-items: stretch;
-      flex-direction: column;
-      gap: 8px;
-      padding: 10px 16px;
-    }
-    .admin-toolbar-left,
-    .admin-toolbar-right {
-      width: 100%;
-    }
-    .admin-toolbar-right {
-      flex-wrap: wrap;
-      justify-content: flex-start;
-    }
-    .tournament-current {
-      flex: 1;
-      max-width: none;
-    }
-    .main {
-      flex-direction: column;
-      overflow-y: auto;
-    }
-    .panel {
-      width: 100%;
-      flex: 0 0 auto;
-      overflow: visible;
-    }
-    .panel-center {
-      order: 1;
-      min-height: 360px;
-    }
-    .panel-left {
-      order: 2;
-    }
-    .panel-right {
-      order: 3;
-    }
-    body[data-admin-phase="setup"] .panel-left {
-      order: 1;
-    }
-    body[data-admin-phase="setup"] .panel-center {
-      order: 2;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .topbar-actions .btn {
-      padding-inline: 8px;
-    }
-  }
-
-  .panel-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-  .player-item { display: flex; align-items: center; padding: 5px 7px; border-radius: 6px; margin-bottom: 3px; background: #273549; transition: background 0.1s; cursor: default; }
-  .player-item:hover { background: #334155; }
-  .player-item .rank { font-size: 11px; color: #475569; width: 18px; text-align: center; flex-shrink: 0; }
-  .player-item .name { flex: 1; font-size: 13px; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .player-item .record { font-size: 11px; color: #94a3b8; min-width: 52px; text-align: center; flex-shrink: 0; font-weight: 600; }
-  .player-item .record .w { color: #22c55e; }
-  .player-item .record .d { color: #94a3b8; }
-  .player-item .record .l { color: #ef4444; }
-  .player-item .del { background: none; border: none; color: #475569; cursor: pointer; font-size: 15px; padding: 0 3px; line-height: 1; flex-shrink: 0; }
-  .player-item .del:hover { color: #f87171; }
-  .player-item.top8-qualify { border-left: 3px solid #d97706; }
-  .player-item.dropped { opacity: 0.55; }
-  .player-item.dropped .name { text-decoration: line-through; color: #64748b; }
-  .wd-badge { font-size: 10px; color: #f59e0b; font-weight: 700; margin-left: 4px; }
-  .drop-btn { background: none; border: none; color: #475569; cursor: pointer; font-size: 13px; padding: 0 2px; flex-shrink: 0; margin-left: 2px; }
-  .drop-btn:hover { color: #f59e0b; }
-  .dropped-section { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #334155; }
-
-  .add-player { display: flex; gap: 5px; margin-bottom: 8px; }
-  .add-player input { flex: 1; padding: 6px 9px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 13px; }
-  .add-player input:focus { outline: none; border-color: #6366f1; }
-  .btn {
-    padding: 6px 12px;
-    border-radius: var(--pts-radius-sm);
-    border: none;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-    transition: background var(--pts-transition-fast), color var(--pts-transition-fast), transform var(--pts-transition-fast), opacity var(--pts-transition-fast);
-    font-family: inherit;
-  }
-  .btn-sm { padding: 4px 9px; font-size: 11px; }
-  .btn:hover:not(:disabled) { transform: translateY(-1px); }
-  .btn-primary { background: var(--pts-brand); color: white; }
-  .btn-primary:hover { background: var(--pts-brand-hover); }
-  .btn-secondary { background: var(--pts-surface-raised); color: #cbd5e1; }
-  .btn-secondary:hover { background: var(--pts-surface-hover); }
-  .btn-green { background: var(--pts-success); color: white; }
-  .btn-green:hover { background: var(--pts-success-hover); }
-  .btn-green:disabled { background: #14532d; color: #4a7c59; cursor: not-allowed; }
-  .btn-amber { background: var(--pts-warning); color: white; }
-  .btn-amber:hover { background: var(--pts-warning-hover); }
-  .btn-amber:disabled { background: #78350f; color: #a16207; cursor: not-allowed; }
-  .btn-red { background: var(--pts-danger); color: white; }
-  .td-item { display: flex; align-items: center; justify-content: space-between; }
-  .td-item-left { flex: 1; min-width: 0; cursor: pointer; padding: 1px 0; }
-  .td-del-btn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 2px 4px; opacity: 0.4; transition: opacity 0.15s; flex-shrink: 0; }
-  .td-del-btn:hover { opacity: 1; }
-  .btn-red:hover { background: #b91c1c; }
-  .btn-red:disabled { background: #7f1d1d; color: #991b1b; cursor: not-allowed; }
-  .btn:disabled { cursor: not-allowed; opacity: 0.5; }
-
-  .config-box { background: rgba(15, 23, 42, 0.66); border: 1px solid rgba(71, 85, 105, 0.62); border-radius: var(--pts-radius-md); padding: 10px; margin-bottom: 10px; }
-  .config-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: #94a3b8; }
-  .config-row:last-child { margin-bottom: 0; }
-  .config-row input { width: 56px; padding: 3px 7px; border-radius: 4px; border: 1px solid #334155; background: #1e293b; color: #e2e8f0; text-align: center; font-size: 12px; }
-  .config-row input.wide { width: 120px; }
-  .player-min-warn { font-size: 11px; color: #f59e0b; margin-top: 4px; display: none; }
-  .player-min-warn.show { display: block; }
-
-  .action-stack { display: flex; flex-direction: column; gap: 6px; }
-  .action-stack .btn { width: 100%; padding: 9px; font-size: 13px; }
-
-  .round-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #1e293b; }
-  .round-label { font-size: 15px; font-weight: 700; color: #f8fafc; }
-  .round-progress { font-size: 11px; color: #64748b; font-weight: normal; margin-left: 10px; }
-  .round-progress .done-count { color: #22c55e; font-weight: 700; }
-  .round-progress.done { color: #22c55e; }
-
-  .match-card { background: rgba(30, 41, 59, 0.92); border-radius: var(--pts-radius-lg); padding: 10px 13px; margin-bottom: 8px; border: 1px solid rgba(71, 85, 105, 0.72); transition: border-color 0.2s, opacity 0.2s, background 0.2s; }
-  .match-card:hover { background: rgba(39, 53, 73, 0.92); }
-  .match-card.live { border-color: #f59e0b; box-shadow: 0 0 14px rgba(245,158,11,0.2); }
-  .match-card.done { opacity: 0.55; }
-  .match-header { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .match-meta { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: rgba(99,102,241,0.16); color: #c7d2fe; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; white-space: nowrap; }
-  .match-header-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-  .match-players { display: flex; align-items: center; gap: 8px; }
-  .seat-group { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
-  .seat-group.right { justify-content: flex-end; }
-  .player-side { flex: 1; padding: 5px 7px; border-radius: 6px; background: #273549; cursor: pointer; text-align: center; font-size: 13px; transition: background 0.12s; }
-  .player-side:hover:not(.won):not(.lost):not(.tbd) { background: #334155; color: #fff; }
-  .player-side.won { background: #16a34a; color: white; font-weight: 700; }
-  .player-side.lost { background: #1e293b; color: #475569; text-decoration: line-through; }
-  .player-side.tbd { color: #475569; font-style: italic; cursor: default; }
-  .player-side.tv::after { content: ' 📺'; }
-  .seat-drop-btn { width: 28px; height: 28px; border: none; border-radius: 6px; background: #7f1d1d; color: #fecaca; cursor: pointer; font-size: 11px; flex-shrink: 0; }
-  .seat-drop-btn:hover { background: #991b1b; color: #fff; }
-  .vs { font-size: 11px; color: #475569; font-weight: 700; flex-shrink: 0; }
-  .match-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-  .live-btn { background: #b45309; color: white; flex: 1; font-size: 11px; }
-  .live-btn:hover { background: #d97706; }
-  .live-btn.active { background: #dc2626; }
-  .live-btn.active::before { content: '🔴 '; }
-  .live-btn:not(.active)::before { content: '📺 '; }
-  .score-btn { background: #334155; color: #cbd5e1; font-size: 11px; padding: 5px 8px; }
-  .score-btn:hover { background: #475569; }
-  .score-stack { display: flex; align-items: center; gap: 4px; }
-  .score-stack .score-btn { min-width: 34px; text-align: center; }
-  .match-btn { background: #334155; color: #cbd5e1; font-size: 11px; padding: 5px 8px; }
-  .match-btn:hover { background: #475569; }
-  .match-btn.warn { background: #92400e; color: #fff; }
-  .match-btn.warn:hover { background: #b45309; }
-
-  .bo3-row { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 5px; font-size: 11px; }
-  .bo3-player { display: flex; align-items: center; gap: 4px; }
-  .bo3-dots { display: flex; gap: 3px; }
-  .bo3-dot { width: 8px; height: 8px; border-radius: 50%; background: #334155; }
-  .bo3-dot.win { background: #22c55e; }
-  .bo3-dot.lose { background: #475569; }
-  .bo3-score-num { font-size: 13px; font-weight: 700; color: #e2e8f0; min-width: 12px; text-align: center; }
-  .bo3-score-num.winning { color: #22c55e; }
-
-  .phase-hint { background: rgba(99, 102, 241, 0.12); border-radius: var(--pts-radius-md); padding: 12px; margin-bottom: 10px; border-left: 3px solid var(--pts-brand); font-size: 12px; color: #b7c4d6; line-height: 1.6; }
-  .phase-hint strong { color: #e2e8f0; }
-  .phase-hint.hidden { display: none; }
-
-  /* 排名总览 */
-  #swissEndedScreen { display: none; }
-  #swissEndedScreen.visible { display: block; }
-  .review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .review-title { font-size: 17px; font-weight: 700; color: #f8fafc; }
-  .review-subtitle { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .review-actions { display: flex; gap: 8px; }
-  .review-actions .btn { padding: 8px 18px; font-size: 13px; }
-  .ranking-table { width: 100%; border-collapse: collapse; }
-  .ranking-table th { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 1px; padding: 6px 10px; text-align: left; border-bottom: 1px solid #1e293b; }
-  .ranking-table td { padding: 7px 10px; font-size: 13px; border-bottom: 1px solid #1e293b40; vertical-align: middle; }
-  .ranking-table tr.top8 td { background: rgba(217,119,6,0.08); }
-  .rank-num { font-size: 16px; font-weight: 700; color: #475569; min-width: 30px; text-align: center; display: inline-block; }
-  .rank-num.top3 { color: #fbbf24; font-size: 18px; }
-  .rank-num.top8 { color: #d97706; }
-  .rank-name { color: #cbd5e1; font-weight: 500; }
-  .rank-name.t8 { color: #fbbf24; font-weight: 700; }
-  .rank-wdl { font-size: 13px; font-weight: 700; letter-spacing: 1px; }
-  .rank-wdl .w { color: #22c55e; }
-  .rank-wdl .d { color: #94a3b8; }
-  .rank-wdl .l { color: #ef4444; }
-  .rank-pts { font-size: 14px; font-weight: 700; color: #e2e8f0; min-width: 30px; text-align: center; }
-  .t8-badge { display: inline-block; padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 700; background: #d97706; color: white; margin-left: 8px; }
-
-  /* 淘汰赛 */
-  #top8Bracket { display: none; }
-  #top8Bracket.visible { display: block; }
-  .bracket-header { font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
-  .bracket-progress { display: flex; gap: 6px; }
-  .bracket-step { flex: 1; height: 4px; border-radius: 2px; background: #334155; transition: background 0.3s; }
-  .bracket-step.done { background: #22c55e; }
-  .bracket-step.active { background: #d97706; }
-
-  /* 预览 */
-  .side-section + .side-section { margin-top: 14px; }
-  .side-module {
-    padding: 10px;
-    border: 1px solid rgba(71, 85, 105, 0.72);
-    border-radius: var(--pts-radius-md);
-    background: rgba(15, 23, 42, 0.42);
-  }
-  .side-module > :last-child { margin-bottom: 0; }
-  .side-subtitle {
-    margin: 0 0 7px;
-    color: #94a3b8;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .overlay-preview { width: 100%; aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; border: 2px solid #334155; background: #000; margin-bottom: 10px; position: relative; --overlay-preview-scale: 0.2; }
-  .overlay-preview iframe { position: absolute; top: 0; left: 0; width: 1920px; height: 1080px; border: none; transform-origin: top left; transform: scale(var(--overlay-preview-scale)); display: block; }
-  .overlay-url { margin-top: 3px; font-size: 11px; color: #94a3b8; word-break: break-all; font-family: var(--pts-font-sans); line-height: 1.45; }
-  .player-link-label { font-size: 11px; color: #64748b; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-  .link-box-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-  .copy-btn { background: #334155; color: #e2e8f0; border: none; border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; flex-shrink: 0; transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease; }
-  .copy-btn:hover { background: #475569; }
-  .copy-btn.copied { background: #16a34a; color: #dcfce7; animation: copyPop 0.42s ease; }
-  @keyframes copyPop {
-    0% { transform: scale(1); }
-    45% { transform: scale(1.08); }
-    100% { transform: scale(1); }
-  }
-  .address-label { font-size: 11px; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
-  .address-control { display: flex; align-items: center; border-radius: 8px; border: 1px solid #334155; background: #111827; overflow: hidden; }
-  .address-control:focus-within { border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.18); }
-  .address-prefix { flex: 0 0 auto; padding: 8px 0 8px 10px; color: #94a3b8; font-size: 12px; font-family: var(--pts-font-sans); user-select: none; }
-  .address-input { width: 100%; min-width: 0; padding: 8px 10px 8px 2px; border: 0; background: transparent; color: #e2e8f0; font-size: 12px; font-family: var(--pts-font-sans); }
-  .address-input:focus { outline: none; }
-  .address-confirm-btn { align-self: stretch; border: 0; border-left: 1px solid #334155; background: #334155; color: #e2e8f0; padding: 0 10px; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap; }
-  .address-confirm-btn:hover { background: #475569; }
-  .address-confirm-btn:disabled { cursor: not-allowed; opacity: 0.58; }
-  .address-message { min-height: 16px; margin-top: 6px; color: #64748b; font-size: 11px; line-height: 1.45; }
-  .address-message.error { color: #fca5a5; }
-  .address-message.success { color: #86efac; }
-  .player-qr-box { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .player-qr-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; align-self: flex-start; }
-  .player-qr-button { border: 0; background: transparent; padding: 0; cursor: pointer; border-radius: 12px; }
-  .player-qr-button:focus-visible { outline: 2px solid #f59e0b; outline-offset: 3px; }
-  .player-qr-frame { width: 180px; height: 180px; border-radius: 12px; background: #fff; display: flex; align-items: center; justify-content: center; padding: 8px; }
-  .player-qr-button:hover .player-qr-frame { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22); }
-  .player-qr-frame img { width: 100%; height: 100%; object-fit: contain; }
-  .player-qr-tip { font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5; }
-  .hidden-link-value { display: none; }
-  .overlay-state-box { background: rgba(15, 23, 42, 0.76); border: 1px solid rgba(51, 65, 85, 0.86); border-radius: 6px; padding: 10px; min-height: 50px; margin-bottom: 8px; }
-  .overlay-state-row { font-size: 12px; color: #94a3b8; margin-bottom: 3px; }
-  .overlay-state-row strong { color: #e2e8f0; }
-  .overlay-state-value { font-weight: 700; color: #fbbf24; }
-  .overlay-hint-idle { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #475569; font-size: 14px; gap: 8px; }
-  .obs-hint { font-size: 11px; color: #94a3b8; background: rgba(15, 23, 42, 0.76); border: 1px solid rgba(51, 65, 85, 0.86); padding: 10px; border-radius: 6px; line-height: 1.8; }
-  .obs-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid rgba(51, 65, 85, 0.58); padding-top: 6px; margin-top: 6px; }
-  .obs-row:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
-  .obs-row span { color: #64748b; }
-  .obs-row strong { color: #cbd5e1; font-weight: 800; text-align: right; }
-  .obs-url-row { border-top: 1px solid rgba(51, 65, 85, 0.58); padding-top: 6px; margin-top: 6px; }
-  .obs-url-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .obs-url-label { color: #64748b; font-size: 11px; }
-
-  /* 弹窗 */
-  #bulkModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 1000; align-items: center; justify-content: center; }
-  #bulkModal.open { display: flex; }
-  .modal-box { background: #1e293b; border-radius: 12px; padding: 24px; width: 460px; border: 1px solid #334155; }
-  .modal-box h2 { font-size: 15px; margin-bottom: 8px; }
-  .modal-box p { font-size: 12px; color: #64748b; margin-bottom: 12px; }
-  .modal-box label { font-size: 12px; color: #94a3b8; margin-bottom: 6px; display: block; }
-  .modal-box input { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 13px; margin-bottom: 10px; }
-  .modal-box input:focus { outline: none; border-color: #6366f1; }
-  #bulkText { width: 100%; height: 200px; background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px; padding: 10px; font-size: 13px; resize: vertical; font-family: inherit; }
-  .modal-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }
-
-  .empty-state { text-align: center; padding: 40px 20px; color: #475569; font-size: 13px; }
-  .empty-state-icon { font-size: 32px; margin-bottom: 10px; }
-
-  .overlay-tname { font-size: 13px; font-weight: 700; color: #fbbf24; background: rgba(251,191,36,0.1); padding: 4px 10px; border-radius: 6px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-</style>
+  <link rel="stylesheet" href="/admin/admin.css?v=3.0-group-tiebreak-1">
 </head>
 <body>
 
@@ -439,7 +16,7 @@
     <img class="brand-mark" src="/shared/favicon.svg" alt="">
     <span class="brand-text">Pokemon Tournament System</span>
   </div>
-  <div class="version">2.2</div>
+  <div class="version">3.0-beta</div>
 </header>
 
 <div class="admin-toolbar">
@@ -463,77 +40,34 @@
 <div class="main">
   <!-- 左栏 -->
   <div class="panel panel-left">
-    <div class="panel-title">📋 选手 <span id="playerCount" style="color:#94a3b8;">0</span>/64</div>
+    <div class="panel-title">🧩 阶段</div>
+    <div class="stage-config-panel">
+      <div class="config-row">
+        <span>赛事结构</span>
+        <span id="presetName" style="color:#f8fafc;font-weight:700;">—</span>
+      </div>
+      <div id="stageList" class="stage-list"></div>
+      <div id="settingsMessage" class="settings-message"></div>
+    </div>
+
+    <div class="panel-title" id="participantPanelTitle" style="margin-top:16px;">📋 选手 <span id="playerCount" style="color:#94a3b8;">0</span></div>
     <div class="add-player">
       <input type="text" id="playerInput" placeholder="选手名称..." onkeydown="if(event.key==='Enter')addPlayer()">
       <button class="btn btn-primary" onclick="addPlayer()">+</button>
     </div>
-    <button class="btn btn-secondary" style="width:100%;margin-bottom:10px;font-size:11px;" onclick="showBulkAdd()">批量导入</button>
+    <button class="btn btn-secondary" id="bulkAddBtn" style="width:100%;margin-bottom:10px;font-size:11px;" onclick="showBulkAdd()">批量导入</button>
     <div id="playerList"></div>
-
-    <div class="panel-title" style="margin-top:16px;">⚙️ 赛制</div>
-    <div class="config-box">
-      <div class="config-row">
-        <span>瑞士轮轮数</span>
-        <input type="number" id="swissRounds" value="5" min="1" max="10">
-      </div>
-      <div class="config-row">
-        <span>当前人数</span>
-        <span id="actualPlayers" style="color:#f8fafc;font-weight:700;">0</span>
-      </div>
-      <div class="config-row">
-        <span>进入淘汰赛</span>
-        <span id="top8Ready" style="color:#64748b;">—</span>
-      </div>
-      <div class="config-row">
-        <span>直播房号</span>
-        <input type="text" class="wide" id="liveRoomCodeInput" onblur="saveTournamentConfig()">
-      </div>
-    </div>
-    <p class="player-min-warn" id="top8Warn">⚠ 需要至少 8 名选手</p>
-
-    <div class="action-stack">
-      <button class="btn btn-green" id="btnStart" onclick="startSwiss()" disabled>▶ 开始瑞士轮</button>
-      <button class="btn btn-secondary" id="btnNext" onclick="nextRound()" disabled>→ 下一轮</button>
-      <button class="btn btn-amber" id="btnEndSwiss" onclick="endSwiss()" disabled>🏁 结束瑞士轮</button>
-      <button class="btn btn-gray" id="btnRevert" onclick="revertRound()" disabled>← 回退</button>
-    </div>
   </div>
 
   <!-- 中栏 -->
   <div class="panel panel-center">
-    <div class="phase-hint" id="swissHint">
-      <span id="swissHintText"></span>
-    </div>
-    <div id="swissArena">
-      <div class="round-header" id="roundHeaderArea">
-        <span class="round-label" id="roundHeader">等待开始瑞士轮</span>
+    <div id="stageIdleScreen" class="stage-idle-screen">
+      <div class="stage-idle-card">
+        <div class="stage-idle-kicker" id="stageIdleKicker">等待开始</div>
+        <div class="stage-idle-title" id="stageIdleTitle">阶段尚未开始</div>
+        <div class="stage-idle-meta" id="stageIdleMeta">参赛者就绪后可启动阶段</div>
+        <div class="stage-idle-actions" id="stageIdleActions"></div>
       </div>
-      <div id="matchList"></div>
-    </div>
-    <div id="swissEndedScreen">
-      <div class="review-header">
-        <div>
-          <div class="review-title">🏆 瑞士轮结束</div>
-          <div class="review-subtitle">确认以下 8 强名单，再进入淘汰赛</div>
-        </div>
-        <div class="review-actions">
-          <button class="btn btn-red" onclick="cancelTop8()">← 继续瑞士轮</button>
-          <button class="btn btn-green" onclick="confirmTop8()">✅ 确认进入淘汰赛</button>
-        </div>
-      </div>
-      <table class="ranking-table">
-        <thead>
-          <tr>
-            <th style="width:40px;">#</th>
-            <th>选手</th>
-            <th style="width:80px;text-align:center;">W-D-L</th>
-            <th style="width:40px;text-align:center;">积分</th>
-            <th style="width:60px;text-align:center;">种子</th>
-          </tr>
-        </thead>
-        <tbody id="rankingBody"></tbody>
-      </table>
     </div>
     <div id="top8Bracket">
       <div class="bracket-header">
@@ -543,13 +77,19 @@
       <div id="top8PhaseHint" class="phase-hint"></div>
       <div id="top8MatchList"></div>
     </div>
+    <div id="stageArena">
+      <div class="round-header">
+        <span class="round-label" id="stageArenaTitle">阶段对局</span>
+      </div>
+      <div id="stageMatchList"></div>
+    </div>
   </div>
 
   <!-- 右栏 -->
   <div class="panel panel-right">
     <div class="side-section">
       <div class="panel-title">🌐 访问地址</div>
-      <div class="side-module">
+      <div class="side-module" data-admin-modern="public-url">
         <div class="address-label">Public Base URL</div>
         <div class="address-control">
           <span class="address-prefix">http://</span>
@@ -562,14 +102,27 @@
 
     <div class="side-section">
       <div class="panel-title">📺 叠加层</div>
-      <div class="side-module">
+      <div class="side-module" data-admin-modern="overlay">
         <div class="overlay-preview">
           <iframe id="overlayFrame" style="display:none;"></iframe>
+          <div class="overlay-preview-fallback" id="overlayPreviewFallback">
+            <div class="overlay-preview-kicker">OVERLAY PREVIEW</div>
+            <div class="overlay-preview-title">等待叠加层状态</div>
+            <div class="overlay-preview-meta">启动赛事后预览生效</div>
+          </div>
         </div>
         <div class="overlay-state-box" id="overlayStateDisplay">
           <div class="overlay-hint-idle">
             <span>🎮</span><span>启动赛事后预览生效</span>
           </div>
+        </div>
+        <div class="live-room-box" data-admin-modern="live-room">
+          <div class="side-subtitle">直播桌房号</div>
+          <div class="live-room-control">
+            <input type="text" id="liveRoomCodeInput" class="live-room-input" placeholder="直播桌房号" autocomplete="off">
+            <button id="liveRoomCodeSaveBtn" class="live-room-save-btn" type="button">保存</button>
+          </div>
+          <div id="liveRoomCodeMessage" class="live-room-message"></div>
         </div>
         <div class="obs-hint">
           <div class="side-subtitle">OBS 设置</div>
@@ -587,10 +140,10 @@
     </div>
 
     <div class="side-section">
-      <div class="panel-title">📱 选手端</div>
-      <div class="side-module">
+        <div class="panel-title" id="playerEntrySectionTitle">📱 选手端</div>
+      <div class="side-module" data-admin-modern="player-entry">
         <div class="player-qr-box">
-          <div class="player-qr-label">Player QR</div>
+          <div class="player-qr-label">选手二维码</div>
           <button class="player-qr-button" type="button" onclick="copyPlayerEntryUrl()" title="点击复制选手入口链接" aria-label="复制选手入口链接">
             <span class="player-qr-frame"><span id="playerQrImage"></span></span>
           </button>
@@ -605,12 +158,16 @@
 <!-- 批量弹窗 -->
 <div id="bulkModal">
   <div class="modal-box">
-    <h2>批量导入选手</h2>
+    <h2 id="bulkModalTitle">批量导入选手</h2>
     <p>每行一个名称</p>
-    <textarea id="bulkText" placeholder="张三
-李四
-王五
-赵六"></textarea>
+    <textarea id="bulkText"></textarea>
+    <label class="bulk-profile-toggle" id="bulkProfileToggle">
+      <input type="checkbox" id="bulkCreateProfiles">
+      <span>
+        <strong>未匹配时登记长期档案</strong>
+        <small>默认只绑定已有档案，未匹配保持临时参赛</small>
+      </span>
+    </label>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeBulkAdd()">取消</button>
       <button class="btn btn-primary" onclick="bulkAdd()">确认导入</button>
@@ -619,614 +176,12 @@
 </div>
 
 <script src="/shared/qrcode.js"></script>
-<script>
-// ── 比赛管理 ─────────────────────────────────────────────
-const routeMatch = location.pathname.match(/^\/t\/([^/]+)\/admin\/?$/);
-const currentTourId = routeMatch ? decodeURIComponent(routeMatch[1]) : '';
-let currentState = null;
-let committedPublicBaseUrlInput = '';
-let publicBaseUrlConfirming = false;
-const OVERLAY_CANVAS_WIDTH = 1920;
-const OVERLAY_CANVAS_HEIGHT = 1080;
-const overlayPreviewEl = document.querySelector('.overlay-preview');
-if (!currentTourId) {
-  location.replace('/');
-}
-
-function updateOverlayPreviewScale() {
-  if (!overlayPreviewEl) return;
-  const scale = Math.min(
-    overlayPreviewEl.clientWidth / OVERLAY_CANVAS_WIDTH,
-    overlayPreviewEl.clientHeight / OVERLAY_CANVAS_HEIGHT
-  );
-  overlayPreviewEl.style.setProperty('--overlay-preview-scale', String(scale || 0.2));
-}
-
-if (overlayPreviewEl && 'ResizeObserver' in window) {
-  new ResizeObserver(updateOverlayPreviewScale).observe(overlayPreviewEl);
-}
-window.addEventListener('resize', updateOverlayPreviewScale);
-updateOverlayPreviewScale();
-
-function tournamentApi(path) {
-  return `/api/tournaments/${encodeURIComponent(currentTourId)}${path}`;
-}
-
-function stripBaseUrlProtocol(value) {
-  return String(value || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-}
-
-function buildPublicBaseUrlOverride(value) {
-  const host = stripBaseUrlProtocol(value);
-  return host ? `http://${host}` : '';
-}
-
-function publicBaseUrlHost(value) {
-  const url = buildPublicBaseUrlOverride(value);
-  if (!url) return '';
-  try {
-    return new URL(url).hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  } catch (err) {
-    return null;
-  }
-}
-
-function isBlockedPublicBaseUrl(value) {
-  const host = publicBaseUrlHost(value);
-  return host === 'localhost'
-    || host === '127.0.0.1'
-    || /^127\./.test(host || '')
-    || host === '::1'
-    || host === '0:0:0:0:0:0:0:1';
-}
-
-function setPublicBaseUrlMessage(text, type = '') {
-  const el = document.getElementById('publicBaseUrlMessage');
-  if (!el) return;
-  el.textContent = text || '';
-  el.className = `address-message ${type}`.trim();
-}
-
-function cancelPublicBaseUrlEdit() {
-  document.getElementById('publicBaseUrlInput').value = committedPublicBaseUrlInput;
-  setPublicBaseUrlMessage('');
-}
-
-async function saveTournamentConfig(options = {}) {
-  const publicBaseUrlOverride = Object.prototype.hasOwnProperty.call(options, 'publicBaseUrlOverride')
-    ? options.publicBaseUrlOverride
-    : buildPublicBaseUrlOverride(committedPublicBaseUrlInput);
-  const liveRoomCode = document.getElementById('liveRoomCodeInput').value.trim();
-  const res = await api(tournamentApi('/config'), { publicBaseUrlOverride, liveRoomCode });
-  if (res.state) render(res.state);
-}
-
-async function confirmPublicBaseUrl() {
-  const input = document.getElementById('publicBaseUrlInput');
-  const btn = document.getElementById('publicBaseUrlConfirmBtn');
-  const candidate = buildPublicBaseUrlOverride(input.value);
-  if (!candidate) {
-    btn.disabled = true;
-    try {
-      await saveTournamentConfig({ publicBaseUrlOverride: '' });
-      committedPublicBaseUrlInput = '';
-      input.value = '';
-      setPublicBaseUrlMessage('已清空，将使用默认内网地址', 'success');
-    } finally {
-      btn.disabled = false;
-    }
-    return;
-  }
-  if (publicBaseUrlHost(input.value) === null) {
-    setPublicBaseUrlMessage('地址格式不正确', 'error');
-    input.focus();
-    return;
-  }
-  if (isBlockedPublicBaseUrl(input.value)) {
-    setPublicBaseUrlMessage('不能使用 localhost 或 127.0.0.1 这类自机地址', 'error');
-    input.focus();
-    return;
-  }
-  btn.disabled = true;
-  btn.textContent = '检查';
-  setPublicBaseUrlMessage('正在检查地址...', '');
-  try {
-    const checked = await api(tournamentApi('/validate-base-url'), { publicBaseUrlOverride: candidate });
-    if (!checked.ok) {
-      setPublicBaseUrlMessage(checked.err || '地址无法访问', 'error');
-      input.focus();
-      return;
-    }
-    await saveTournamentConfig({ publicBaseUrlOverride: checked.publicBaseUrlOverride || candidate });
-    committedPublicBaseUrlInput = stripBaseUrlProtocol(checked.publicBaseUrlOverride || candidate);
-    input.value = committedPublicBaseUrlInput;
-    setPublicBaseUrlMessage('地址可访问，已保存', 'success');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '确认';
-  }
-}
-
-function isTournamentFinished(s) {
-  if (!s) return false;
-  if (s.phase === 'done') return true;
-  const matches = s.matches || [];
-  const finalsDone = matches.some(m => m.phase === 'Finals' && m.done);
-  const bronzeDone = matches.some(m => m.phase === 'Bronze Match' && m.done);
-  return finalsDone && bronzeDone;
-}
-
-function renderQrInto(containerId, text) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  container.innerHTML = '';
-  if (!text) return;
-  const qr = qrcode(0, 'M');
-  qr.addData(text);
-  qr.make();
-  container.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
-  const svg = container.querySelector('svg');
-  if (svg) {
-    svg.style.width = '100%';
-    svg.style.height = '100%';
-    svg.style.display = 'block';
-  }
-}
-
-async function exportReport() {
-  const btn = document.getElementById('btnExportReport');
-  if (!currentState || !isTournamentFinished(currentState)) return;
-  btn.disabled = true;
-  try {
-    window.open(tournamentApi('/export-report'), '_blank');
-  } finally {
-    if (currentState) {
-      const canExport = isTournamentFinished(currentState);
-      btn.disabled = !canExport;
-    }
-  }
-}
-
-// ── WebSocket ─────────────────────────────────────────────
-let ws;
-function connect() {
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = protocol + '//' + location.host + '/t/' + encodeURIComponent(currentTourId) + '/ws';
-  ws = new WebSocket(wsUrl);
-  ws.onopen = () => { document.getElementById('wsDot').classList.add('connected'); document.getElementById('wsText').textContent = '已连接'; };
-  ws.onclose = () => { document.getElementById('wsDot').classList.remove('connected'); document.getElementById('wsText').textContent = '重连中…'; setTimeout(connect, 3000); };
-  ws.onmessage = evt => {
-    const d = JSON.parse(evt.data);
-    if (!d.data) return;
-    if (currentTourId && d.data.tournamentId && d.data.tournamentId !== currentTourId) return;
-    render(d.data);
-  };
-}
-connect();
-
-// ── REST ─────────────────────────────────────────────────
-function apiGet(path) { return fetch(tournamentApi(path)).then(r => r.json()).catch(() => null); }
-async function copyText(text) {
-  const value = (text || '').trim();
-  if (!value || value === '—') return;
-  try {
-    await navigator.clipboard.writeText(value);
-  } catch (err) {
-    const ta = document.createElement('textarea');
-    ta.value = value;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-  }
-}
-async function copyOverlayUrl(btn) {
-  await copyText(document.getElementById('overlayUrl').textContent);
-  if (!btn) return;
-  btn.textContent = '已复制';
-  btn.classList.add('copied');
-  window.clearTimeout(copyOverlayUrl.timer);
-  copyOverlayUrl.timer = window.setTimeout(() => {
-    btn.textContent = '复制';
-    btn.classList.remove('copied');
-  }, 1200);
-}
-async function copyPlayerEntryUrl() {
-  await copyText(document.getElementById('playerEntryUrl').textContent);
-  const tip = document.querySelector('.player-qr-tip');
-  if (!tip) return;
-  tip.textContent = '已复制选手入口链接';
-  window.clearTimeout(copyPlayerEntryUrl.timer);
-  copyPlayerEntryUrl.timer = window.setTimeout(() => {
-    tip.textContent = '扫码进入选手个人页';
-  }, 1200);
-}
-function api(path, data = {}) {
-  return fetch(`${path}`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  }).then(r => r.json()).catch(() => ({ ok: false }));
-}
-
-// ── 选手 ─────────────────────────────────────────────────
-async function addPlayer() {
-  const name = document.getElementById('playerInput').value.trim();
-  if (!name) return;
-  const res = await api(tournamentApi('/players'), { action: 'add', name });
-  if (res.state) render(res.state);
-  document.getElementById('playerInput').value = '';
-  document.getElementById('playerInput').focus();
-}
-async function dropPlayer(name) {
-  if (!confirm('确认将「' + name + '」标记为退赛？')) return;
-  const res = await api(tournamentApi('/drop-player'), { name });
-  if (res.state) render(res.state);
-}
-async function removePlayer(name) { const res = await api(tournamentApi('/players'), { action: 'remove', name }); if (res.state) render(res.state); }
-async function bulkAdd() {
-  for (const line of document.getElementById('bulkText').value.split('\n')) {
-    const n = line.trim(); if (n) await api(tournamentApi('/players'), { action: 'add', name: n });
-  }
-  closeBulkAdd();
-  // 批量添加后获取最新状态刷新
-  const s = await apiGet('/state');
-  if (s) render(s);
-}
-function showBulkAdd() { document.getElementById('bulkModal').classList.add('open'); }
-function closeBulkAdd() { document.getElementById('bulkModal').classList.remove('open'); document.getElementById('bulkText').value = ''; }
-
-// ── 赛程 ─────────────────────────────────────────────────
-async function startSwiss() {
-  const res = await api(tournamentApi('/start-swiss'), { rounds: parseInt(document.getElementById('swissRounds').value) || 5 });
-  if (res.state) render(res.state);
-  // 开始瑞士轮后自动生成第一轮对位
-  const matchRes = await api(tournamentApi('/generate-matches'));
-  if (matchRes.state) render(matchRes.state);
-}
-async function nextRound() {
-  // 下一轮：先递增轮次，再生成对位
-  const res = await api(tournamentApi('/next-round'));
-  if (!res.ok) { alert(res.err || '无法进入下一轮'); if (res.state) render(res.state); return; }
-  if (res.state) render(res.state);
-}
-async function endSwiss() { const res = await api(tournamentApi('/end-swiss')); if (res.state) render(res.state); }
-async function revertRound() {
-  if (!confirm('确定要退回到上一轮吗？当前轮的对局结果将被清除。')) return;
-  const res = await api(tournamentApi('/revert-round'));
-  if (!res.ok) alert(res.err || '无法回退瑞士轮');
-  if (res.state) render(res.state);
-}
-async function confirmTop8() { const res = await api(tournamentApi('/enter-top8')); if (res.state) render(res.state); }
-async function cancelTop8() { const res = await api(tournamentApi('/cancel-top8')); if (res.state) render(res.state); }
-async function setLive(id) {
-  const res = await api(tournamentApi('/set-live'), { matchId: id });
-  if (res.state) render(res.state);
-}
-async function setResult(id, winner) { const res = await api(tournamentApi('/result'), { matchId: id, winnerId: winner }); if (res.state) render(res.state); }
-async function setDraw(id) { const res = await api(tournamentApi('/draw'), { matchId: id }); if (res.state) render(res.state); }
-async function swapSeats(id) { const res = await api(tournamentApi('/swap-seats'), { matchId: id }); if (res.state) render(res.state); }
-async function dropPlayerFromMatchAction(matchId, playerName) {
-  if (!confirm(`确认将「${playerName}」标记为退赛？未录入结果则按赛前退赛处理，已录入结果则按赛后退赛处理。`)) return;
-  const res = await api(tournamentApi('/drop-player-from-match'), { matchId, playerName });
-  if (res.state) render(res.state);
-}
-async function setBo3Score(id, pw1, pw2) { const res = await api(tournamentApi('/bo3-score'), { matchId: id, p1Wins: pw1, p2Wins: pw2 }); if (res.state) render(res.state); }
-
-// ── 辅助 ─────────────────────────────────────────────────
-function roundStats(round, matches) {
-  const rms = matches.filter(m => m.round === round);
-  return { total: rms.length, done: rms.filter(m => m.done).length, allDone: rms.length > 0 && rms.every(m => m.done) };
-}
-function top8PhaseStats(matches) {
-  return ['Quarter Finals', 'Semi Finals', 'Finals', 'Bronze Match'].map(p => {
-    const ms = matches.filter(m => m.phase === p);
-    return { phase: p, total: ms.length, done: ms.filter(m => m.done).length, allDone: ms.length > 0 && ms.every(m => m.done) };
-  });
-}
-function wdlHtml(w, d, l) { return `<span class="rank-wdl"><span class="w">${w}</span>-<span class="d">${d}</span>-<span class="l">${l}</span></span>`; }
-function getRecord2(player, s) {
-  let w = 0, d = 0, l = 0;
-  for (const m of s.matches) {
-    if (!m.done) continue;
-    if (m.draw) { if (m.p1 === player || m.p2 === player) d++; continue; }
-    if (m.winner === player) w++; else if (m.p1 === player || m.p2 === player) l++;
-  }
-  return { w, d, l, points: w * 3 + d };
-}
-function hasOpponent(m, a, b) { return (m.p1 === a && m.p2 === b) || (m.p1 === b && m.p2 === a); }
-
-// ── 渲染 ─────────────────────────────────────────────────
-function render(s) {
-  currentState = s;
-  const n = s.players.length;
-  const p8 = s.pendingTop8 || [];
-  const p8Set = new Set(p8);
-
-  // 顶栏
-  const badge = document.getElementById('phaseBadge');
-  const displayPhase = isTournamentFinished(s) ? 'done' : s.phase;
-  document.body.dataset.adminPhase = displayPhase || '';
-  const labels = { setup:'等待开始', swiss:'瑞士轮', 'swiss-ended':'瑞士轮结束', top8:'淘汰赛', done:'已结束' };
-  badge.className = 'phase-badge ' + (displayPhase === 'swiss' ? 'swiss' : displayPhase === 'swiss-ended' ? 'swiss-ended' : displayPhase === 'top8' ? 'top8' : displayPhase === 'done' ? 'done' : '');
-  badge.textContent = labels[displayPhase] || '—';
-  document.getElementById('roundLabel').textContent = s.phase === 'swiss' ? `第 ${s.round} 轮` : '';
-
-  // 比赛名
-  const tCur = document.getElementById('tourName');
-  tCur.textContent = s.tournamentName || '—';
-  const baseUrl = s.publicBaseUrl || location.origin;
-  const playerEntryUrl = `${baseUrl}/t/${encodeURIComponent(s.tournamentId)}/player-login`;
-  document.getElementById('playerEntryUrl').textContent = playerEntryUrl;
-  renderQrInto('playerQrImage', playerEntryUrl);
-
-  // 统计
-  document.getElementById('playerCount').textContent = n;
-  document.getElementById('actualPlayers').textContent = n;
-  document.getElementById('top8Ready').textContent = n >= 8 ? '✅' : '❌';
-  document.getElementById('top8Warn').classList.toggle('show', n > 0 && n < 8);
-  committedPublicBaseUrlInput = stripBaseUrlProtocol(s.publicBaseUrlOverride);
-  document.getElementById('publicBaseUrlInput').value = committedPublicBaseUrlInput;
-  document.getElementById('liveRoomCodeInput').value = s.liveRoomCode || '';
-
-  const rs = roundStats(s.round, s.matches);
-  const allSwissDone = s.phase === 'swiss' && rs.allDone;
-
-  document.getElementById('btnStart').disabled = n < 2 || s.phase !== 'setup';
-  document.getElementById('btnNext').disabled = s.phase !== 'swiss' || !allSwissDone || s.round >= s.swissRounds;
-  document.getElementById('btnEndSwiss').disabled = s.phase !== 'swiss' || !allSwissDone;
-  document.getElementById('btnRevert').disabled = s.phase !== 'swiss' || s.round <= 1;
-  const canExport = isTournamentFinished(s);
-  const exportBtn = document.getElementById('btnExportReport');
-  exportBtn.disabled = !canExport;
-  exportBtn.title = canExport ? '导出战报' : '比赛完成后可导出战报';
-
-  renderPlayers(s, p8Set);
-  renderSwissHint(s, rs);
-  renderSwissArena(s);
-  renderSwissEndedScreen(s);
-  renderTop8Bracket(s);
-  renderOverlay(s);
-}
-
-// ── 选手列表 ─────────────────────────────────────────────
-function renderPlayers(s, p8Set) {
-  const list = document.getElementById('playerList');
-  const dropped = new Set(s.droppedPlayers || []);
-  if (s.phase === 'setup') {
-    list.innerHTML = s.players.length === 0
-      ? `<div class="empty-state"><div class="empty-state-icon">👥</div>暂无选手</div>`
-      : s.players.map(p => {
-          const esc = p.replace(/'/g, "\\'");
-           const dropped = new Set(s.droppedPlayers || []);
-   const isDropped = dropped.has(p);
-   return `<div class="player-item${isDropped ? ' dropped' : ''}"><span class="rank">—</span><span class="name" title="${p}">${p}</span>${isDropped ? '<span class="wd-badge">WD</span>' : ''}<button class="drop-btn" onclick="removePlayer('${esc}')" title="移除">×</button></div>`;
-        }).join('');
-    return;
-  }
-  const sorted = [...s.players].sort((a, b) => {
-    const ra = getRecord2(a, s), rb = getRecord2(b, s);
-    if (rb.points !== ra.points) return rb.points - ra.points;
-    return s.matches.filter(m => m.done && !m.draw && m.winner === a && hasOpponent(m, a, b)).length
-         - s.matches.filter(m => m.done && !m.draw && m.winner === b && hasOpponent(m, a, b)).length;
-  });
-  // active players (not dropped) for ranking
-  const activeSorted = sorted.filter(p => !dropped.has(p));
-  list.innerHTML = activeSorted.map(function(p, i) {
-    var rec = getRecord2(p, s);
-    var isT8 = p8Set.has(p);
-    var isDropped = dropped.has(p);
-    var dropBtn = (!isDropped && s.phase === 'swiss') ? ' <button class="drop-btn" onclick="dropPlayer(\'' + p.replace(/'/g, '\\\'') + '\')" style="margin-left:4px;background:none;border:none;color:#f87171;cursor:pointer;font-size:11px;">退赛</button>' : '';
-    return '<div class="player-item' + (isT8 ? ' top8-qualify' : '') + (isDropped ? ' dropped' : '') + '">' +
-      '<span class="rank">' + (i+1) + '</span>' +
-      '<span class="name" title="' + p + '" style="flex:1;">' + p + '</span>' +
-      '<span class="record">' + wdlHtml(rec.w, rec.d, rec.l) + '</span>' +
-      dropBtn +
-      '</div>';
-  }).join('');
-
-  // dropped players section
-  const droppedList = sorted.filter(p => dropped.has(p));
-  if (droppedList.length > 0) {
-    const section = document.createElement('div');
-    section.className = 'dropped-section';
-    section.innerHTML = '<div style="font-size:11px;color:#64748b;margin-bottom:4px;">退赛选手</div>' +
-      droppedList.map(p => `<div class="player-item dropped"><span class="rank">—</span><span class="name">${p}</span><span class="wd-badge">WD</span></div>`).join('');
-    list.appendChild(section);
-  }
-}
-
-// ── 瑞士轮提示 ───────────────────────────────────────────
-function renderSwissHint(s, rs) {
-  const el = document.getElementById('swissHint');
-  const txt = document.getElementById('swissHintText');
-  if (s.phase === 'setup' || s.phase === 'swiss-ended' || s.phase === 'top8' || s.phase === 'done') { el.classList.add('hidden'); return; }
-  el.classList.remove('hidden');
-  if (s.phase === 'swiss') {
-    if (rs.allDone) {
-      if (s.round >= s.swissRounds) txt.innerHTML = '✅ 本轮已结束！已达预设轮数 — 点击 <strong>「结束瑞士轮」</strong> 进入排名确认';
-      else txt.innerHTML = '✅ 本轮全部结束！可以 <strong>「下一轮」</strong> 或 <strong>「结束瑞士轮」</strong>';
-    } else {
-      txt.innerHTML = `⏳ <strong>第 ${s.round} 轮</strong> 进行中（${rs.done}/${rs.total} 桌已完成）`;
-    }
-  }
-}
-
-// ── 瑞士轮对战场 ─────────────────────────────────────────
-function renderSwissArena(s) {
-  const el = document.getElementById('swissArena');
-  if (s.phase !== 'swiss') { el.style.display = 'none'; return; }
-  el.style.display = 'block';
-  const rs = roundStats(s.round, s.matches);
-  document.getElementById('roundHeaderArea').innerHTML = `
-    <span class="round-label">🏁 第 ${s.round} 轮</span>
-    <span class="round-progress ${rs.allDone ? 'done' : ''}">
-      <span class="done-count">${rs.done}</span><span>/${rs.total}</span> 已完成 ${rs.allDone ? '✅' : ''}
-    </span>`;
-  const rms = s.matches.filter(m => m.round === s.round);
-  document.getElementById('matchList').innerHTML = rms.map(m => matchCard(s, m, false)).join('');
-}
-
-// ── 瑞士轮结束排名 ───────────────────────────────────────
-function renderSwissEndedScreen(s) {
-  const el = document.getElementById('swissEndedScreen');
-  if (s.phase !== 'swiss-ended') { el.classList.remove('visible'); return; }
-  el.classList.add('visible');
-  const p8 = new Set(s.pendingTop8 || []);
-  document.getElementById('rankingBody').innerHTML = (s.swissRanking || []).map(r => {
-    const isT8 = p8.has(r.player);
-    const rc = r.rank <= 3 ? 'top3' : r.rank <= 8 ? 'top8' : '';
-    return `<tr class="${isT8 ? 'top8' : ''}">
-      <td><span class="rank-num ${rc}">${r.rank}</span></td>
-      <td><span class="rank-name${isT8 ? ' t8' : ''}">${r.player}</span>${isT8 ? '<span class="t8-badge">8强</span>' : ''}</td>
-      <td>${wdlHtml(r.wins, r.draws, r.losses)}</td>
-      <td><span class="rank-pts">${r.points}</span></td>
-      <td><span style="color:#475569;">${r.rank}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-// ── 淘汰赛 ───────────────────────────────────────────────
-function renderTop8Bracket(s) {
-  const el = document.getElementById('top8Bracket');
-  if (s.phase !== 'top8') { el.style.display = 'none'; return; }
-  el.style.display = 'block';
-  const phases = top8PhaseStats(s.matches);
-  document.getElementById('bracketProgress').innerHTML = phases.map(p =>
-    `<div class="bracket-step${p.allDone ? ' done' : p.done > 0 ? ' active' : ''}" title="${p.phase}"></div>`
-  ).join('');
-  // 显示当前未完成的 phase，但 Finals 和 Bronze Match 同时显示
-  const activePhases = phases.filter(p => !p.allDone);
-  const pms = activePhases.length > 0
-    ? s.matches.filter(m => activePhases.some(p => p.phase === m.phase))
-    : s.matches.filter(m => m.phase === 'Finals' || m.phase === 'Bronze Match');
-  const phaseLabels = activePhases.length > 0 ? activePhases.map(p => p.phase).join(' / ') : 'Finals / Bronze Match';
-  document.getElementById('top8PhaseHint').innerHTML = `<strong>${phaseLabels}</strong>`;
-  document.getElementById('top8MatchList').innerHTML = pms.map(m => matchCard(s, m, true)).join('');
-}
-
-// ── 对局卡片 ─────────────────────────────────────────────
-function matchCard(s, m, isTop8) {
-  const isLive = s.currentLiveMatch && s.currentLiveMatch.id === m.id;
-  const hasOtherLiveMatch = s.currentLiveMatch && s.currentLiveMatch.id !== m.id;
-  const liveClosedThisScope = s.matches.some(other =>
-    other.id !== m.id &&
-    other.wasLive &&
-    other.done &&
-    (
-      (typeof m.round === 'number' && other.round === m.round) ||
-      (m.phase && other.phase === m.phase)
-    ),
-  ) || (m.wasLive && m.done);
-  const cardClass = `match-card${isLive ? ' live' : ''}${m.done ? ' done' : ''}`;
-  const p1Won = m.winner === m.p1, p2Won = m.winner === m.p2;
-  const featured = new Set(s.featuredSwissPlayers || []);
-  const p1Featured = !isTop8 && featured.has(m.p1);
-  const p2Featured = !isTop8 && featured.has(m.p2);
-  const canOperate = m.p1 && m.p2 && m.p1 !== 'BYE' && m.p2 !== 'BYE';
-  const escP1 = (m.p1 || '').replace(/'/g, "\\'");
-  const escP2 = (m.p2 || '').replace(/'/g, "\\'");
-  let bo3Html = '';
-  if (isTop8 && (m.p1Wins > 0 || m.p2Wins > 0)) {
-    const pw1 = m.p1Wins || 0, pw2 = m.p2Wins || 0;
-    bo3Html = `<div class="bo3-row">
-      <div class="bo3-player"><span class="bo3-score-num${pw1 >= 2 ? ' winning' : ''}">${pw1}</span><div class="bo3-dots">${[0,1].map(i => `<div class="bo3-dot${i < pw1 ? ' win' : ''}"></div>`).join('')}</div></div>
-      <span style="color:#475569;font-size:10px;">—</span>
-      <div class="bo3-player"><div class="bo3-dots">${[0,1].map(i => `<div class="bo3-dot${i < pw2 ? ' win' : ''}"></div>`).join('')}</div><span class="bo3-score-num${pw2 >= 2 ? ' winning' : ''}">${pw2}</span></div>
-    </div>`;
-  }
-  return `<div class="${cardClass}">
-    <div class="match-header">
-      <span class="match-meta">桌 ${m.table}</span>
-      <div class="match-header-actions">
-        ${isLive
-          ? `<button class="btn live-btn active" onclick="setLive('${m.id}')">取消直播</button>`
-          : (!hasOtherLiveMatch && !liveClosedThisScope
-              ? `<button class="btn live-btn" onclick="setLive('${m.id}')">${m.liveRoomCode ? `设为直播(${m.liveRoomCode})` : '设为直播'}</button>`
-              : '')}
-        ${canOperate && !m.done ? `<button class="btn match-btn" onclick="swapSeats('${m.id}')">换座</button>` : ''}
-        ${!isTop8 && canOperate && !m.done ? `<button class="btn match-btn warn" onclick="setDraw('${m.id}')">平局</button>` : ''}
-        ${m.done ? '<span style="color:#22c55e;font-weight:700;">✅</span>' : ''}
-      </div>
-    </div>
-    <div class="match-players">
-      <div class="seat-group">
-        ${!isTop8 && canOperate ? `<button class="seat-drop-btn" onclick="dropPlayerFromMatchAction('${m.id}','${escP1}')" title="左侧选手退赛">退</button>` : ''}
-        ${isTop8 ? `<div class="score-stack"><button class="btn score-btn" onclick="adjustScore('${m.id}','p1',-1)">-1</button><button class="btn score-btn" onclick="adjustScore('${m.id}','p1',1)">+1</button></div>` : ''}
-        <div class="player-side ${p1Won ? 'won' : p2Won ? 'lost' : ''}${!m.p1?' tbd':''}${p1Featured ? ' tv' : ''}" onclick="${m.p1?`setResult('${m.id}','${m.p1}')`:''}">${m.p1 || 'TBD'}</div>
-      </div>
-      <div class="vs">VS</div>
-      <div class="seat-group right">
-        <div class="player-side ${p2Won ? 'won' : p1Won ? 'lost' : ''}${!m.p2?' tbd':''}${p2Featured ? ' tv' : ''}" onclick="${m.p2?`setResult('${m.id}','${m.p2}')`:''}">${m.p2 || 'TBD'}</div>
-        ${isTop8 ? `<div class="score-stack"><button class="btn score-btn" onclick="adjustScore('${m.id}','p2',1)">+1</button><button class="btn score-btn" onclick="adjustScore('${m.id}','p2',-1)">-1</button></div>` : ''}
-        ${!isTop8 && canOperate ? `<button class="seat-drop-btn" onclick="dropPlayerFromMatchAction('${m.id}','${escP2}')" title="右侧选手退赛">退</button>` : ''}
-      </div>
-    </div>
-    ${bo3Html}
-  </div>`;
-}
-
-function adjustScore(matchId, side, delta) {
-  const m = currentState.matches.find(x => x.id === matchId);
-  if (!m) return;
-  const pw1 = Math.max(0, m.p1Wins || 0);
-  const pw2 = Math.max(0, m.p2Wins || 0);
-  if (side === 'p1') {
-    const next = Math.max(0, Math.min(2, pw1 + delta));
-    setBo3Score(matchId, next, pw2);
-  } else {
-    const next = Math.max(0, Math.min(2, pw2 + delta));
-    setBo3Score(matchId, pw1, next);
-  }
-}
-
-// ── 叠加层预览 ──────────────────────────────────────────
-function renderOverlay(s) {
-  const baseUrl = s.publicBaseUrl || location.origin;
-  const previewUrl = `/t/${encodeURIComponent(s.tournamentId)}/overlay`;
-  const url = `${baseUrl}/t/${encodeURIComponent(s.tournamentId)}/overlay`;
-  document.getElementById('overlayUrl').textContent = url;
-  const frame = document.getElementById('overlayFrame');
-  updateOverlayPreviewScale();
-  if (frame.getAttribute('src') !== previewUrl) { frame.src = previewUrl; frame.style.display = 'block'; }
-  const names = { idle:'空闲', live:'直播中', result:'胜者展示(直播桌)', overview:'全场总览', 'top8-live':'淘汰赛直播', 'top8-result':'胜者展示(BO3)', 'top8-bracket':'淘汰赛对阵图', 'swiss-ended':'瑞士轮排名' };
-  const live = s.currentLiveMatch;
-  document.getElementById('overlayStateDisplay').innerHTML = `
-    <div class="overlay-state-row"><strong>叠加层状态：</strong><span class="overlay-state-value">${names[s.overlayState] || s.overlayState}</span></div>
-    ${live ? `<div class="overlay-state-row"><strong>直播桌：</strong>${live.p1} vs ${live.p2} · 桌${live.table}</div>` : ''}
-    ${s.phase === 'top8' && live ? `<div class="overlay-state-row"><strong>BO3：</strong>${live.p1Wins||0} — ${live.p2Wins||0}</div>` : ''}
-  `;
-}
-
-// ── 启动 ─────────────────────────────────────────────────
-const publicBaseUrlInput = document.getElementById('publicBaseUrlInput');
-const publicBaseUrlConfirmBtn = document.getElementById('publicBaseUrlConfirmBtn');
-publicBaseUrlConfirmBtn.addEventListener('pointerdown', () => { publicBaseUrlConfirming = true; });
-publicBaseUrlConfirmBtn.addEventListener('click', async () => {
-  try {
-    await confirmPublicBaseUrl();
-  } finally {
-    publicBaseUrlConfirming = false;
-  }
-});
-publicBaseUrlInput.addEventListener('blur', () => {
-  window.setTimeout(() => {
-    if (publicBaseUrlConfirming || document.activeElement === publicBaseUrlConfirmBtn) return;
-    cancelPublicBaseUrlEdit();
-  }, 0);
-});
-publicBaseUrlInput.addEventListener('input', () => setPublicBaseUrlMessage(''));
-publicBaseUrlInput.addEventListener('keydown', evt => {
-  if (evt.key === 'Enter') {
-    evt.preventDefault();
-    publicBaseUrlConfirmBtn.click();
-  } else if (evt.key === 'Escape') {
-    evt.preventDefault();
-    cancelPublicBaseUrlEdit();
-    publicBaseUrlInput.blur();
-  }
-});
-apiGet('/state').then(state => { if (state && state.phase) render(state); });
-</script>
+<script src="/admin/state.js?v=3.0-live-room-config"></script>
+<script src="/admin/api.js?v=3.0-live-room-config"></script>
+<script src="/admin/modals.js?v=3.0-bulk-profile-mode"></script>
+<script src="/admin/stages-panel.js?v=3.0-swiss-revert-round"></script>
+<script src="/admin/rules-panel.js?v=3.0-swiss-revert-round"></script>
+<script src="/admin/admin.js?v=3.0-group-tiebreak-1"></script>
 </body>
 </html>
 

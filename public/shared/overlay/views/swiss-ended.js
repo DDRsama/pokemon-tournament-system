@@ -21,6 +21,33 @@ function renderSeRankRow(r, p8) {
   </div>`;
 }
 
+function getSwissEndedAdvancers(s) {
+  const pending = Array.isArray(s.pendingTop8) ? s.pendingTop8.filter(Boolean) : [];
+  if (pending.length > 0) return pending;
+  const results = s.stageResults && typeof s.stageResults === 'object'
+    ? Object.values(s.stageResults)
+    : [];
+  for (const result of results) {
+    if (Array.isArray(result.advancers) && result.advancers.length > 0) {
+      return result.advancers.filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function swissEndedMainTitle(s) {
+  const count = getSwissEndedAdvancers(s).length;
+  if (!count) return '最终排名';
+  const labels = {
+    2: '决赛名单出炉',
+    4: '四强出炉',
+    8: '八强出炉',
+    16: '十六强出炉',
+    32: '三十二强出炉',
+  };
+  return labels[count] || '晋级名单出炉';
+}
+
 function renderSwissEnded(s) {
   renderSwissEndedInto(document, s);
 }
@@ -29,15 +56,17 @@ function renderSwissEndedInto(root, s) {
   var el = root.querySelector('#state-swiss-ended');
   if (!el) return;
   var ranking = (s.swissRanking || []);
-  var top8Ranking = ranking.slice(0, 8);
-  var tableRanking = ranking.slice(8);
-  var p8 = new Set(s.pendingTop8 || []);
+  var advancers = getSwissEndedAdvancers(s);
+  var mainCount = advancers.length || 8;
+  var top8Ranking = ranking.slice(0, mainCount);
+  var tableRanking = ranking.slice(mainCount);
+  var p8 = new Set(advancers);
   el.innerHTML = `
     <div class="se-shell">
       <section class="se-left">
         <div class="se-logo" aria-hidden="true"></div>
         <div class="se-kicker">瑞士轮结束</div>
-        <div class="se-main-title">八强出炉</div>
+        <div class="se-main-title">${escapeHtml(swissEndedMainTitle(s))}</div>
         <div class="se-subtitle">${escapeHtml(s.tournamentName || '')}</div>
         <div class="se-grid">
           ${top8Ranking.map(function(r) { return renderSeTop8Card(r, p8); }).join('')}

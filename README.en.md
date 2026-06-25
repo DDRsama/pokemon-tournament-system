@@ -15,7 +15,14 @@ PTS combines admin management, livestream overlays, player-facing mobile pages, 
 
 Latest stable version: `2.2.0`
 
-Current source development snapshot: `2.2.5-dev.0` (source-only engineering refactor, no Docker image published)
+Current beta version: `3.0.0-beta`
+
+Release channels:
+
+- `latest`: stable Docker image
+- `beta`: beta Docker image
+- Tags such as `3.0.0-beta`: pinned beta image
+- Tags such as `3.0.0`: pinned stable image
 
 Roadmap: [ROADMAP.en.md](./ROADMAP.en.md)
 
@@ -224,16 +231,42 @@ Legacy entries `/admin`, `/overlay`, `/player`, and `/player-login` redirect to 
 docker pull ddrsama/pokemon-tournament-system:latest
 ```
 
+You can also pull beta:
+
+```bash
+docker pull ddrsama/pokemon-tournament-system:beta
+```
+
 You can also pin a specific version:
 
 ```bash
 docker pull ddrsama/pokemon-tournament-system:2.2.0
 ```
 
-### Docker Compose
+### Local Development Docker Compose
 
 ```bash
 docker compose up -d --build
+```
+
+This builds the image directly from the current workspace.
+
+### Stable Docker Compose Deployment
+
+```bash
+docker compose -f docker-compose.deploy.yml up -d
+```
+
+### Beta Docker Compose Deployment
+
+```bash
+docker compose -f docker-compose.deploy.yml -f docker-compose.deploy.beta.yml up -d
+```
+
+To pin a specific beta image:
+
+```bash
+PTS_TAG=3.0.0-beta docker compose -f docker-compose.deploy.yml up -d
 ```
 
 Default port:
@@ -246,6 +279,17 @@ Docker Compose stores persistent data under the project directory by default:
 
 - `./data/tournaments`
 - `./data/reports`
+
+## GitHub And Docker Releases
+
+The repository supports two release channels:
+
+- Stable GitHub Release:
+  publishes `x.y.z` and `latest`
+- GitHub pre-release:
+  publishes `x.y.z-beta` and `beta`
+- Manual GitHub Actions dispatch:
+  can push an additional beta image
 
 ## Environment Variables
 

@@ -24,10 +24,19 @@ function renderRecordChips(record) {
 
 function top8PhaseName(phase) {
   return ({
+    top8: '\u6dd8\u6c70\u8d5b',
+    single_elimination: '\u5355\u8d25\u6dd8\u6c70',
+    double_elimination: '\u53cc\u8d25\u6dd8\u6c70',
+    'double_elimination-ended': '\u53cc\u8d25\u6dd8\u6c70\u7ed3\u679c',
+    winners: '\u80dc\u8005\u7ec4',
+    losers: '\u8d25\u8005\u7ec4',
+    grand_final: '\u603b\u51b3\u8d5b',
     'Quarter Finals': '\u56db\u5206\u4e4b\u4e00\u51b3\u8d5b',
     'Semi Finals': '\u534a\u51b3\u8d5b',
     'Bronze Match': '\u5b63\u519b\u8d5b',
     'Finals': '\u51b3\u8d5b',
+    'Round of 16': '\u5341\u516d\u5f3a\u8d5b',
+    'Round of 32': '\u4e09\u5341\u4e8c\u5f3a\u8d5b',
   })[phase] || phase || '\u6dd8\u6c70\u8d5b';
 }
 

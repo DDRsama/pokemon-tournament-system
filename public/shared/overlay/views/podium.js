@@ -9,21 +9,39 @@ function renderPodiumInto(root, s) {
   const finalMatch = matches.find(m => m.phase === 'Finals' && m.done);
   const bronzeMatch = matches.find(m => m.phase === 'Bronze Match' && m.done);
   const getLoser = (m) => m.winner === m.p1 ? m.p2 : m.p1;
+  const stageResult = Object.values(s.stageResults || {})
+    .find(result => result && Array.isArray(result.standings) && result.standings.some(entry => entry.rank === 1 && entry.player));
+  const resultStandings = stageResult ? [...stageResult.standings].sort((a, b) => (a.rank || 999) - (b.rank || 999)) : [];
 
-  const first = finalMatch ? finalMatch.winner : '-';
-  const second = finalMatch ? getLoser(finalMatch) : '-';
-  const third = bronzeMatch ? bronzeMatch.winner : '-';
-  const fourth = bronzeMatch ? getLoser(bronzeMatch) : '-';
+  const first = finalMatch ? finalMatch.winner : (resultStandings.find(entry => entry.rank === 1)?.player || '-');
+  const second = finalMatch ? getLoser(finalMatch) : (resultStandings.find(entry => entry.rank === 2)?.player || '-');
+  const third = bronzeMatch ? bronzeMatch.winner : (resultStandings.find(entry => entry.rank === 3)?.player || '-');
+  const fourth = bronzeMatch ? getLoser(bronzeMatch) : (resultStandings.find(entry => entry.rank === 4)?.player || '-');
+  const bracketSize = window.PTSOverlay?.topCutBracketSize?.(s)
+    || Number(s.activeStage?.elimination?.bracketSize || s.activeStage?.doubleElimination?.bracketSize || s.top8?.length || 8)
+    || 8;
+  const topCutLabel = ({
+    2: '决赛选手',
+    4: '四强选手',
+    8: '八强选手',
+    16: '十六强选手',
+    32: '三十二强选手',
+  })[bracketSize] || '晋级选手';
 
   // 提取5-8名：四分之一决赛的败者
   const qfMatches = matches.filter(m => m.phase === 'Quarter Finals' && m.done);
   const top8Set = new Set(s.top8 || []);
   const top4Set = new Set([first, second, third, fourth]);
-  const fifthToEighth = qfMatches.map(m => {
+  const fifthToEighthFromMatches = qfMatches.map(m => {
     if (m.winner === m.p1) return m.p2;
     if (m.winner === m.p2) return m.p1;
     return null;
   }).filter(p => p && p !== 'BYE' && top8Set.has(p) && !top4Set.has(p));
+  const fifthToEighth = fifthToEighthFromMatches.length > 0
+    ? fifthToEighthFromMatches
+    : resultStandings
+        .filter(entry => entry.rank >= 5 && entry.rank <= 8 && entry.player)
+        .map(entry => entry.player);
 
   const el = root.querySelector('#state-podium');
   if (!el) return;
@@ -41,7 +59,7 @@ function renderPodiumInto(root, s) {
         <div class="podium-side-name" title="${escapeHtml(p)}">${renderMarqueeText(p)}</div>
       </div>
     `).join('')
-    : '<div class="podium-side-empty">暂无其他八强选手</div>';
+    : `<div class="podium-side-empty">暂无其他${escapeHtml(topCutLabel)}</div>`;
 
   el.innerHTML = '<div class="podium-confetti" id="confetti"></div>' +
     '<div class="podium-shell">' +
@@ -59,7 +77,7 @@ function renderPodiumInto(root, s) {
       '</div>' +
         '</div>' +
         '<div class="podium-side">' +
-          '<div class="podium-side-title">八强选手</div>' +
+          '<div class="podium-side-title">' + escapeHtml(topCutLabel) + '</div>' +
           '<div class="podium-side-list">' + sideList + '</div>' +
         '</div>' +
       '</div>' +

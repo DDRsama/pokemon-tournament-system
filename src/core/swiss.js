@@ -92,9 +92,11 @@ function buildRoundPairings(state, standings, options = {}) {
 }
 
 function createRoundMatches(state, standings, options = {}) {
+  const stageId = options.stageId || 'stage_swiss_1';
   const { pairs, byeSet } = buildRoundPairings(state, standings, options);
   const matches = pairs.map(([p1, p2], index) => ({
     id: `r${state.round}-m${index + 1}`,
+    stageId,
     table: index + 1,
     round: state.round,
     p1,
@@ -118,13 +120,28 @@ function replaceRoundMatches(state, matches, byeSet) {
   return state;
 }
 
+function recommendedSwissRoundsForPlayerCount(playerCount) {
+  const count = Number(playerCount);
+  if (!Number.isInteger(count) || count < 2) return 0;
+  if (count <= 2) return 1;
+  if (count <= 8) return 3;
+  if (count <= 16) return 4;
+  if (count <= 32) return 5;
+  if (count <= 64) return 6;
+  if (count <= 128) return 7;
+  if (count <= 226) return 8;
+  if (count <= 409) return 9;
+  return 10;
+}
+
 function startSwiss(state, rounds, standings, options = {}) {
   const isActiveForRound = options.isActiveForRound || ((player, roundNumber) => defaultIsActiveForRound(state, player, roundNumber));
   const activePlayers = (state.players || []).filter(player => isActiveForRound(player, 1));
   if (activePlayers.length < 2) return false;
+  const stageId = options.stageId || 'stage_swiss_1';
   state.phase = 'swiss';
   state.round = 1;
-  state.swissRounds = rounds;
+  state.swissRounds = recommendedSwissRoundsForPlayerCount(activePlayers.length);
   state.matches = [];
   state.top8 = [];
   state.pendingTop8 = null;
@@ -136,14 +153,13 @@ function startSwiss(state, rounds, standings, options = {}) {
   state._byeSet = new Set();
   state.swissRollbackSnapshots = [];
   state.playerReports = {};
-  const result = createRoundMatches(state, standings, options);
+  const result = createRoundMatches(state, standings, { ...options, stageId });
   replaceRoundMatches(state, result.matches, result.byeSet);
   return true;
 }
 
 function canAdvanceRound(state) {
   if (state.phase !== 'swiss') return { ok: false, err: 'not in swiss phase' };
-  if (state.round >= state.swissRounds) return { ok: false, err: 'already at final swiss round' };
   const roundMatches = (state.matches || []).filter(match => match.round === state.round);
   if (roundMatches.length === 0 || !roundMatches.every(match => match.done)) {
     return { ok: false, err: 'current round is not complete' };
@@ -185,6 +201,7 @@ module.exports = {
   buildRoundPairings,
   createRoundMatches,
   replaceRoundMatches,
+  recommendedSwissRoundsForPlayerCount,
   startSwiss,
   canAdvanceRound,
   buildSwissRanking,

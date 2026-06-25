@@ -57,35 +57,34 @@ Theme: server-side engineering refactor and unit test expansion
 - Add native Node.js unit tests for Swiss rounds, standings, Top 8, storage, player views, and report data.
 - Tighten low-risk validation for safe tournament IDs, BO3 score ranges, and legal match winners.
 - Use this as a source-only foundation for later development; push source and tag only, without publishing Docker Hub images.
-## Version 2.3
+## Version 3.0
 
-Theme: tournament rules and flow configuration
+Status: in development
 
-### Planned Work
-
-- Add structured tournament rule settings during creation.
-- Cover Swiss, group stage, and playoff stage configuration.
-- Support BO counts, plus single-elimination and double-elimination playoff modes.
-- Add baseline fields for singles and team events.
-- Let the admin, player, overlay, and report flows read the same rule data.
-- Backfill default settings for older JSON files to stay compatible.
-- Add coverage for rule-related flows so advancement, match handling, and reports stay stable.
-
-## Version 2.3.5-dev
-
-Theme: overlay componentization and theme preparation
+Theme: tournament engine rewrite, league points, and long-term player identity
 
 ### Planned Work
 
-- Continue cleaning the modularized overlay structure and reduce legacy compatibility code.
-- Extract shared components for player nameplates, score blocks, phase labels, logo zones, connector lines, result badges, and QR blocks.
-- Split overlay CSS further into base, components, and view-specific styles.
-- Improve checks around state routing, View lifecycle, and OBS-safe rendering.
-- Prepare the structure for future theme work, without introducing full theme switching yet.
+- Move the fixed Swiss + Top 8 single-elimination flow into a configurable tournament stage model.
+- Add `schemaVersion: 3`, `tournamentSettings`, `stages`, `matchRules`, and related engine data structures.
+- Keep the current default flow as a built-in preset so old tournaments and existing workflows stay usable.
+- Generalize BO1 / BO3 / BO5 match result handling.
+- Add a server-side player registry, separating long-term player profiles from per-tournament entries.
+- Allow guest entrants to play, while excluding unbound guests from league / season points.
+- Add baseline league / season, points profile, ranked event, and leaderboard support.
+- Gradually adapt home, admin, player, overlay, and report flows to the new tournament engine view models.
+- Add tests for migration, stage advancement, BO handling, player profiles, guest entrants, and league points.
 
-## Version 2.4
+### Later Themes
 
-Theme: language system and theme system
+- Language system.
+- Theme system.
+- Overlay componentization and theme preparation.
+- Complete UI for group stages, double elimination, team events, and other expanded formats.
+
+## Version 3.x
+
+Theme: language system, theme system, and expanded formats
 
 ### Language System
 

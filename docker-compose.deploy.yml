@@ -1,0 +1,16 @@
+version: "3.9"
+services:
+  app:
+    image: ${PTS_IMAGE:-ddrsama/pokemon-tournament-system}:${PTS_TAG:-latest}
+    environment:
+      PORT: "18765"
+      PUBLIC_BASE_URL: ""
+      DATA_DIR: /data/tournaments
+      REPORTS_DIR: /data/reports
+      PYTHON_BIN: /usr/local/bin/python
+    ports:
+      - "18765:18765"
+    volumes:
+      - ./data/tournaments:/data/tournaments
+      - ./data/reports:/data/reports
+    restart: unless-stopped

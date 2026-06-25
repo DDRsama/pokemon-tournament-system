@@ -33,7 +33,11 @@
       setup: '等待开始',
       swiss: '瑞士轮',
       'swiss-ended': '瑞士轮结束',
+      groups: '小组赛',
+      'groups-ended': '小组赛结束',
       top8: '淘汰赛',
+      double_elimination: '双败淘汰',
+      'double_elimination-ended': '双败结束',
       done: '已完成',
     };
     const phaseText = state.phase === 'top8' ? '' : (phaseLabels[state.phase] || '-');
@@ -73,6 +77,24 @@
     return state.lastResult || state.currentLiveMatch || {};
   }
 
+  function livePhaseLabel(match, state) {
+    const raw = match.phase || match.groupLabel || match.bracket || match.stagePhase || '';
+    const labels = {
+      groups: '小组赛',
+      double_elimination: '双败淘汰',
+      winners: '胜者组',
+      losers: '败者组',
+      grand_final: '总决赛',
+      'Quarter Finals': '八强赛',
+      'Semi Finals': '半决赛',
+      'Bronze Match': '季军赛',
+      Finals: '决赛',
+    };
+    if (raw) return labels[raw] || raw;
+    if (match.round || state.round) return `Round ${match.round || state.round}`;
+    return labels[state.phase] || state.phase || '-';
+  }
+
   function ensureOverviewTimerCleanup(ctx) {
     if (ctx.overviewTimerCleanupReady) return;
     ctx.overviewTimerCleanupReady = true;
@@ -85,31 +107,54 @@
     });
   }
 
+  function stopSwissOverviewAutoScroll(ctx) {
+    ensureOverviewTimerCleanup(ctx);
+    if (!ctx.overviewScrollers) return;
+    for (const scroller of Object.values(ctx.overviewScrollers)) {
+      if (scroller.timer) window.clearInterval(scroller.timer);
+    }
+    ctx.overviewScrollers = {};
+  }
+
   function autoScrollListInView(ctx, key, el, options = {}) {
     if (!el) return;
     if (!ctx.overviewScrollers) ctx.overviewScrollers = {};
-    const stepMs = options.stepMs || 34;
-    const travelMs = options.travelMs || 45000;
-    const edgePauseMs = options.edgePauseMs || 650;
-    const topPauseMs = options.topPauseMs || edgePauseMs;
-    const bottomPauseMs = options.bottomPauseMs || edgePauseMs;
-    const getStepPx = (currentEl, currentMax) => {
-      if (options.itemsPerSecond) {
+    const scrollOptions = {
+      stepMs: options.stepMs || 34,
+      travelMs: options.travelMs || 45000,
+      edgePauseMs: options.edgePauseMs || 650,
+      topPauseMs: options.topPauseMs || options.edgePauseMs || 650,
+      bottomPauseMs: options.bottomPauseMs || options.edgePauseMs || 650,
+      itemsPerSecond: options.itemsPerSecond,
+      stepPx: options.stepPx,
+    };
+    const getStepPx = (currentEl, currentMax, currentOptions) => {
+      if (currentOptions.itemsPerSecond) {
         const firstItem = currentEl.children && currentEl.children[0];
         const styles = window.getComputedStyle(currentEl);
         const rowGap = parseFloat(styles.rowGap || styles.gap || '0') || 0;
         const itemHeight = firstItem ? firstItem.getBoundingClientRect().height : 0;
-        const pxPerSecond = Math.max(1, (itemHeight + rowGap) * options.itemsPerSecond);
-        return pxPerSecond * stepMs / 1000;
+        const pxPerSecond = Math.max(1, (itemHeight + rowGap) * currentOptions.itemsPerSecond);
+        return pxPerSecond * currentOptions.stepMs / 1000;
       }
-      return options.stepPx || (currentMax / Math.max(1, travelMs / stepMs));
+      return currentOptions.stepPx || (currentMax / Math.max(1, currentOptions.travelMs / currentOptions.stepMs));
     };
     let scroller = ctx.overviewScrollers[key];
     if (!scroller) {
       scroller = { direction: 1, holdUntil: 0, el, timer: null, virtualTop: el.scrollTop || 0 };
+      ctx.overviewScrollers[key] = scroller;
+    }
+    scroller.options = scrollOptions;
+    if (scroller.timer && scroller.stepMs !== scrollOptions.stepMs) {
+      window.clearInterval(scroller.timer);
+      scroller.timer = null;
+    }
+    if (!scroller.timer) {
+      scroller.stepMs = scrollOptions.stepMs;
       scroller.timer = window.setInterval(() => {
         const now = Date.now();
         const currentEl = scroller.el;
+        const currentOptions = scroller.options || scrollOptions;
         if (!currentEl || now < scroller.holdUntil) return;
         const currentMax = currentEl.scrollHeight - currentEl.clientHeight;
         if (currentMax <= 4) {
@@ -125,21 +170,20 @@
           scroller.virtualTop = currentMax;
           currentEl.scrollTop = currentMax;
           scroller.direction = -1;
-          scroller.holdUntil = now + bottomPauseMs;
+          scroller.holdUntil = now + currentOptions.bottomPauseMs;
           return;
         }
         if (scroller.direction < 0 && scroller.virtualTop <= 2) {
           scroller.virtualTop = 0;
           currentEl.scrollTop = 0;
           scroller.direction = 1;
-          scroller.holdUntil = now + topPauseMs;
+          scroller.holdUntil = now + currentOptions.topPauseMs;
           return;
         }
-        const stepPx = getStepPx(currentEl, currentMax);
+        const stepPx = getStepPx(currentEl, currentMax, currentOptions);
         scroller.virtualTop = Math.max(0, Math.min(currentMax, scroller.virtualTop + stepPx * scroller.direction));
         currentEl.scrollTop = scroller.virtualTop;
-      }, stepMs);
-      ctx.overviewScrollers[key] = scroller;
+      }, scrollOptions.stepMs);
     }
     scroller.el = el;
     if (typeof scroller.virtualTop !== 'number') scroller.virtualTop = el.scrollTop || 0;
@@ -153,6 +197,14 @@
       scroller.virtualTop = currentMax;
       scroller.direction = -1;
     }
+  }
+
+  function isGroupOverviewAutoScrollState(state) {
+    const stage = state?.activeStage || state?.stage || {};
+    return state?.phase === 'groups'
+      || state?.phase === 'groups-ended'
+      || stage.type === 'groups'
+      || stage.type === 'group_round_robin';
   }
 
   function startSwissOverviewAutoScroll(root, ctx, state) {
@@ -173,8 +225,19 @@
         }
       }
     }
-    autoScrollListInView(ctx, 'players', playerList, { stepMs: 32, itemsPerSecond: 1.5, topPauseMs: 7000, bottomPauseMs: 2000 });
-    autoScrollListInView(ctx, 'tables', tableList, { stepMs: 32, travelMs: 5000, topPauseMs: 3000, bottomPauseMs: 3000 });
+    const isGroupOverview = isGroupOverviewAutoScrollState(state);
+    autoScrollListInView(ctx, 'players', playerList, {
+      stepMs: 32,
+      itemsPerSecond: isGroupOverview ? 0.5 : 1.5,
+      topPauseMs: 7000,
+      bottomPauseMs: 2000,
+    });
+    autoScrollListInView(ctx, 'tables', tableList, {
+      stepMs: 32,
+      travelMs: isGroupOverview ? 15000 : 5000,
+      topPauseMs: 3000,
+      bottomPauseMs: 3000,
+    });
     if (ctx.overviewFollowUntil && ctx.overviewScrollers?.players) {
       ctx.overviewScrollers.players.holdUntil = Math.max(
         ctx.overviewScrollers.players.holdUntil || 0,
@@ -250,7 +313,7 @@
     updateTopBar(root, state);
     const liveMatch = state.currentLiveMatch || state.lastLiveMatch || {};
     show(root, '#state-live', 'flex');
-    setText(root, '#liveRoundTag', `Round ${liveMatch.round || state.round || '-'}`);
+    setText(root, '#liveRoundTag', livePhaseLabel(liveMatch, state));
     const p1 = liveMatch.p1 || '-';
     const p2 = liveMatch.p2 || '-';
     const p1Rec = p1 !== '-' ? getRecord(p1, state.matches || []) : null;
@@ -266,7 +329,11 @@
     updateTopBar(root, state);
     show(root, '#state-overview', 'flex');
     renderOverviewInto(root, state, ctx);
-    startSwissOverviewAutoScroll(root, ctx, state);
+    if (state.phase === 'double_elimination') {
+      stopSwissOverviewAutoScroll(ctx);
+    } else {
+      startSwissOverviewAutoScroll(root, ctx, state);
+    }
   });
 
   registerView('swiss-ended', 'tpl-swiss-ended', (root, state, ctx) => {
@@ -292,19 +359,24 @@
     updateTopBar(root, state);
     const live = state.currentLiveMatch || {};
     show(root, '#state-top8-live', 'flex');
-    setText(root, '#top8Phase', top8PhaseName(live.phase || '淘汰赛'));
+    setText(root, '#top8Phase', top8PhaseName(live.phase || live.bracket || live.stagePhase || '淘汰赛'));
     setHtml(root, '#top8P1', renderMarqueeText(live.p1 || '-'));
     setHtml(root, '#top8P2', renderMarqueeText(live.p2 || '-'));
     setText(root, '#top8P1Score', live.p1Wins || 0);
     setText(root, '#top8P2Score', live.p2Wins || 0);
+    setText(root, '#top8BoLabel', `BO${Number(live.bestOf || state.activeStage?.matchRules?.bestOf || 3)}`);
     const p1Score = $(root, '#top8P1Score');
     const p2Score = $(root, '#top8P2Score');
     if (p1Score) {
-      p1Score.className = 'top8-live-score' + ((live.p1Wins || 0) >= 2 ? ' winning' : '');
+      const bestOf = Number(live.bestOf || state.activeStage?.matchRules?.bestOf || 3);
+      const required = Math.max(1, Math.floor(bestOf / 2) + 1);
+      p1Score.className = 'top8-live-score' + ((live.p1Wins || 0) >= required ? ' winning' : '');
       p1Score.removeAttribute('style');
     }
     if (p2Score) {
-      p2Score.className = 'top8-live-score' + ((live.p2Wins || 0) >= 2 ? ' winning' : '');
+      const bestOf = Number(live.bestOf || state.activeStage?.matchRules?.bestOf || 3);
+      const required = Math.max(1, Math.floor(bestOf / 2) + 1);
+      p2Score.className = 'top8-live-score' + ((live.p2Wins || 0) >= required ? ' winning' : '');
       p2Score.removeAttribute('style');
     }
   });

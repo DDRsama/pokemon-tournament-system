@@ -7,6 +7,7 @@ function registerTop8Routes(app, deps) {
     enterTop8,
     cancelTop8Confirm,
     getPostMatchOverlayState,
+    getLiveOverlayStateForMatch,
     current,
   } = deps;
 
@@ -46,8 +47,10 @@ app.post('/api/tournaments/:tournamentId/set-live', (req, res) => {
   match.wasLive = true;
   match.liveRoomCode = current().liveRoomCode || null;
   current().currentLiveMatch = match;
-  current().lastLiveMatch = { id: match.id, p1: match.p1, p2: match.p2, table: match.table, round: current().round, liveRoomCode: match.liveRoomCode || null };
-  current().overlayState = current().phase === 'top8' ? 'top8-live' : 'live';
+  current().lastLiveMatch = { id: match.id, p1: match.p1, p2: match.p2, table: match.table, round: match.round || current().round, phase: match.phase || match.groupLabel || match.bracket || match.stagePhase || null, liveRoomCode: match.liveRoomCode || null };
+  current().overlayState = typeof getLiveOverlayStateForMatch === 'function'
+    ? getLiveOverlayStateForMatch(match)
+    : (current().phase === 'top8' ? 'top8-live' : 'live');
   if (current().phase === 'swiss') {
     const featured = new Set(current()._featuredSwissPlayers || []);
     if (match.p1 && match.p1 !== 'BYE') featured.add(match.p1);

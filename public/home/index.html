@@ -6,387 +6,7 @@
 <title>Home - Pokemon Tournament System</title>
 <link rel="icon" type="image/svg+xml" href="/shared/favicon.svg">
 <link rel="stylesheet" href="/shared/theme.css">
-<style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    min-height: 100vh;
-    font-family: var(--pts-font-sans);
-    background:
-      linear-gradient(180deg, rgba(30, 41, 59, 0.42) 0, rgba(15, 23, 42, 0) 240px),
-      var(--pts-page-bg);
-    color: var(--pts-text);
-  }
-  .topbar {
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 24px;
-    border-bottom: 1px solid rgba(71, 85, 105, 0.7);
-    background: rgba(30, 41, 59, 0.92);
-  }
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    color: var(--pts-text-strong);
-    font-size: 15px;
-    font-weight: 900;
-  }
-  .brand-mark {
-    width: 24px;
-    height: 24px;
-    flex: 0 0 auto;
-  }
-  .brand-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .version {
-    display: inline-flex;
-    align-items: center;
-    height: 26px;
-    padding: 0 10px;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    border-radius: 999px;
-    color: var(--pts-text-muted);
-    background: rgba(15, 23, 42, 0.45);
-    font-size: 12px;
-    font-weight: 800;
-  }
-  .page-shell {
-    width: min(1180px, calc(100% - 32px));
-    margin: 0 auto;
-    padding: 44px 0 42px;
-  }
-  .layout {
-    display: grid;
-    grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
-    gap: 20px;
-    align-items: start;
-  }
-  .hero {
-    display: flex;
-    justify-content: space-between;
-    gap: 24px;
-    align-items: end;
-    padding: 0 0 24px;
-  }
-  .hero-title {
-    margin: 0;
-    color: var(--pts-text-strong);
-    font-size: clamp(32px, 4.8vw, 54px);
-    line-height: 0.98;
-    font-weight: 900;
-    letter-spacing: 0;
-  }
-  .hero-subtitle {
-    margin: 14px 0 0;
-    color: #cbd5e1;
-    font-size: 15px;
-    font-weight: 700;
-  }
-  .panel {
-    background: rgba(30, 41, 59, 0.92);
-    border: 1px solid rgba(71, 85, 105, 0.7);
-    border-radius: var(--pts-radius-lg);
-    padding: 18px;
-    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
-  }
-  .create-panel {
-    position: sticky;
-    top: 16px;
-  }
-  .list-panel {
-    min-height: 360px;
-  }
-  .panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-  .panel-title {
-    margin: 0;
-    color: var(--pts-text-strong);
-    font-size: 15px;
-    font-weight: 900;
-  }
-  .panel-count {
-    color: var(--pts-text-dim);
-    font-size: 12px;
-    font-weight: 800;
-    white-space: nowrap;
-  }
-  .label {
-    display: block;
-    margin-bottom: 6px;
-    color: var(--pts-text-muted);
-    font-size: 12px;
-    font-weight: 800;
-  }
-  .input {
-    width: 100%;
-    height: 42px;
-    border: 1px solid var(--pts-border-strong);
-    border-radius: var(--pts-radius-sm);
-    background: rgba(15, 23, 42, 0.88);
-    color: var(--pts-text-strong);
-    padding: 0 11px;
-    font: inherit;
-    font-size: 14px;
-    margin-bottom: 12px;
-  }
-  .input:focus {
-    outline: none;
-    border-color: var(--pts-warning-bright);
-    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
-  }
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    border: 0;
-    border-radius: var(--pts-radius-sm);
-    min-height: 36px;
-    padding: 8px 12px;
-    color: var(--pts-text-strong);
-    background: var(--pts-surface-raised);
-    font: inherit;
-    font-size: 13px;
-    font-weight: 800;
-    line-height: 1.2;
-    cursor: pointer;
-    transition: background var(--pts-transition-fast), color var(--pts-transition-fast), transform var(--pts-transition-fast), opacity var(--pts-transition-fast);
-  }
-  .btn:hover { background: var(--pts-surface-hover); }
-  .btn:active { transform: translateY(1px); }
-  .btn-primary { background: var(--pts-brand); color: var(--pts-text-inverse); }
-  .btn-primary:hover { background: var(--pts-brand-hover); }
-  .btn-secondary { background: rgba(51, 65, 85, 0.78); color: #dbe4f0; }
-  .btn-danger { background: var(--pts-danger-dark); color: #fecaca; }
-  .btn-danger:hover { background: #991b1b; }
-  .btn-full { width: 100%; }
-  .btn-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .empty {
-    display: grid;
-    place-items: center;
-    min-height: 246px;
-    border: 1px dashed rgba(148, 163, 184, 0.34);
-    border-radius: var(--pts-radius-lg);
-    padding: 36px 18px;
-    color: var(--pts-text-dim);
-    text-align: center;
-    background: rgba(15, 23, 42, 0.26);
-    font-size: 14px;
-    font-weight: 800;
-  }
-  .tour-card {
-    border: 1px solid rgba(71, 85, 105, 0.78);
-    border-radius: var(--pts-radius-lg);
-    background: rgba(23, 32, 51, 0.94);
-    padding: 15px;
-    transition: border-color var(--pts-transition-fast), background var(--pts-transition-fast), transform var(--pts-transition-fast);
-  }
-  .tour-card:hover {
-    border-color: rgba(148, 163, 184, 0.48);
-    background: rgba(30, 41, 59, 0.96);
-  }
-  .tour-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-  .tour-name {
-    color: var(--pts-text-strong);
-    font-size: 16px;
-    font-weight: 900;
-    line-height: 1.35;
-    word-break: break-word;
-  }
-  .tour-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 7px;
-    color: var(--pts-text-muted);
-    font-size: 12px;
-    line-height: 1.45;
-  }
-  .tour-id {
-    max-width: 260px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: #aebcd0;
-    font-family: var(--pts-font-sans);
-  }
-  .tour-actions {
-    display: grid;
-    grid-template-columns: minmax(132px, auto) repeat(2, minmax(118px, auto)) 1fr auto auto;
-    gap: 8px;
-    align-items: center;
-  }
-  .tour-actions .btn {
-    min-width: 0;
-    white-space: nowrap;
-  }
-  .tour-action-spacer {
-    min-width: 8px;
-  }
-  .phase {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: var(--pts-phase-setup-bg);
-    color: var(--pts-phase-setup-fg);
-    font-size: 11px;
-    font-weight: 900;
-    line-height: 1.3;
-    white-space: nowrap;
-  }
-  .phase.swiss { background: var(--pts-phase-swiss-bg); color: var(--pts-phase-swiss-fg); }
-  .phase.swiss-ended { background: var(--pts-phase-swiss-ended-bg); color: var(--pts-phase-swiss-ended-fg); }
-  .phase.top8 { background: var(--pts-phase-top8-bg); color: var(--pts-phase-top8-fg); }
-  .phase.done { background: var(--pts-phase-done-bg); color: var(--pts-phase-done-fg); }
-  .toast {
-    position: fixed;
-    right: 16px;
-    bottom: 16px;
-    display: none;
-    padding: 10px 12px;
-    border-radius: var(--pts-radius-md);
-    background: #14532d;
-    color: #dcfce7;
-    font-size: 13px;
-    font-weight: 800;
-    box-shadow: var(--pts-shadow-md);
-  }
-  .toast.show { display: block; }
-  .modal {
-    position: fixed;
-    inset: 0;
-    z-index: 50;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(15, 23, 42, 0.8);
-    padding: 20px;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.18s ease;
-  }
-  .modal.open {
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .modal-box {
-    width: min(420px, 100%);
-    border: 1px solid rgba(71, 85, 105, 0.78);
-    border-radius: var(--pts-radius-lg);
-    background: var(--pts-surface);
-    padding: 16px;
-    box-shadow: var(--pts-shadow-lg);
-    transform: translateY(8px) scale(0.98);
-    transition: transform 0.18s ease;
-  }
-  .modal.open .modal-box {
-    transform: translateY(0) scale(1);
-  }
-  .modal-box h2 {
-    margin: 0 0 14px;
-    color: var(--pts-text-strong);
-    font-size: 16px;
-  }
-  .modal-text {
-    margin: 0 0 14px;
-    color: var(--pts-text-muted);
-    font-size: 13px;
-    line-height: 1.7;
-  }
-  .modal-text strong {
-    color: var(--pts-text-strong);
-  }
-  .qr-frame {
-    width: 220px;
-    height: 220px;
-    display: grid;
-    place-items: center;
-    margin: 6px auto 14px;
-    padding: 12px;
-    border-radius: var(--pts-radius-lg);
-    background: #fff;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.24);
-  }
-  .qr-frame svg {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  .qr-url {
-    max-height: 72px;
-    overflow: auto;
-    margin-bottom: 14px;
-    padding: 9px 10px;
-    border: 1px solid rgba(71, 85, 105, 0.72);
-    border-radius: var(--pts-radius-sm);
-    background: rgba(15, 23, 42, 0.72);
-    color: var(--pts-text-muted);
-    font-family: var(--pts-font-sans);
-    font-size: 11px;
-    line-height: 1.45;
-    word-break: break-all;
-  }
-  .danger-text {
-    color: #fecaca;
-  }
-  @media (max-width: 1050px) {
-    .tour-actions {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .tour-actions .btn-primary {
-      grid-column: 1 / -1;
-    }
-    .tour-action-spacer { display: none; }
-  }
-  @media (max-width: 820px) {
-    .topbar { padding: 0 16px; }
-    .page-shell { padding-top: 32px; }
-    .hero { display: block; padding-bottom: 20px; }
-    .layout { grid-template-columns: 1fr; }
-    .create-panel { position: static; }
-    .tour-top { flex-direction: column; }
-  }
-  @media (max-width: 560px) {
-    .page-shell { width: min(100% - 24px, 1180px); }
-    .hero-title { font-size: 32px; }
-    .tour-actions {
-      grid-template-columns: 1fr 1fr;
-    }
-    .tour-actions .btn-primary {
-      grid-column: 1 / -1;
-    }
-  }
-</style>
+<link rel="stylesheet" href="/home/home.css?v=3.0-profile-pagination">
 </head>
 <body>
   <header class="topbar">
@@ -394,7 +14,7 @@
       <img class="brand-mark" src="/shared/favicon.svg" alt="">
       <span class="brand-text">Pokemon Tournament System</span>
     </div>
-    <div class="version">2.2</div>
+    <div class="version">3.0-beta</div>
   </header>
 
   <div class="page-shell">
@@ -403,29 +23,258 @@
         <h1 class="hero-title">Pokemon Tournament System</h1>
         <p class="hero-subtitle">欢迎使用宝可梦赛事管理系统</p>
       </div>
+      <div class="hero-actions">
+        <button id="refreshBtn" class="btn btn-ghost" type="button">刷新</button>
+        <button id="openCreateTournamentBtn" class="btn btn-primary" type="button">新建比赛</button>
+      </div>
     </section>
 
-    <main class="layout">
-    <section class="panel create-panel">
-      <div class="panel-head">
-        <h1 class="panel-title">新建比赛</h1>
-      </div>
-      <label class="label" for="newTournamentName">比赛名称</label>
-      <input id="newTournamentName" class="input" type="text" placeholder="例如：2026 年 6 月月赛">
-      <button id="createBtn" class="btn btn-primary btn-full" type="button">创建比赛</button>
+    <section class="stat-grid">
+      <div class="stat"><strong id="tournamentTotalCount">0</strong><span>比赛总数</span></div>
+      <div class="stat"><strong id="leagueCount">0</strong><span>联赛</span></div>
+      <div class="stat"><strong id="profileCount">0</strong><span>登记选手数</span></div>
     </section>
 
-    <section class="panel list-panel">
-      <div class="panel-head">
-        <h2 class="panel-title">比赛列表</h2>
-        <span id="tournamentCount" class="panel-count">0 场</span>
-      </div>
-      <div id="tournamentList" class="list"></div>
-    </section>
+    <main class="workspace">
+      <section class="column">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">联赛</h2>
+            <span id="leagueCountSummary" class="panel-count">0 个</span>
+          </div>
+          <div class="data-summary">
+            <div class="summary-number" id="leagueCountSummaryNumber">0</div>
+            <div class="summary-title">联赛总数</div>
+            <div class="summary-actions">
+              <button class="btn btn-secondary" type="button" data-action="openLeagueManager">管理联赛</button>
+            </div>
+          </div>
+          <div id="leagueList" class="data-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">选手档案</h2>
+          </div>
+          <div class="data-summary">
+            <div class="summary-number" id="profileCountSummary">0</div>
+            <div class="summary-title">登记选手数</div>
+            <div class="summary-actions">
+              <button class="btn btn-secondary" type="button" data-action="openProfileManager">管理档案</button>
+            </div>
+          </div>
+          <div id="profileList" class="data-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">积分规则</h2>
+          </div>
+          <div class="data-summary">
+            <div class="summary-number" id="pointsProfileCountSummary">0</div>
+            <div class="summary-title">当前积分规则总数</div>
+            <div class="summary-actions">
+              <button class="btn btn-secondary" type="button" data-action="openPointsManager">管理规则</button>
+            </div>
+          </div>
+          <div id="pointsProfileList" class="data-list"></div>
+        </section>
+      </section>
+
+      <aside class="column">
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">比赛列表</h2>
+            <span id="tournamentCount" class="panel-count">0 场</span>
+          </div>
+          <div id="tournamentList" class="list"></div>
+        </section>
+      </aside>
     </main>
   </div>
 
   <div id="toast" class="toast">已复制</div>
+
+  <div id="createTournamentModal" class="modal">
+    <div class="modal-box tournament-create">
+      <h2>新建比赛</h2>
+      <label class="label" for="newTournamentName">比赛名称</label>
+      <input id="newTournamentName" class="input" type="text" placeholder="例如：2026 年 6 月月赛">
+      <label class="label" for="entrantTypeSelect">参赛单位</label>
+      <select id="entrantTypeSelect" class="select">
+        <option value="player">个人赛</option>
+        <option value="team">团队赛</option>
+      </select>
+      <div class="create-stage-grid">
+        <section class="form-section">
+          <div class="section-title">资格赛阶段</div>
+          <label class="label" for="qualificationTypeSelect">资格赛规则</label>
+          <select id="qualificationTypeSelect" class="select" required>
+            <option value="" selected>请选择资格赛规则</option>
+            <option value="swiss">瑞士轮</option>
+            <option value="groups">小组赛</option>
+            <option value="none">无，直接进入淘汰赛</option>
+          </select>
+          <div class="create-rule-grid" data-qualification-extra="swiss">
+            <div class="create-rule-readonly">
+              <span>轮数</span>
+              <strong>按人数自动</strong>
+            </div>
+          </div>
+          <div class="create-rule-grid hidden" data-qualification-extra="groups">
+            <div>
+              <label class="label" for="groupCountInput">小组数量</label>
+              <input id="groupCountInput" class="input" type="number" min="2" max="32" step="1" value="4">
+            </div>
+            <div>
+              <label class="label" for="advancePerGroupInput">每组晋级</label>
+              <input id="advancePerGroupInput" class="input" type="number" min="1" max="16" step="1" value="2">
+            </div>
+          </div>
+          <div id="qualificationBestOfBlock">
+            <label class="label" for="qualificationBestOfSelect">资格赛 BO</label>
+            <select id="qualificationBestOfSelect" class="select">
+              <option value="1">BO1</option>
+              <option value="3">BO3</option>
+              <option value="5">BO5</option>
+            </select>
+          </div>
+        </section>
+        <section id="finalsStageSection" class="form-section hidden">
+          <div class="section-title">淘汰赛阶段</div>
+          <label class="label" for="finalsTypeSelect">淘汰赛规则</label>
+          <select id="finalsTypeSelect" class="select" required>
+            <option value="" selected>请选择淘汰赛规则</option>
+            <option value="single_elimination">单败淘汰</option>
+            <option value="double_elimination">双败淘汰</option>
+            <option value="none">不设置淘汰赛</option>
+          </select>
+          <div class="create-rule-grid" id="finalsOptions">
+            <div>
+              <label id="topCutSizeLabel" class="label" for="topCutSizeInput">晋级人数</label>
+              <select id="topCutSizeInput" class="select">
+                <option value="2">2 人</option>
+                <option value="4">4 人</option>
+                <option value="8" selected>8 人</option>
+                <option value="16">16 人</option>
+                <option value="32">32 人</option>
+              </select>
+            </div>
+            <div>
+              <label class="label" for="finalsBestOfSelect">淘汰赛 BO</label>
+              <select id="finalsBestOfSelect" class="select">
+                <option value="1">BO1</option>
+                <option value="3" selected>BO3</option>
+                <option value="5">BO5</option>
+              </select>
+            </div>
+          </div>
+          <label class="check-row" id="bronzeMatchRow"><input id="bronzeMatchToggle" type="checkbox" checked> 开启季军赛</label>
+        </section>
+      </div>
+      <p id="createTournamentHint" class="field-note">请先选择资格赛规则。</p>
+      <div class="btn-row">
+        <button id="createBtn" class="btn btn-primary" type="button">创建比赛</button>
+        <button class="btn" type="button" data-action="closeModal">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="createLeagueModal" class="modal">
+    <div class="modal-box">
+      <h2>新建联赛</h2>
+      <label class="label" for="newLeagueName">联赛名称</label>
+      <input id="newLeagueName" class="input" type="text" placeholder="例如：2026 城市联赛">
+      <label class="label" for="newLeagueBestFinishLimit">最佳计分场次</label>
+      <input id="newLeagueBestFinishLimit" class="input" type="number" min="1" step="1" placeholder="留空为不限">
+      <p class="field-note">用于联赛总榜，只统计每名选手最好的 N 场比赛；留空则全部计入。</p>
+      <div class="btn-row">
+        <button id="createLeagueBtn" class="btn btn-primary" type="button">创建联赛</button>
+        <button class="btn" type="button" data-action="closeModal">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="createProfileModal" class="modal">
+    <div class="modal-box">
+      <h2 id="profileModalTitle">新建选手档案</h2>
+      <label class="label" for="newProfileName">显示名</label>
+      <input id="newProfileName" class="input" type="text" placeholder="选手显示名">
+      <label class="label" for="newProfileAliases">别名</label>
+      <textarea id="newProfileAliases" class="textarea" rows="3" placeholder="用换行分隔多个别名"></textarea>
+      <div class="btn-row">
+        <button id="createProfileBtn" class="btn btn-primary" type="button">创建档案</button>
+        <button class="btn" type="button" data-action="closeModal">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="createPointsProfileModal" class="modal">
+    <div class="modal-box wide">
+      <h2 id="pointsProfileModalTitle">新建积分规则</h2>
+      <label class="label" for="newPointsProfileName">规则名称</label>
+      <input id="newPointsProfileName" class="input" type="text" placeholder="积分规则名称">
+      <div class="points-grid">
+        <div>
+          <label class="label" for="newPointsParticipation">参赛分</label>
+          <input id="newPointsParticipation" class="input" type="number" step="1" value="1">
+        </div>
+        <div>
+          <label class="label" for="newPointsMultiplier">赛事倍率</label>
+          <input id="newPointsMultiplier" class="input" type="number" step="0.1" value="1">
+        </div>
+        <div>
+          <label class="label" for="newPointsPreset">快速模板</label>
+          <select id="newPointsPreset" class="select">
+            <option value="">手动设置</option>
+            <option value="top8">Top8 奖励</option>
+            <option value="top4">Top4 奖励</option>
+            <option value="winner">冠军奖励</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-section">
+        <div class="section-head">
+          <div>
+            <div class="section-title">名次分</div>
+            <p class="field-note">单名次只填“名次”；区间填“起始名次”和“结束名次”。例如 3-4 名填起始 3、结束 4。</p>
+          </div>
+          <button id="addPointsRowBtn" class="btn btn-secondary" type="button">添加名次分</button>
+        </div>
+        <div id="pointsRows"></div>
+      </div>
+      <div class="modal-actions">
+        <button id="createPointsProfileBtn" class="btn btn-primary" type="button">保存规则</button>
+        <button class="btn" type="button" data-action="closeModal">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="detailModal" class="modal">
+    <div class="modal-box wide">
+      <h2 id="detailTitle">详情</h2>
+      <div id="detailBody"></div>
+      <div class="btn-row">
+        <button class="btn" type="button" data-action="closeModal">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="profileEditModal" class="modal">
+    <div class="modal-box">
+      <h2 id="profileEditTitle">编辑选手档案</h2>
+      <label class="label" for="editProfileName">显示名</label>
+      <input id="editProfileName" class="input" type="text" placeholder="选手显示名">
+      <label class="label" for="editProfileAliases">别名</label>
+      <textarea id="editProfileAliases" class="textarea" rows="3" placeholder="用换行分隔多个别名"></textarea>
+      <div id="profileEditHint" class="field-note"></div>
+      <div class="btn-row">
+        <button id="profileEditSaveBtn" class="btn btn-primary" type="button">保存修改</button>
+        <button id="profileEditDeleteBtn" class="btn btn-danger" type="button">删除档案</button>
+        <button id="profileEditCancelBtn" class="btn" type="button">取消</button>
+      </div>
+    </div>
+  </div>
 
   <div id="renameModal" class="modal">
     <div class="modal-box">
@@ -463,282 +312,116 @@
     </div>
   </div>
 
+  <div id="deletePointsModal" class="modal">
+    <div class="modal-box">
+      <h2>删除积分规则</h2>
+      <p class="modal-text danger-text">确认删除 <strong id="deletePointsProfileName"></strong>？正在被联赛使用的规则不会被删除。</p>
+      <div class="btn-row">
+        <button id="deletePointsConfirmBtn" class="btn btn-danger" type="button">确认删除</button>
+        <button id="deletePointsCancelBtn" class="btn" type="button">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteProfileModal" class="modal">
+    <div class="modal-box">
+      <h2>删除选手档案</h2>
+      <p class="modal-text danger-text">确认删除 <strong id="deleteProfileName"></strong>？有参赛记录或积分记录的档案不能删除。</p>
+      <div class="btn-row">
+        <button id="deleteProfileConfirmBtn" class="btn btn-danger" type="button">确认删除</button>
+        <button id="deleteProfileCancelBtn" class="btn" type="button">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="leagueManagerModal" class="modal">
+    <div class="modal-box manager">
+      <div class="manager-head">
+        <div>
+          <h2>联赛管理</h2>
+          <p class="modal-text">查看全部联赛，并维护联赛包含的比赛。</p>
+        </div>
+        <div class="manager-actions">
+          <button class="btn btn-primary" type="button" data-action="openCreateLeague">新建联赛</button>
+          <button class="btn" type="button" data-action="closeModal">关闭</button>
+        </div>
+      </div>
+      <div id="leagueManagerList" class="manager-list"></div>
+    </div>
+  </div>
+
+  <div id="profileManagerModal" class="modal">
+    <div class="modal-box manager">
+      <div class="manager-head">
+        <div>
+          <h2>选手档案管理</h2>
+          <p class="modal-text">查看、编辑和清理选手档案。已有历史记录的档案会被保护。</p>
+        </div>
+        <div class="manager-actions">
+          <button class="btn btn-primary" type="button" data-action="openCreateProfile">新建档案</button>
+          <button class="btn" type="button" data-action="closeModal">关闭</button>
+        </div>
+      </div>
+      <div class="manager-toolbar">
+        <input id="profileManagerSearchInput" class="input search-input" type="search" placeholder="搜索选手或别名" aria-label="搜索选手档案">
+        <select id="profileManagerPageSizeSelect" class="select page-size-select" aria-label="每页显示数量">
+          <option value="10">10 / 页</option>
+          <option value="20">20 / 页</option>
+          <option value="40">40 / 页</option>
+        </select>
+      </div>
+      <div id="profileManagerList" class="manager-list"></div>
+      <div id="profileManagerPager" class="profile-pager hidden"></div>
+    </div>
+  </div>
+
+  <div id="pointsManagerModal" class="modal">
+    <div class="modal-box manager">
+      <div class="manager-head">
+        <div>
+          <h2>积分规则管理</h2>
+          <p class="modal-text">查看全部积分规则、进入详情或继续创建。</p>
+        </div>
+        <div class="manager-actions">
+          <button class="btn btn-primary" type="button" data-action="openCreatePointsProfile">新建规则</button>
+          <button class="btn" type="button" data-action="closeModal">关闭</button>
+        </div>
+      </div>
+      <div id="pointsManagerList" class="manager-list"></div>
+    </div>
+  </div>
+
+  <div id="deleteLeagueModal" class="modal">
+    <div class="modal-box">
+      <h2>删除联赛</h2>
+      <p class="modal-text danger-text">确认删除 <strong id="deleteLeagueName"></strong>？删除联赛不会删除源比赛。</p>
+      <div class="btn-row">
+        <button id="deleteLeagueConfirmBtn" class="btn btn-danger" type="button">确认删除</button>
+        <button id="deleteLeagueCancelBtn" class="btn" type="button">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="leagueRuleModal" class="modal modal-stack">
+    <div class="modal-box">
+      <h2>选择积分规则</h2>
+      <p id="leagueRuleTargetName" class="modal-text"></p>
+      <label class="label" for="leagueRuleSelect">积分规则</label>
+      <select id="leagueRuleSelect" class="select"></select>
+      <div class="btn-row">
+        <button id="leagueRuleConfirmBtn" class="btn btn-primary" type="button">确认</button>
+        <button id="leagueRuleCancelBtn" class="btn" type="button">取消</button>
+      </div>
+    </div>
+  </div>
+
 <script src="/shared/qrcode.js"></script>
-<script>
-const listEl = document.getElementById('tournamentList');
-const tournamentCountEl = document.getElementById('tournamentCount');
-const createBtn = document.getElementById('createBtn');
-const nameInput = document.getElementById('newTournamentName');
-const toastEl = document.getElementById('toast');
-const renameModal = document.getElementById('renameModal');
-const renameInput = document.getElementById('renameInput');
-const renameSaveBtn = document.getElementById('renameSaveBtn');
-const renameCancelBtn = document.getElementById('renameCancelBtn');
-const qrModal = document.getElementById('qrModal');
-const qrTournamentName = document.getElementById('qrTournamentName');
-const qrImage = document.getElementById('qrImage');
-const qrUrl = document.getElementById('qrUrl');
-const qrCopyBtn = document.getElementById('qrCopyBtn');
-const qrCloseBtn = document.getElementById('qrCloseBtn');
-const deleteModal = document.getElementById('deleteModal');
-const deleteTournamentName = document.getElementById('deleteTournamentName');
-const deleteConfirmBtn = document.getElementById('deleteConfirmBtn');
-const deleteCancelBtn = document.getElementById('deleteCancelBtn');
-let renamingTournamentId = '';
-let currentQrUrl = '';
-let deletingTournamentId = '';
-let deletingTournamentName = '';
-
-function escHtml(value) {
-  return String(value ?? '').replace(/[&<>"']/g, ch => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }[ch]));
-}
-
-const escAttr = escHtml;
-
-function phaseLabel(phase) {
-  return {
-    setup: '准备中',
-    swiss: '瑞士轮',
-    'swiss-ended': '瑞士轮结束',
-    top8: '淘汰赛',
-    done: '已结束',
-  }[phase] || phase || '-';
-}
-
-function phaseClass(phase) {
-  return {
-    swiss: 'swiss',
-    'swiss-ended': 'swiss-ended',
-    top8: 'top8',
-    done: 'done',
-  }[phase] || '';
-}
-
-function adminUrl(id) {
-  return `/t/${encodeURIComponent(id)}/admin`;
-}
-
-function overlayUrl(id) {
-  return `/t/${encodeURIComponent(id)}/overlay`;
-}
-
-function playerUrl(id) {
-  return `/t/${encodeURIComponent(id)}/player-login`;
-}
-
-async function api(path, data = null) {
-  const init = data
-    ? {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      }
-    : {};
-  const res = await fetch(path, init);
-  const json = await res.json();
-  if (!res.ok || json.ok === false) throw new Error(json.err || '请求失败');
-  return json;
-}
-
-function showToast(text) {
-  toastEl.textContent = text;
-  toastEl.classList.add('show');
-  window.clearTimeout(showToast.timer);
-  showToast.timer = window.setTimeout(() => toastEl.classList.remove('show'), 1400);
-}
-
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch (err) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-  }
-  showToast('已复制链接');
-}
-
-function renderQr(text) {
-  qrImage.innerHTML = '';
-  const qr = qrcode(0, 'M');
-  qr.addData(text);
-  qr.make();
-  qrImage.innerHTML = qr.createSvgTag({ cellSize: 8, margin: 0, scalable: true });
-}
-
-function openQrModal(url, tournamentName) {
-  currentQrUrl = location.origin + url;
-  qrTournamentName.innerHTML = `<strong>${escHtml(tournamentName || '未命名比赛')}</strong>`;
-  qrUrl.textContent = currentQrUrl;
-  renderQr(currentQrUrl);
-  qrModal.classList.add('open');
-}
-
-function closeQrModal() {
-  currentQrUrl = '';
-  qrModal.classList.remove('open');
-}
-
-async function loadTournaments() {
-  const tournaments = await api('/api/tournaments');
-  tournamentCountEl.textContent = `${Array.isArray(tournaments) ? tournaments.length : 0} 场`;
-  if (!Array.isArray(tournaments) || tournaments.length === 0) {
-    listEl.innerHTML = '<div class="empty">暂无比赛</div>';
-    return;
-  }
-  listEl.innerHTML = tournaments.map(t => {
-    const admin = adminUrl(t.id);
-    const player = playerUrl(t.id);
-    const overlay = overlayUrl(t.id);
-    const createdAt = t.date ? new Date(t.date).toLocaleString('zh-CN') : '-';
-    return `
-      <article class="tour-card">
-        <div class="tour-top">
-          <div>
-            <div class="tour-name">${escHtml(t.name || '未命名比赛')}</div>
-            <div class="tour-meta">
-              <span class="tour-id">${escHtml(t.id)}</span>
-              <span>${escHtml(createdAt)}</span>
-            </div>
-          </div>
-          <span class="phase ${phaseClass(t.phase)}">${escHtml(phaseLabel(t.phase))}</span>
-        </div>
-        <div class="tour-actions">
-          <button class="btn btn-primary" type="button" data-action="admin" data-url="${escAttr(admin)}">进入后台</button>
-          <button class="btn btn-secondary" type="button" data-action="playerQr" data-url="${escAttr(player)}" data-name="${escAttr(t.name || '')}">选手入口二维码</button>
-          <button class="btn btn-secondary" type="button" data-action="copy" data-url="${escAttr(overlay)}">复制叠加层链接</button>
-          <span class="tour-action-spacer"></span>
-          <button class="btn btn-secondary" type="button" data-action="rename" data-id="${escAttr(t.id)}" data-name="${escAttr(t.name || '')}">重命名</button>
-          <button class="btn btn-danger" type="button" data-action="delete" data-id="${escAttr(t.id)}" data-name="${escAttr(t.name || '')}">删除</button>
-        </div>
-      </article>
-    `;
-  }).join('');
-}
-
-async function createTournament() {
-  const name = nameInput.value.trim() || '未命名比赛';
-  try {
-    const res = await api('/api/tournaments', { action: 'create', name });
-    nameInput.value = '';
-    if (res.id) {
-      location.href = adminUrl(res.id);
-      return;
-    }
-    await loadTournaments();
-  } catch (err) {
-    alert(err.message || '创建比赛失败');
-  }
-}
-
-function openRenameModal(id, currentName) {
-  renamingTournamentId = id;
-  renameInput.value = currentName || '';
-  renameModal.classList.add('open');
-  window.setTimeout(() => {
-    renameInput.focus();
-    renameInput.select();
-  }, 30);
-}
-
-function closeRenameModal() {
-  renamingTournamentId = '';
-  renameModal.classList.remove('open');
-}
-
-async function submitRename() {
-  if (!renamingTournamentId) return;
-  try {
-    await api('/api/tournaments', { action: 'rename', id: renamingTournamentId, name: renameInput.value.trim() || '未命名比赛' });
-    closeRenameModal();
-    await loadTournaments();
-  } catch (err) {
-    alert(err.message || '重命名失败');
-  }
-}
-
-function openDeleteModal(id, name) {
-  deletingTournamentId = id;
-  deletingTournamentName = name || id;
-  deleteTournamentName.textContent = `「${deletingTournamentName}」`;
-  deleteModal.classList.add('open');
-}
-
-function closeDeleteModal() {
-  deletingTournamentId = '';
-  deletingTournamentName = '';
-  deleteModal.classList.remove('open');
-}
-
-async function submitDelete() {
-  if (!deletingTournamentId) return;
-  try {
-    await api('/api/tournaments', { action: 'delete', id: deletingTournamentId });
-    closeDeleteModal();
-    await loadTournaments();
-  } catch (err) {
-    alert(err.message || '删除失败');
-  }
-}
-
-createBtn.addEventListener('click', createTournament);
-nameInput.addEventListener('keydown', evt => {
-  if (evt.key === 'Enter') createTournament();
-});
-listEl.addEventListener('click', evt => {
-  const btn = evt.target.closest('button[data-action]');
-  if (!btn) return;
-  const action = btn.dataset.action;
-  if (action === 'admin') {
-    location.href = btn.dataset.url;
-  } else if (action === 'copy') {
-    copyText(location.origin + btn.dataset.url);
-  } else if (action === 'playerQr') {
-    openQrModal(btn.dataset.url, btn.dataset.name);
-  } else if (action === 'rename') {
-    openRenameModal(btn.dataset.id, btn.dataset.name);
-  } else if (action === 'delete') {
-    openDeleteModal(btn.dataset.id, btn.dataset.name);
-  }
-});
-renameSaveBtn.addEventListener('click', submitRename);
-renameCancelBtn.addEventListener('click', closeRenameModal);
-renameModal.addEventListener('click', evt => {
-  if (evt.target === renameModal) closeRenameModal();
-});
-renameInput.addEventListener('keydown', evt => {
-  if (evt.key === 'Enter') submitRename();
-  if (evt.key === 'Escape') closeRenameModal();
-});
-qrCopyBtn.addEventListener('click', () => {
-  if (currentQrUrl) copyText(currentQrUrl);
-});
-qrCloseBtn.addEventListener('click', closeQrModal);
-qrModal.addEventListener('click', evt => {
-  if (evt.target === qrModal) closeQrModal();
-});
-deleteConfirmBtn.addEventListener('click', submitDelete);
-deleteCancelBtn.addEventListener('click', closeDeleteModal);
-deleteModal.addEventListener('click', evt => {
-  if (evt.target === deleteModal) closeDeleteModal();
-});
-document.addEventListener('keydown', evt => {
-  if (evt.key !== 'Escape') return;
-  if (qrModal.classList.contains('open')) closeQrModal();
-  if (deleteModal.classList.contains('open')) closeDeleteModal();
-});
-loadTournaments().catch(err => {
-  listEl.innerHTML = `<div class="empty">${escHtml(err.message || '加载失败')}</div>`;
-});
-</script>
+<script src="/home/api.js?v=3.0-profile-pagination"></script>
+<script src="/home/modal.js?v=3.0-create-staged"></script>
+<script src="/home/tournaments.js?v=3.0-swiss-auto-rounds"></script>
+<script src="/home/leagues.js?v=3.0-league-dropdown"></script>
+<script src="/home/profiles.js?v=3.0-profile-pagination"></script>
+<script src="/home/points.js?v=3.0-home-tail-cleanup"></script>
+<script src="/home/home.js?v=3.0-profile-pagination"></script>
 </body>
 </html>

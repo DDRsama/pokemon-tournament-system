@@ -13,7 +13,7 @@ function assertSafeTournamentId(id) {
   }
 }
 
-function createJsonStore({ dataDir, displayPhaseForTournament }) {
+function createJsonStore({ dataDir, displayPhaseForTournament, getListItemName, getListItemDate }) {
   fs.mkdirSync(dataDir, { recursive: true });
 
   function tournamentFilePath(id) {
@@ -49,11 +49,12 @@ function createJsonStore({ dataDir, displayPhaseForTournament }) {
         if (!isSafeTournamentId(id)) return null;
         try {
           const data = JSON.parse(fs.readFileSync(path.join(dataDir, file), 'utf8'));
+          const date = getListItemDate ? getListItemDate(data) : data._createdAt;
           return {
             id,
-            name: data.tournamentName,
+            name: getListItemName ? getListItemName(data) : data.tournamentName,
             phase: displayPhaseForTournament(data),
-            date: data._createdAt,
+            date: Number.isFinite(Number(date)) ? Number(date) : 0,
           };
         } catch (err) {
           console.warn(`Skipping invalid tournament file ${file}: ${err.message}`);

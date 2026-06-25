@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>选手中心 - Pokemon Tournament System</title>
+<link rel="icon" type="image/svg+xml" href="/shared/favicon.svg">
+<link rel="stylesheet" href="/shared/theme.css">
+<link rel="stylesheet" href="/player/center.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-mark" src="/shared/favicon.svg" alt="">
+      <span class="brand-text">Pokemon Tournament System</span>
+    </div>
+    <div class="version">3.0-beta</div>
+  </header>
+
+  <main class="app-shell player-center-compact">
+    <header class="hero compact-hero">
+      <div class="eyebrow">PLAYER CENTER</div>
+      <h1>选手中心</h1>
+      <p>管理你的选手档案，查看正在参加的比赛、历史战绩和联赛积分。</p>
+    </header>
+
+    <section class="panel identity-panel" id="signedOutView">
+      <div class="panel-head">
+        <div>
+          <div class="section-label">本机选手身份</div>
+          <h2>登录选手中心</h2>
+        </div>
+      </div>
+      <div class="field-grid">
+        <label class="field">
+          <span>选手名称</span>
+          <input id="profileNameInput" autocomplete="nickname">
+        </label>
+        <button class="primary-action" id="createProfileBtn" type="button">登录</button>
+      </div>
+      <div class="profile-confirm hidden" id="profileConfirmBox">
+        <div>
+          <div class="confirm-title" id="profileConfirmTitle">确认登录</div>
+          <div class="confirm-message" id="profileConfirmMessage"></div>
+        </div>
+        <div class="confirm-actions">
+          <button class="secondary-action" id="profileConfirmCancelBtn" type="button">取消</button>
+          <button class="primary-action" id="profileConfirmOkBtn" type="button">确认</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel identity-panel hidden" id="signedInView">
+      <div class="profile-card">
+        <div>
+          <div class="section-label">当前档案</div>
+          <h2 id="activeProfileName">-</h2>
+        </div>
+        <button class="secondary-action" id="changeProfileBtn" type="button">登出</button>
+      </div>
+      <div class="stats-row">
+        <div class="stat">
+          <span>联赛积分</span>
+          <strong id="totalPoints">0</strong>
+        </div>
+        <div class="stat">
+          <span>积分记录</span>
+          <strong id="rankedEvents">0</strong>
+        </div>
+        <div class="stat">
+          <span>比赛记录</span>
+          <strong id="historyCount">0</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-grid hidden" id="profileContentGrid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="section-label">进行中</div>
+            <h2>我的当前比赛</h2>
+          </div>
+        </div>
+        <div class="item-list" id="currentTournamentList"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="section-label">报名入口</div>
+            <h2>开放比赛</h2>
+          </div>
+        </div>
+        <div class="item-list" id="openTournamentList"></div>
+      </section>
+
+      <section class="panel wide-panel">
+        <div class="panel-head">
+          <div>
+            <div class="section-label">历史与积分</div>
+            <h2>过往记录</h2>
+          </div>
+        </div>
+        <div class="item-list" id="historyTournamentList"></div>
+      </section>
+    </section>
+  </main>
+
+  <div class="modal-overlay hidden" id="tournamentConfirmBox" role="dialog" aria-modal="true" aria-labelledby="tournamentConfirmTitle">
+    <div class="modal-dialog tournament-confirm">
+      <div>
+        <div class="confirm-title" id="tournamentConfirmTitle">确认报名</div>
+        <div class="confirm-message" id="tournamentConfirmMessage"></div>
+      </div>
+      <div class="confirm-actions">
+        <button class="secondary-action" id="tournamentConfirmCancelBtn" type="button">取消</button>
+        <button class="primary-action" id="tournamentConfirmOkBtn" type="button">确认报名</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="/player/center.js?v=3.0-compact-center"></script>
+</body>
+</html>

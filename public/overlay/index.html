@@ -5,8 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Overlay - Pokemon Tournament System</title>
 <link rel="icon" type="image/svg+xml" href="/shared/favicon.svg">
-<link rel="stylesheet" href="/shared/theme.css?v=2.2-overlay">
-<link rel="stylesheet" href="/shared/overlay/overlay.css?v=2.2-overlay">
+<link rel="preload" as="font" type="font/ttf" href="/shared/fonts/ud-shin-go-sc-r.ttf" crossorigin>
+<link rel="preload" as="image" href="/shared/pokemon-champions-title.png">
+<link rel="stylesheet" href="/shared/theme.css?v=3.0-overlay">
+<link rel="stylesheet" href="/shared/overlay/overlay.css?v=3.0-overlay-group-tiebreak-1">
+<style>
+  html:not([data-pts-overlay-boot="ready"]) #overlay-shell {
+    visibility: hidden;
+  }
+</style>
 </head>
 <body>
   <main id="overlay-shell">
@@ -126,7 +133,7 @@
             <img class="top8-live-logo" src="/shared/pokemon-champions-title.png" alt="">
             <div class="top8-live-meta">
               <div id="top8Phase" class="top8-live-phase"></div>
-              <div class="top8-live-bo">BO3</div>
+              <div class="top8-live-bo" id="top8BoLabel">BO3</div>
             </div>
           </div>
           <div class="top8-live-player right">
@@ -215,19 +222,19 @@
   </template>
 
 <script src="/shared/qrcode.js"></script>
-<script src="/shared/overlay/core.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/view-context.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/state-router.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/transition-manager.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/state.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/utils.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/views/top8-overview.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/views/swiss-overview.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/views/swiss-ended.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/views/podium.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/views/top8-bracket.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/views/compat-views.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/router.js?v=2.2-overlay"></script>
-<script src="/shared/overlay/boot.js?v=2.2-overlay"></script>
+<script src="/shared/overlay/core.js?v=3.0-overlay"></script>
+<script src="/shared/overlay/view-context.js?v=3.0-overlay"></script>
+<script src="/shared/overlay/state-router.js?v=3.0-overlay-route-5"></script>
+<script src="/shared/overlay/transition-manager.js?v=3.0-overlay"></script>
+<script src="/shared/overlay/state.js?v=3.0-overlay"></script>
+<script src="/shared/overlay/utils.js?v=3.0-overlay"></script>
+<script src="/shared/overlay/views/top8-overview.js?v=3.0-overlay"></script>
+<script src="/shared/overlay/views/swiss-overview.js?v=3.0-overlay-topn-overview-1"></script>
+<script src="/shared/overlay/views/swiss-ended.js?v=3.0-overlay-swiss-ended-topn-title"></script>
+<script src="/shared/overlay/views/podium.js?v=3.0-overlay-topn-1"></script>
+<script src="/shared/overlay/views/top8-bracket.js?v=3.0-overlay"></script>
+<script src="/shared/overlay/views/compat-views.js?v=3.0-overlay-topn-labels-1"></script>
+<script src="/shared/overlay/router.js?v=3.0-overlay"></script>
+<script src="/shared/overlay/boot.js?v=3.0-overlay"></script>
 </body>
 </html>

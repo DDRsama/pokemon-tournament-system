@@ -9,17 +9,49 @@ const swissCore = require('./core/swiss');
 const top8Core = require('./core/top8');
 const reportsData = require('./core/reportsData');
 const pdfReport = require('./reports/pdfReport');
+const playersCore = require('./core/players');
+const entrantsCore = require('./core/entrants');
+const leaguesCore = require('./core/leagues');
+const pointsCore = require('./core/points');
+const advancementCore = require('./core/advancement');
+const groupsCore = require('./core/groups');
+const doubleEliminationCore = require('./core/doubleElimination');
 const { createBroadcaster } = require('./realtime/broadcaster');
 const { attachTournamentWebSocket } = require('./realtime/websocket');
 const { buildPlayerView: buildPlayerViewCore } = require('./core/playerView');
-const { PORT, DATA_DIR, PUBLIC_DIR, PUBLIC_BASE_URL, REPORTS_DIR, PYTHON_BIN } = require('./config');
+const { PORT, DATA_DIR, PLAYERS_DIR, LEAGUES_DIR, POINTS_DIR, PUBLIC_DIR, PUBLIC_BASE_URL, REPORTS_DIR, PYTHON_BIN } = require('./config');
 const stateCore = require('./core/state');
 const recordsCore = require('./core/records');
 const standingsCore = require('./core/standings');
+const stagesCore = require('./core/stages');
+const matchesCore = require('./core/matches');
+const rulesCore = require('./core/rules');
+const presetsCore = require('./core/presets');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.mkdirSync(PLAYERS_DIR, { recursive: true });
+fs.mkdirSync(LEAGUES_DIR, { recursive: true });
+fs.mkdirSync(POINTS_DIR, { recursive: true });
 fs.mkdirSync(REPORTS_DIR, { recursive: true });
 const tournamentStore = createJsonStore({ dataDir: DATA_DIR, displayPhaseForTournament });
+const playerStore = createJsonStore({
+  dataDir: PLAYERS_DIR,
+  displayPhaseForTournament: () => 'player',
+  getListItemName: data => data.displayName || data.name,
+  getListItemDate: data => data.updatedAt || data.createdAt || data._createdAt,
+});
+const leagueStore = createJsonStore({
+  dataDir: LEAGUES_DIR,
+  displayPhaseForTournament: () => 'league',
+  getListItemName: data => data.name,
+  getListItemDate: data => data.updatedAt || data.createdAt || data._createdAt,
+});
+const pointsStore = createJsonStore({
+  dataDir: POINTS_DIR,
+  displayPhaseForTournament: () => 'points',
+  getListItemName: data => data.name,
+  getListItemDate: data => data.updatedAt || data.createdAt || data._createdAt,
+});
 
 const app = express();
 app.use(express.json());
@@ -27,6 +59,27 @@ app.use(express.json());
 let wss = null;
 let currentTournamentId = null;
 let tournaments = new Map();
+let playerRegistry = new Map();
+let leagueRegistry = new Map();
+let pointsRegistry = new Map();
+let playerSummaryCache = null;
+let playerListWithSummaryCache = null;
+let leaguePointAwardsCache = null;
+
+function clonePlain(value) {
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
+function invalidateDerivedCaches() {
+  playerSummaryCache = null;
+  playerListWithSummaryCache = null;
+  leaguePointAwardsCache = null;
+}
+
+function invalidatePlayerCaches() {
+  playerSummaryCache = null;
+  playerListWithSummaryCache = null;
+}
 
 function getLocalNetworkHost() {
   const interfaces = os.networkInterfaces();
@@ -141,6 +194,335 @@ function restoreState(rawState) {
   return stateCore.restoreState(rawState);
 }
 
+function loadPlayerRegistry() {
+  const next = new Map();
+  for (const item of playerStore.list()) {
+    const raw = playerStore.load(item.id);
+    if (!raw) continue;
+    const profile = playersCore.createPlayerProfile({
+      id: item.id,
+      displayName: raw.displayName || raw.name || item.name || item.id,
+      aliases: raw.aliases || [],
+      bindings: raw.bindings || [],
+      stats: raw.stats || {},
+    });
+    profile.createdAt = raw.createdAt || raw._createdAt || Date.now();
+    profile.updatedAt = raw.updatedAt || profile.createdAt;
+    next.set(item.id, profile);
+  }
+  playerRegistry = next;
+  invalidatePlayerCaches();
+}
+
+function savePlayerProfile(profile) {
+  const now = Date.now();
+  profile.createdAt = profile.createdAt || now;
+  profile.updatedAt = now;
+  playerStore.save(profile.id, profile);
+  playerRegistry.set(profile.id, profile);
+  invalidatePlayerCaches();
+  return profile;
+}
+
+function buildLightPlayerProfile(profile) {
+  return {
+    ...profile,
+    totalPoints: Number(profile.stats?.leaguePoints || 0),
+    rankedEvents: Number(profile.stats?.rankedTournamentsPlayed || 0),
+  };
+}
+
+function listPlayerProfiles(options = {}) {
+  const includeSummary = options.includeSummary !== false;
+  if (!includeSummary) {
+    return [...playerRegistry.values()].map(buildLightPlayerProfile);
+  }
+  if (playerListWithSummaryCache) return clonePlain(playerListWithSummaryCache);
+  const summaries = getPlayerSummaryCache();
+  playerListWithSummaryCache = [...playerRegistry.values()].map(profile => {
+    const summary = summaries.get(profile.id);
+    return {
+      ...profile,
+      totalPoints: summary ? summary.totalPoints : Number(profile.stats?.leaguePoints || 0),
+      rankedEvents: summary ? summary.rankedEvents : Number(profile.stats?.rankedTournamentsPlayed || 0),
+    };
+  });
+  return clonePlain(playerListWithSummaryCache);
+}
+
+function createGlobalPlayerProfile(input = {}) {
+  return savePlayerProfile(playersCore.createPlayerProfile(input));
+}
+
+function getGlobalPlayerProfileById(playerId) {
+  return playerRegistry.get(playerId) || null;
+}
+
+function getGlobalPlayerProfileByName(name) {
+  const target = String(name || '').trim();
+  if (!target) return null;
+  for (const profile of playerRegistry.values()) {
+    if (profile.displayName === target) return profile;
+    if (Array.isArray(profile.aliases) && profile.aliases.includes(target)) return profile;
+  }
+  return null;
+}
+
+function getGlobalPlayerProfileReferences(playerId) {
+  const id = String(playerId || '').trim();
+  if (!id) return [];
+  const refs = [];
+  const seen = new Set();
+  const push = (type, refId, name) => {
+    const key = `${type}:${refId}:${name}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    refs.push({ type, id: refId, name });
+  };
+
+  const profile = getGlobalPlayerProfileById(id);
+  if (profile && Array.isArray(profile.bindings) && profile.bindings.length > 0) {
+    push('binding', id, profile.displayName || id);
+  }
+
+  for (const [name, entry] of Object.entries(currentState.playerProfiles || {})) {
+    if (entry && entry.globalProfileId === id) {
+      push('current', currentState._id || '', currentState.tournamentName || name);
+      break;
+    }
+  }
+
+  const summary = buildGlobalPlayerSummary(id);
+  if (summary) {
+    for (const item of Array.isArray(summary.tournaments) ? summary.tournaments : []) {
+      push('tournament', item.tournamentId || '', item.tournamentName || item.tournamentId || id);
+    }
+    for (const award of Array.isArray(summary.awards) ? summary.awards : []) {
+      push('award', award.tournamentId || '', award.tournamentName || award.tournamentId || id);
+    }
+  }
+
+  return refs;
+}
+
+function updateGlobalPlayerProfile(playerId, patch = {}) {
+  const current = getGlobalPlayerProfileById(playerId);
+  if (!current) return null;
+  const nextDisplayName = String(patch.displayName || patch.name || current.displayName || '').trim();
+  if (!nextDisplayName) throw new Error('missing player displayName');
+  const sourceAliases = Array.isArray(patch.aliases) ? patch.aliases : current.aliases;
+  const aliases = new Set((Array.isArray(sourceAliases) ? sourceAliases : [])
+    .map(value => String(value || '').trim())
+    .filter(Boolean));
+  if (current.displayName && current.displayName !== nextDisplayName) {
+    aliases.add(current.displayName);
+  }
+  aliases.delete(nextDisplayName);
+  const updated = playersCore.createPlayerProfile({
+    id: current.id,
+    displayName: nextDisplayName,
+    aliases: [...aliases],
+    bindings: Array.isArray(current.bindings) ? current.bindings : [],
+    stats: current.stats || {},
+  });
+  updated.createdAt = current.createdAt || updated.createdAt;
+  return savePlayerProfile(updated);
+}
+
+function deleteGlobalPlayerProfile(playerId) {
+  const current = getGlobalPlayerProfileById(playerId);
+  if (!current) return { ok: false, err: 'player profile not found' };
+  const refs = getGlobalPlayerProfileReferences(playerId);
+  if (refs.length > 0) {
+    return { ok: false, err: 'player profile is in use', references: refs };
+  }
+  playerRegistry.delete(current.id);
+  playerStore.remove(current.id);
+  invalidatePlayerCaches();
+  return { ok: true, player: current };
+}
+
+function bindGuestEntrantToGlobalProfile(entrant, playerId) {
+  const profile = getGlobalPlayerProfileById(playerId);
+  if (!profile) return null;
+  return playersCore.bindEntrantToProfile(entrant, profile);
+}
+
+function loadLeagueRegistry() {
+  const next = new Map();
+  for (const item of leagueStore.list()) {
+    const raw = leagueStore.load(item.id);
+    if (!raw) continue;
+    const league = leaguesCore.createLeague({
+      id: item.id,
+      name: raw.name || item.name || item.id,
+      seasonLabel: raw.seasonLabel || '',
+      game: raw.game || 'vgc',
+      divisions: raw.divisions || ['open'],
+      regions: raw.regions || [],
+      pointsProfileId: raw.pointsProfileId || null,
+      tournamentBindings: raw.tournamentBindings || [],
+      includedTournamentIds: raw.includedTournamentIds || [],
+      finalTournamentIds: raw.finalTournamentIds || [],
+      bestFinishLimit: raw.bestFinishLimit || null,
+    });
+    league.createdAt = raw.createdAt || raw._createdAt || Date.now();
+    league.updatedAt = raw.updatedAt || league.createdAt;
+    next.set(item.id, league);
+  }
+  leagueRegistry = next;
+  invalidateDerivedCaches();
+}
+
+function saveLeague(league) {
+  const now = Date.now();
+  league.createdAt = league.createdAt || now;
+  league.updatedAt = now;
+  leagueStore.save(league.id, league);
+  leagueRegistry.set(league.id, league);
+  invalidateDerivedCaches();
+  return league;
+}
+
+function listLeagues() {
+  return [...leagueRegistry.values()].map(league => ({ ...league }));
+}
+
+function getLeagueById(leagueId) {
+  const id = String(leagueId || '').trim();
+  return id ? leagueRegistry.get(id) || null : null;
+}
+
+function createLeague(input = {}) {
+  return saveLeague(leaguesCore.createLeague(input));
+}
+
+function updateLeague(leagueId, patch = {}) {
+  const current = getLeagueById(leagueId);
+  if (!current) return null;
+  return saveLeague(leaguesCore.createLeague({
+    ...current,
+    ...patch,
+    id: current.id,
+  }));
+}
+
+function deleteLeague(leagueId) {
+  const league = getLeagueById(leagueId);
+  if (!league) return { ok: false, err: 'league not found' };
+  leagueRegistry.delete(league.id);
+  leagueStore.remove(league.id);
+  invalidateDerivedCaches();
+  return { ok: true, league };
+}
+
+function loadPointsRegistry() {
+  const next = new Map();
+  for (const item of pointsStore.list()) {
+    const raw = pointsStore.load(item.id);
+    if (!raw) continue;
+    const profile = pointsCore.createPointsProfile({
+      id: item.id,
+      name: raw.name || item.name || item.id,
+      participationPoints: raw.participationPoints,
+      placementPoints: raw.placementPoints,
+      eventTierMultiplier: raw.eventTierMultiplier,
+      bestFinishLimit: raw.bestFinishLimit,
+    });
+    profile.createdAt = raw.createdAt || raw._createdAt || Date.now();
+    profile.updatedAt = raw.updatedAt || profile.createdAt;
+    next.set(item.id, profile);
+  }
+  if (!next.size) {
+    const defaultProfile = pointsCore.createPointsProfile({
+      id: 'default_ranked',
+      name: 'Default Ranked Points',
+      participationPoints: 1,
+      placementPoints: [
+        { rank: 1, points: 30 },
+        { rank: 2, points: 24 },
+        { rankMin: 3, rankMax: 4, points: 18 },
+        { rankMin: 5, rankMax: 8, points: 12 },
+      ],
+    });
+    defaultProfile.createdAt = Date.now();
+    defaultProfile.updatedAt = defaultProfile.createdAt;
+    pointsStore.save(defaultProfile.id, defaultProfile);
+    next.set(defaultProfile.id, defaultProfile);
+  }
+  pointsRegistry = next;
+  invalidateDerivedCaches();
+}
+
+function savePointsProfile(profile) {
+  const now = Date.now();
+  profile.createdAt = profile.createdAt || now;
+  profile.updatedAt = now;
+  pointsStore.save(profile.id, profile);
+  pointsRegistry.set(profile.id, profile);
+  invalidateDerivedCaches();
+  return profile;
+}
+
+function createPointsProfile(input = {}) {
+  return savePointsProfile(pointsCore.createPointsProfile(input));
+}
+
+function updatePointsProfile(profileId, patch = {}) {
+  const current = getPointsProfileById(profileId);
+  if (!current) return null;
+  return savePointsProfile(pointsCore.createPointsProfile({
+    ...current,
+    ...patch,
+    id: current.id,
+    createdAt: current.createdAt,
+  }));
+}
+
+function getPointsProfileReferences(profileId) {
+  const id = String(profileId || '').trim();
+  if (!id) return [];
+  const refs = [];
+  for (const league of listLeagues()) {
+    if (league.pointsProfileId === id) {
+      refs.push({ type: 'league', id: league.id, name: league.name || league.id });
+    }
+    for (const binding of leaguesCore.normalizeTournamentBindings(league)) {
+      if (binding.pointsProfileId === id) {
+        refs.push({ type: 'leagueTournament', id: league.id, name: `${league.name || league.id} / ${binding.tournamentId}` });
+      }
+    }
+  }
+  return refs;
+}
+
+function deletePointsProfile(profileId) {
+  const id = String(profileId || '').trim();
+  const current = getPointsProfileById(id);
+  if (!current) return { ok: false, err: 'points profile not found' };
+  const refs = getPointsProfileReferences(id);
+  if (refs.length > 0) {
+    return { ok: false, err: 'points profile is in use', references: refs };
+  }
+  pointsStore.remove(id);
+  pointsRegistry.delete(id);
+  invalidateDerivedCaches();
+  return { ok: true, pointsProfile: current };
+}
+
+function listPointsProfiles() {
+  return [...pointsRegistry.values()].map(profile => ({ ...profile }));
+}
+
+function getPointsProfileById(profileId) {
+  const id = String(profileId || '').trim();
+  return id ? pointsRegistry.get(id) || null : null;
+}
+
+function getDefaultPointsProfile() {
+  return getPointsProfileById('default_ranked') || listPointsProfiles()[0] || pointsCore.createPointsProfile();
+}
+
 function getDropAfterRound(player) {
   const table = currentState._dropAfterRound || {};
   const value = table[player];
@@ -161,7 +543,50 @@ function isActiveForRound(player, roundNumber) {
 }
 
 function getPostMatchOverlayState() {
-  return currentState.phase === 'top8' ? 'top8-bracket' : 'overview';
+  if (currentState.phase === 'done') {
+    if (currentState.overlayState === 'swiss-ended') return 'swiss-ended';
+    const activeStage = stagesCore.getActiveStage(currentState);
+    if (activeStage?.type === 'single_elimination' || activeStage?.type === 'double_elimination') return 'podium';
+    return currentState.overlayState === 'podium' ? 'podium' : 'overview';
+  }
+  if (currentState.phase === 'top8') {
+    const activeStage = stagesCore.getActiveStage(currentState);
+    const bracketSize = top8Core.normalizeBracketSize(activeStage?.elimination?.bracketSize || currentState.top8?.length || 8, 8);
+    return activeStage?.id === 'stage_top_cut_1' && bracketSize === 8 ? 'top8-bracket' : 'overview';
+  }
+  return 'overview';
+}
+
+function getCurrentGroupRoundForState(state = currentState, stage = null) {
+  const activeStage = stage || stagesCore.getActiveStage(state);
+  return groupsCore.getCurrentGroupRound(state, activeStage);
+}
+
+function getGroupRoundCountForState(state = currentState, stage = null) {
+  const activeStage = stage || stagesCore.getActiveStage(state);
+  return activeStage ? groupsCore.getGroupRoundCount(groupsCore.getGroupMatches(state, activeStage.id)) : 0;
+}
+
+function normalizeActiveGroupSchedules(state = currentState) {
+  const stages = stagesCore.getStages(state);
+  let changed = false;
+  for (const stage of stages) {
+    if (stage.type === 'groups' || stage.type === 'group_round_robin') {
+      changed = groupsCore.normalizeGroupSchedule(state, stage) || changed;
+    }
+  }
+  return changed;
+}
+
+function isGameScoreStage(stage) {
+  const rules = stage && stage.matchRules ? stage.matchRules : {};
+  return rulesCore.usesGameScore(rules, stage);
+}
+
+function getLiveOverlayStateForMatch(match, result = false) {
+  const stage = getMatchStage(match);
+  if (isGameScoreStage(stage)) return result ? 'top8-result' : 'top8-live';
+  return result ? 'result' : 'live';
 }
 
 function resetCurrentState(nextState) {
@@ -169,13 +594,24 @@ function resetCurrentState(nextState) {
   currentState = restoreState(nextState);
   _dropped = new Set(currentState._dropped || []);
   normalizeTop8MatchTables(currentState);
+  normalizeActiveGroupSchedules(currentState);
+  top8Core.repairSingleEliminationBracketShape(currentState);
+  if (currentState.phase === 'top8') top8Core.advanceBracket(currentState);
+  finishSingleEliminationIfComplete(currentState);
+  invalidateDerivedCaches();
 
   if (currentState.phase === 'setup') currentState.overlayState = 'idle';
-  else if (currentState.phase === 'swiss-ended') currentState.overlayState = 'swiss-ended';
+  else if (currentState.phase === 'swiss-ended' || (currentState.phase === 'done' && currentState.overlayState === 'swiss-ended')) {
+    currentState.overlayState = 'swiss-ended';
+  } else if (currentState.phase === 'done' && currentState.overlayState === 'podium') {
+    currentState.overlayState = 'podium';
+  }
   else if (currentState.phase === 'top8') {
-    currentState.overlayState = currentState.currentLiveMatch ? 'top8-live' : 'top8-bracket';
+    currentState.overlayState = currentState.currentLiveMatch ? getLiveOverlayStateForMatch(currentState.currentLiveMatch) : getPostMatchOverlayState();
+  } else if (currentState.phase === 'groups' || currentState.phase === 'double_elimination') {
+    currentState.overlayState = currentState.currentLiveMatch ? getLiveOverlayStateForMatch(currentState.currentLiveMatch) : 'overview';
   } else {
-    currentState.overlayState = currentState.currentLiveMatch ? 'live' : 'overview';
+    currentState.overlayState = currentState.currentLiveMatch ? getLiveOverlayStateForMatch(currentState.currentLiveMatch) : 'overview';
   }
 }
 
@@ -315,17 +751,70 @@ function pairPlayersWithinGroup(players) {
 function getSortedStandings(includeDropped = true) {
   return standingsCore.getSortedStandings(currentState, includeDropped, _dropped);
 }
+
+function getSwissStage() {
+  return stagesCore.getStages(currentState).find(stage => stage.type === 'swiss') || null;
+}
+
+function getTopCutStage() {
+  return stagesCore.getStages(currentState).find(stage => stage.type === 'single_elimination') || null;
+}
+
+function getMatchStage(match, state = currentState) {
+  if (!match) return null;
+  if (match.stageId) return stagesCore.getStageById(state, match.stageId);
+  if (typeof match.round === 'number') return stagesCore.getStages(state).find(stage => stage.type === 'swiss') || null;
+  if (match.phase) return stagesCore.getStages(state).find(stage => stage.type === 'single_elimination') || null;
+  return stagesCore.getActiveStage(state);
+}
+
+function getMatchRulesForMatch(match, state = currentState) {
+  return getMatchStage(match, state)?.matchRules || {};
+}
+
+function ensureEntrantsList() {
+  currentState.entrants = entrantsCore.migrateLegacyEntrants(currentState);
+  return currentState.entrants;
+}
+
+function getEntrantByName(name) {
+  return entrantsCore.findEntrantByDisplayName(ensureEntrantsList(), name);
+}
+
+function upsertTournamentEntrant(entrant) {
+  currentState.entrants = entrantsCore.upsertEntrant(ensureEntrantsList(), entrant);
+  return entrantsCore.findEntrantByDisplayName(currentState.entrants, entrant.displayName);
+}
+
+function createGuestTournamentEntrant(name, source = 'manual') {
+  return entrantsCore.createGuestEntrant({
+    tournamentId: currentState._id,
+    displayName: name,
+    source,
+  });
+}
+
 function addPlayer(name) {
   name = (name || '').trim();
   if (name && !currentState.players.includes(name) && !_dropped.has(name) && currentState.players.length < 64) {
     currentState.players.push(name);
     if (!currentState.playerProfiles) currentState.playerProfiles = {};
     if (!currentState.playerProfiles[name]) {
+      const globalProfile = getGlobalPlayerProfileByName(name);
       currentState.playerProfiles[name] = {
         playerId: `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         name,
+        globalProfileId: globalProfile ? globalProfile.id : null,
       };
     }
+    const profile = currentState.playerProfiles[name];
+    upsertTournamentEntrant({
+      ...(getEntrantByName(name) || createGuestTournamentEntrant(name)),
+      profileId: profile.globalProfileId || null,
+      entryType: profile.globalProfileId ? 'registered' : 'guest',
+      source: profile.globalProfileId ? 'manual_bound_profile' : 'manual',
+      rankedEligible: !!profile.globalProfileId || profile.rankedEligible === true,
+    });
     return true;
   }
   return false;
@@ -333,6 +822,8 @@ function addPlayer(name) {
 
 function removePlayer(name) {
   currentState.players = currentState.players.filter(p => p !== name);
+  currentState.entrants = entrantsCore.removeEntrantByDisplayName(ensureEntrantsList(), name);
+  if (currentState.playerProfiles) delete currentState.playerProfiles[name];
 }
 
 function dropPlayer(name) {
@@ -341,6 +832,8 @@ function dropPlayer(name) {
   _dropped.add(name);
   if (!currentState.players.includes(name)) currentState.players.push(name);
   setDropAfterRound(name, currentState.round);
+  if (!getEntrantByName(name)) upsertTournamentEntrant(createGuestTournamentEntrant(name, 'drop'));
+  currentState.entrants = entrantsCore.markEntrantDropped(ensureEntrantsList(), name, currentState.round);
 
   const activeRound = currentState.round;
   for (const m of currentState.matches) {
@@ -367,15 +860,24 @@ function dropPlayer(name) {
 
 function startSwiss(rounds) {
   clearResultTimer();
-  const ok = swissCore.startSwiss(currentState, rounds, getSortedStandings(false), { isActiveForRound });
+  const stage = getSwissStage();
+  const ok = swissCore.startSwiss(currentState, rounds, getSortedStandings(false), {
+    isActiveForRound,
+    stageId: stage?.id || 'stage_swiss_1',
+  });
   if (!ok) return false;
+  currentState.activeStageId = stage?.id || 'stage_swiss_1';
   rebuildSwissMatchesArchive();
   syncSwissHistoryForRound(currentState.round);
   return true;
 }
 
 function generateRoundMatches() {
-  const result = swissCore.createRoundMatches(currentState, getSortedStandings(false), { isActiveForRound });
+  const stage = getSwissStage();
+  const result = swissCore.createRoundMatches(currentState, getSortedStandings(false), {
+    isActiveForRound,
+    stageId: stage?.id || 'stage_swiss_1',
+  });
   swissCore.replaceRoundMatches(currentState, result.matches, result.byeSet);
   syncSwissHistoryForRound(currentState.round);
 }
@@ -385,6 +887,7 @@ function nextRound() {
   if (!canAdvance.ok) return canAdvance;
   clearSwissRoundTransientState();
   pushSwissRollbackSnapshot('next-round');
+  currentState.swissRounds = Math.max(Number(currentState.swissRounds || 0), Number(currentState.round || 0) + 1);
   currentState.round++;
   generateRoundMatches();
   return { ok: true };
@@ -406,14 +909,43 @@ function revertRound() {
 }
 
 function endSwiss() {
+  const stage = getSwissStage();
   const standings = getSortedStandings(true);
   swissCore.endSwiss(currentState, standings);
+  const hasNextStage = !!stage?.advancement?.targetStageId;
+  const advancementCount = Number(stage?.advancement?.count);
+  const advancerCount = hasNextStage && Number.isInteger(advancementCount) && advancementCount > 0
+    ? advancementCount
+    : 0;
+  if (!hasNextStage) currentState.pendingTop8 = null;
+  advancementCore.setStageResult(currentState, stage?.id || 'stage_swiss_1', {
+    standings: currentState.swissRanking || swissCore.buildSwissRanking(standings),
+    advancers: advancementCore.buildAdvancersFromStandings(
+      standings.filter(entry => !entry.dropped),
+      advancerCount,
+    ),
+    metadata: {
+      roundCount: currentState.round,
+      scheduledRoundCount: currentState.swissRounds,
+      advancementMode: hasNextStage ? (stage?.advancement?.mode || 'top_cut') : 'none',
+    },
+  });
+  if (!hasNextStage) {
+    currentState.phase = 'done';
+    currentState.overlayState = 'swiss-ended';
+    currentState.activeStageId = stage?.id || 'stage_swiss_1';
+  }
   rebuildSwissMatchesArchive();
 }
 
 function enterTop8() {
   rebuildSwissMatchesArchive();
-  return top8Core.enterTop8(currentState);
+  const stage = getTopCutStage();
+  if (stage?.elimination?.bracketSize && Array.isArray(currentState.pendingTop8)) {
+    currentState.pendingTop8 = currentState.pendingTop8.slice(0, stage.elimination.bracketSize);
+  }
+  currentState.activeStageId = stage?.id || 'stage_top_cut_1';
+  return top8Core.enterSingleElimination(currentState, stage);
 }
 
 function cancelTop8Confirm() {
@@ -422,7 +954,7 @@ function cancelTop8Confirm() {
 
 function swapMatchSeats(matchId) {
   const match = currentState.matches.find(m => m.id === matchId);
-  if (!match) return false;
+  if (!match || match.done || !matchesCore.isMatchReady(match)) return false;
   const oldP1 = match.p1;
   const oldP2 = match.p2;
   const oldP1Wins = match.p1Wins || 0;
@@ -448,6 +980,7 @@ function dropPlayerFromMatch(matchId, playerName) {
   if (!match) return false;
   const player = (playerName || '').trim();
   if (!player || (match.p1 !== player && match.p2 !== player)) return false;
+  if (!match.done && !matchesCore.isMatchReady(match)) return false;
   _dropped.add(player);
   if (!currentState.players.includes(player)) currentState.players.push(player);
   if (!match.done) {
@@ -471,15 +1004,13 @@ function dropPlayerFromMatch(matchId, playerName) {
 function applyDraw(matchId) {
   const match = currentState.matches.find(m => m.id === matchId);
   if (!match) return false;
-  match.done = true;
-  match.draw = true;
-  match.winner = null;
-  match.p1Wins = 0;
-  match.p2Wins = 0;
+  const rules = getMatchRulesForMatch(match);
+  if (rules.allowDraw === false) return false;
+  if (!matchesCore.applyDrawToMatch(match)) return false;
   const isLive = currentState.currentLiveMatch && currentState.currentLiveMatch.id === matchId;
   if (isLive) {
     clearResultTimer();
-    currentState.overlayState = currentState.phase === 'top8' ? 'top8-result' : 'result';
+    currentState.overlayState = getLiveOverlayStateForMatch(match, true);
     currentState.lastResult = {
       winner: 'Draw',
       p1: match.p1,
@@ -504,11 +1035,14 @@ function applyDraw(matchId) {
 function applyResult(matchId, winnerId) {
   const match = currentState.matches.find(m => m.id === matchId);
   if (!match) return false;
-  if (!top8Core.applyResultToMatch(match, winnerId)) return false;
+  if (!matchesCore.applyMatchWinner(match, winnerId)) return false;
   const isLive = currentState.currentLiveMatch && currentState.currentLiveMatch.id === matchId;
+  upsertSwissMatchHistory(match);
+  if (currentState.phase === 'top8') advanceBracket();
+  const finishedSingleElimination = finishSingleEliminationIfComplete();
   if (isLive) {
     clearResultTimer();
-    currentState.overlayState = currentState.phase === 'top8' ? 'top8-result' : 'result';
+    currentState.overlayState = getLiveOverlayStateForMatch(match, true);
     currentState.lastResult = {
       winner: match.winner,
       p1: match.p1,
@@ -525,22 +1059,32 @@ function applyResult(matchId, winnerId) {
       broadcast();
     }, 3500);
   }
-  upsertSwissMatchHistory(match);
-  if (currentState.phase === 'top8') advanceBracket();
+  if (currentState.phase === 'double_elimination') {
+    const stage = getMatchStage(match);
+    const changed = doubleEliminationCore.advanceDoubleElimination(currentState, stage);
+    if (changed) {
+      saveState();
+      broadcast();
+    }
+  }
+  if (finishedSingleElimination && !isLive) currentState.overlayState = 'podium';
   return true;
 }
 
 function applyBo3Score(matchId, p1Wins, p2Wins) {
   const match = currentState.matches.find(m => m.id === matchId);
   if (!match) return false;
-  if (!top8Core.applyBo3ScoreToMatch(match, p1Wins, p2Wins)) return false;
+  const rules = getMatchRulesForMatch(match);
+  if (!matchesCore.applyGameScoreToMatch(match, p1Wins, p2Wins, { matchRules: rules, bestOf: rules.bestOf || 3 })) return false;
   const isLive = currentState.currentLiveMatch && currentState.currentLiveMatch.id === matchId;
   if (isLive) {
     currentState.currentLiveMatch = { ...match };
   }
+  if (currentState.phase === 'top8' && match.done) advanceBracket();
+  const finishedSingleElimination = finishSingleEliminationIfComplete();
   if (isLive && match.done) {
     clearResultTimer();
-    currentState.overlayState = 'top8-result';
+    currentState.overlayState = getLiveOverlayStateForMatch(match, true);
     currentState.lastResult = {
       winner: match.winner,
       p1: match.p1,
@@ -557,20 +1101,153 @@ function applyBo3Score(matchId, p1Wins, p2Wins) {
       broadcast();
     }, 3500);
   }
-  if (currentState.phase === 'top8' && match.done) advanceBracket();
+  if (currentState.phase === 'double_elimination' && match.done) {
+    const stage = getMatchStage(match);
+    const changed = doubleEliminationCore.advanceDoubleElimination(currentState, stage);
+    if (changed) {
+      saveState();
+      broadcast();
+    }
+  }
+  if (finishedSingleElimination && !isLive) currentState.overlayState = 'podium';
   return true;
 }
 
 function advanceBracket() {
-  const changed = top8Core.advanceBracket(currentState);
+  const activeStage = stagesCore.getActiveStage(currentState);
+  const bracketSize = top8Core.normalizeBracketSize(activeStage?.elimination?.bracketSize || currentState.top8?.length || 8, 8);
+  const changed = activeStage?.type === 'single_elimination' && (activeStage.id !== 'stage_top_cut_1' || bracketSize !== 8)
+    ? top8Core.advanceSingleEliminationBracket(currentState)
+    : top8Core.advanceBracket(currentState);
   if (changed) {
     saveState();
     broadcast();
   }
 }
 
+function buildSingleEliminationCompletion(state, stage) {
+  if (!stage || stage.type !== 'single_elimination') return null;
+  if (!top8Core.isSingleEliminationStageFinished(state, stage)) return null;
+  const matches = top8Core.getSingleEliminationStageMatches(state, stage);
+  const final = matches.find(match => match.phase === 'Finals' && match.done);
+  const bronze = matches.find(match => match.phase === 'Bronze Match' && match.done);
+  const standings = [];
+  if (final?.winner) {
+    standings.push({ rank: 1, player: final.winner });
+    const runnerUp = final.winner === final.p1 ? final.p2 : final.p1;
+    if (runnerUp) standings.push({ rank: 2, player: runnerUp });
+  }
+  if (bronze?.winner) {
+    standings.push({ rank: 3, player: bronze.winner });
+    const fourth = bronze.winner === bronze.p1 ? bronze.p2 : bronze.p1;
+    if (fourth) standings.push({ rank: 4, player: fourth });
+  }
+  return {
+    standings,
+    advancers: final?.winner ? [final.winner] : [],
+    metadata: { champion: final?.winner || null },
+  };
+}
+
+function finishSingleEliminationIfComplete(state = currentState) {
+  const stage = stagesCore.getActiveStage(state);
+  if (!stage || stage.type !== 'single_elimination') return false;
+  if (state.phase !== 'top8' && state.phase !== 'done') return false;
+  const result = buildSingleEliminationCompletion(state, stage);
+  if (!result) return false;
+  advancementCore.setStageResult(state, stage.id, result);
+  state.phase = 'done';
+  state.overlayState = 'podium';
+  return true;
+}
+
+function getStageAdvancementTarget(stage = null) {
+  if (!stage || !stage.advancement || !stage.advancement.targetStageId) return null;
+  return stagesCore.getStageById(currentState, stage.advancement.targetStageId);
+}
+
+function getEffectiveStageForStart(stage = null) {
+  if (!stage || stage.type !== 'single_elimination') return stage;
+  const entrants = advancementCore.getEntryListForStage(currentState, stage);
+  const requestedSize = top8Core.normalizeBracketSize(stage.elimination?.bracketSize || entrants.length || 8, 8);
+  return {
+    ...stage,
+    elimination: {
+      ...(stage.elimination || {}),
+      bracketSize: requestedSize,
+    },
+  };
+}
+
+function advanceTournamentStage(stageId) {
+  const stage = stagesCore.getStageById(currentState, stageId);
+  if (!stage) return { ok: false, err: 'stage not found' };
+  currentState.activeStageId = stage.id;
+
+  if (stage.type === 'swiss') {
+    const targetStage = getStageAdvancementTarget(stage);
+    const stageResult = advancementCore.getStageResult(currentState, stage.id);
+    if (targetStage && stageResult && currentState.phase !== 'swiss') {
+      const result = startTournamentStage(targetStage.id);
+      if (!result.ok) return result;
+      return { ok: true, stage: stagesCore.buildStageViewModel(currentState, targetStage.id), advancedFrom: stage.id };
+    }
+    if (currentState.phase !== 'swiss') return { ok: false, err: 'not in swiss phase' };
+    const result = nextRound();
+    if (!result.ok) return result;
+    return { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) };
+  }
+
+  if (stage.type === 'groups' || stage.type === 'group_round_robin') {
+    const targetStage = getStageAdvancementTarget(stage);
+    const stageResult = advancementCore.getStageResult(currentState, stage.id);
+    if (targetStage && stageResult && currentState.phase !== 'groups') {
+      groupsCore.archiveGroupMatches(currentState, stage.id);
+      const result = startTournamentStage(targetStage.id);
+      if (!result.ok) return result;
+      return { ok: true, stage: stagesCore.buildStageViewModel(currentState, targetStage.id), advancedFrom: stage.id };
+    }
+    if (currentState.phase !== 'groups') return { ok: false, err: 'not in groups phase' };
+    const result = groupsCore.advanceGroupRound(currentState, stage);
+    if (!result.ok) return result;
+    return {
+      ok: true,
+      stage: stagesCore.buildStageViewModel(currentState, stage.id),
+      groupRound: result.groupRound,
+      roundCount: result.roundCount,
+    };
+  }
+
+  const targetStage = getStageAdvancementTarget(stage);
+  if (targetStage) {
+    if (!advancementCore.getStageResult(currentState, stage.id)) {
+      return { ok: false, err: 'stage result not ready' };
+    }
+    const result = startTournamentStage(targetStage.id);
+    if (!result.ok) return result;
+    return { ok: true, stage: stagesCore.buildStageViewModel(currentState, targetStage.id), advancedFrom: stage.id };
+  }
+
+  if (stage.type === 'single_elimination') {
+    const bracketSize = top8Core.normalizeBracketSize(stage.elimination?.bracketSize || currentState.top8?.length || 8, 8);
+    const changed = stage.id === 'stage_top_cut_1' && bracketSize === 8
+      ? top8Core.advanceBracket(currentState)
+      : top8Core.advanceSingleEliminationBracket(currentState);
+    if (!changed) return { ok: false, err: 'stage cannot advance' };
+    return { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) };
+  }
+
+  if (stage.type === 'double_elimination') {
+    const changed = doubleEliminationCore.advanceDoubleElimination(currentState, stage);
+    if (!changed) return { ok: false, err: 'stage cannot advance' };
+    return { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) };
+  }
+
+  return { ok: false, err: `advance not implemented for stage type: ${stage.type}` };
+}
+
 function isTournamentFinished(state = currentState) {
-  return top8Core.isTournamentFinished(state);
+  return stateCore.isTournamentFinished(state);
 }
 
 function displayPhaseForTournament(state = currentState) {
@@ -634,12 +1311,23 @@ function getPlayerCompletionStatus(playerName, state = currentState) {
   const top8Award = getTop8AwardForPlayer(playerName, state);
   const isTop8Player = (state.top8 || []).includes(playerName);
   const reachedSwissSummary = state.phase === 'swiss-ended' && !!standing;
+  const groupStageResult = Object.values(state.stageResults || {}).find(result =>
+    Array.isArray(result.advancers)
+    && Array.isArray(result.standings)
+    && result.standings.some(entry => entry.player === playerName || entry.displayName === playerName)
+  ) || null;
+  const isGroupAdvancer = !!groupStageResult?.advancers?.includes(playerName);
 
   if (dropped) {
     return { finished: true, reason: '退赛', award: top8Award || null, standing };
   }
   if (top8Award) {
     return { finished: true, reason: top8Award, award: top8Award, standing };
+  }
+  if (state.phase === 'groups-ended' && groupStageResult) {
+    return isGroupAdvancer
+      ? { finished: false, reason: null, award: null, standing }
+      : { finished: true, reason: '止步小组赛', award: null, standing };
   }
   if (state.phase === 'top8' && !isTop8Player && !!standing) {
     return { finished: true, reason: '止步瑞士轮', award: null, standing };
@@ -750,12 +1438,32 @@ function exportPlayerReportFile(playerName, state = currentState) {
 }
 
 function buildClientState(state = currentState) {
+  normalizeActiveGroupSchedules(state);
   normalizeTop8MatchTables(state);
   const standings = getSortedStandings(true).map((entry, index) => ({ ...entry, rank: index + 1 }));
+  const stageViewModels = stagesCore.getStages(state).map(stage => stagesCore.buildStageViewModel(state, stage.id));
+  const activeStage = stagesCore.buildStageViewModel(state);
   return {
     publicBaseUrl: getPublicBaseUrl(),
     tournamentId: state._id,
     tournamentName: state.tournamentName,
+    schemaVersion: state.schemaVersion || 3,
+    tournamentSettings: state.tournamentSettings || null,
+    stages: stageViewModels,
+    activeStage,
+    stageResults: state.stageResults || {},
+    groupAssignments: state.groupAssignments || {},
+    groupRound: state.groupRound || getCurrentGroupRoundForState(state),
+    groupStageRounds: state.groupStageRounds || {},
+    groupRoundCount: getGroupRoundCountForState(state),
+    doubleElimination: state.doubleElimination || {},
+    entrants: state.entrants || [],
+    playerProfiles: state.playerProfiles || {},
+    playerSessions: state.playerSessions || {},
+    globalPlayerProfiles: listPlayerProfiles({ includeSummary: false }),
+    leagues: listLeagues(),
+    pointsProfiles: listPointsProfiles(),
+    pointAwards: state.pointAwards || [],
     publicBaseUrlOverride: state.publicBaseUrlOverride || '',
     liveRoomCode: state.liveRoomCode || '',
     phase: state.phase,
@@ -778,16 +1486,17 @@ function buildClientState(state = currentState) {
 }
 
 function serializeCurrentState() {
+  normalizeActiveGroupSchedules(currentState);
   normalizeTop8MatchTables(currentState);
   currentState._dropped = [..._dropped];
   const { _resultTimer, ...rest } = currentState;
-  if (rest._byeSet instanceof Set) rest._byeSet = [...rest._byeSet];
-  return rest;
+  return stateCore.serializeState(rest);
 }
 
 function saveState() {
   if (!currentState._id) return;
   tournamentStore.save(currentState._id, serializeCurrentState());
+  invalidateDerivedCaches();
 }
 
 function saveCurrentAsCache() {
@@ -818,16 +1527,37 @@ function loadTournament(id) {
   if (!raw) return false;
   currentTournamentId = id;
   resetCurrentState(raw);
+  saveState();
   saveCurrentAsCache();
   return true;
 }
 
-function createTournament(name) {
+function resolveCreateTournamentSettings(rawSettings = null) {
+  if (!rawSettings || typeof rawSettings !== 'object') return null;
+  const shouldBuildPreset = rawSettings.presetId && !Array.isArray(rawSettings.stages);
+  const candidate = shouldBuildPreset
+    ? presetsCore.getPreset(rawSettings.presetId, rawSettings)
+    : rawSettings;
+  if (!Array.isArray(candidate.stages) || candidate.stages.length === 0) return null;
+  const validation = rulesCore.validateTournamentSettings(candidate);
+  if (!validation.ok) throw new Error(validation.errors.join('; '));
+  return validation.settings;
+}
+
+function createTournament(name, options = {}) {
+  const rawSettings = options.tournamentSettings || options.settings || null;
+  const resolvedSettings = resolveCreateTournamentSettings(rawSettings);
   const nextState = freshState({
     _id: `t_${Date.now()}`,
     _createdAt: Date.now(),
     tournamentName: (name || '未命名比赛').trim(),
+    tournamentSettings: resolvedSettings || rawSettings || undefined,
   });
+  if (resolvedSettings) {
+    nextState.tournamentSettings = resolvedSettings;
+    nextState.stages = presetsCore.clone(resolvedSettings.stages);
+    nextState.activeStageId = rulesCore.inferActiveStageId(nextState, nextState.stages);
+  }
   currentTournamentId = nextState._id;
   resetCurrentState(nextState);
   saveState();
@@ -837,6 +1567,457 @@ function createTournament(name) {
 
 function getPlayerProfileByName(playerName) {
   return currentState.playerProfiles ? currentState.playerProfiles[playerName] || null : null;
+}
+
+function bindTournamentPlayerToGlobalProfile(playerName, globalProfileId) {
+  const name = String(playerName || '').trim();
+  const profile = getGlobalPlayerProfileById(globalProfileId);
+  if (!name || !profile || !currentState.players.includes(name)) return null;
+  if (!currentState.playerProfiles) currentState.playerProfiles = {};
+  const existing = currentState.playerProfiles[name] || {};
+  currentState.playerProfiles[name] = {
+    ...existing,
+    playerId: existing.playerId || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    globalProfileId: profile.id,
+    rankedEligible: true,
+  };
+  const existingEntrant = getEntrantByName(name) || createGuestTournamentEntrant(name, 'manual_binding');
+  upsertTournamentEntrant(entrantsCore.bindEntrantToProfile(existingEntrant, profile));
+  return currentState.playerProfiles[name];
+}
+
+function listTournamentEntrants() {
+  return ensureEntrantsList().map(entrant => ({ ...entrant }));
+}
+
+function createTournamentEntrant(input = {}) {
+  const entrantType = input.entrantType === 'team' ? 'team' : 'player';
+  const name = String(input.displayName || input.name || input.teamName || '').trim();
+  if (!name) throw new Error(entrantType === 'team' ? 'missing teamName' : 'missing displayName');
+  if (!currentState.players.includes(name)) currentState.players.push(name);
+  if (!currentState.playerProfiles) currentState.playerProfiles = {};
+  const source = input.source || 'manual';
+  const hasProfileIdInput = Object.prototype.hasOwnProperty.call(input, 'profileId') && input.profileId !== undefined;
+  const explicitProfileId = hasProfileIdInput ? String(input.profileId || '').trim() : '';
+  const existingProfile = currentState.playerProfiles[name] || {};
+  const matchedProfile = !hasProfileIdInput && entrantType === 'player'
+    ? getGlobalPlayerProfileByName(name)
+    : null;
+  const profileId = explicitProfileId || matchedProfile?.id || (!hasProfileIdInput ? existingProfile.globalProfileId : null) || null;
+  const entrySource = matchedProfile ? `${source}_bound_profile` : source;
+  currentState.playerProfiles[name] = {
+    ...existingProfile,
+    playerId: existingProfile.playerId || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    globalProfileId: profileId,
+    rankedEligible: !!profileId || existingProfile.rankedEligible === true,
+  };
+  const entrant = entrantType === 'team'
+    ? entrantsCore.createTeamEntrant({
+        tournamentId: currentState._id,
+        teamName: name,
+        teamRoster: Array.isArray(input.teamRoster) ? input.teamRoster : [],
+        profileId,
+        rankedEligible: !!profileId,
+        source: entrySource,
+      })
+    : entrantsCore.createGuestEntrant({
+        tournamentId: currentState._id,
+        displayName: name,
+        source: entrySource,
+      });
+  return upsertTournamentEntrant({
+    ...entrant,
+    profileId: profileId || entrant.profileId,
+    entryType: profileId ? 'registered' : entrant.entryType,
+    rankedEligible: !!profileId || entrant.rankedEligible,
+  });
+}
+
+function updateTournamentEntrant(entrantId, patch = {}) {
+  const entrant = entrantsCore.findEntrantById(ensureEntrantsList(), entrantId);
+  if (!entrant) return null;
+  const updated = upsertTournamentEntrant(entrantsCore.patchEntrant(entrant, patch));
+  const oldName = entrant.displayName;
+  const newName = updated.displayName;
+  if (oldName !== newName) {
+    currentState.players = (currentState.players || []).map(player => player === oldName ? newName : player);
+    currentState.matches = (currentState.matches || []).map(match => ({
+      ...match,
+      p1: match.p1 === oldName ? newName : match.p1,
+      p2: match.p2 === oldName ? newName : match.p2,
+      winner: match.winner === oldName ? newName : match.winner,
+    }));
+    if (currentState.playerProfiles && currentState.playerProfiles[oldName]) {
+      currentState.playerProfiles[newName] = {
+        ...currentState.playerProfiles[oldName],
+        name: newName,
+        globalProfileId: updated.profileId || currentState.playerProfiles[oldName].globalProfileId || null,
+        rankedEligible: updated.rankedEligible,
+      };
+      delete currentState.playerProfiles[oldName];
+    }
+  }
+  if (updated.profileId) {
+    if (!currentState.playerProfiles) currentState.playerProfiles = {};
+    currentState.playerProfiles[newName] = {
+      ...(currentState.playerProfiles[newName] || {}),
+      playerId: currentState.playerProfiles[newName]?.playerId || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      name: newName,
+      globalProfileId: updated.profileId,
+      rankedEligible: updated.rankedEligible,
+    };
+  }
+  return updated;
+}
+
+function bindTournamentEntrantToGlobalProfile(entrantId, globalProfileId) {
+  const profile = getGlobalPlayerProfileById(globalProfileId);
+  const entrant = entrantsCore.findEntrantById(ensureEntrantsList(), entrantId);
+  if (!profile || !entrant) return null;
+  const boundEntrant = upsertTournamentEntrant(entrantsCore.bindEntrantToProfile(entrant, profile));
+  const name = boundEntrant.displayName;
+  if (!currentState.players.includes(name)) currentState.players.push(name);
+  if (!currentState.playerProfiles) currentState.playerProfiles = {};
+  const existingProfile = currentState.playerProfiles[name] || {};
+  currentState.playerProfiles[name] = {
+    ...existingProfile,
+    playerId: existingProfile.playerId || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    globalProfileId: profile.id,
+    rankedEligible: true,
+  };
+  return boundEntrant;
+}
+
+function getTournamentSettings() {
+  return rulesCore.normalizeTournamentSettings(currentState.tournamentSettings, currentState);
+}
+
+function updateTournamentSettings(nextSettings = {}) {
+  const currentSettings = currentState.tournamentSettings || presetsCore.createDefaultTournamentSettings();
+  const candidate = {
+    ...currentSettings,
+    ...nextSettings,
+  };
+  if (!Array.isArray(nextSettings.stages) && Array.isArray(currentSettings.stages)) {
+    candidate.stages = currentSettings.stages;
+  }
+  const validation = rulesCore.validateTournamentSettings(candidate);
+  if (!validation.ok) throw new Error(validation.errors.join('; '));
+  const settings = validation.settings;
+  currentState.tournamentSettings = settings;
+  currentState.stages = presetsCore.clone(settings.stages);
+  currentState.activeStageId = rulesCore.inferActiveStageId(currentState, currentState.stages);
+  return settings;
+}
+
+function applyTournamentPreset(presetId, options = {}) {
+  const settings = presetsCore.getPreset(presetId, {
+    ...currentState.tournamentSettings,
+    ...(options || {}),
+  });
+  return updateTournamentSettings(settings);
+}
+
+function listTournamentPresets() {
+  return presetsCore.listPresets();
+}
+
+function getFinalStageResult(state = currentState) {
+  const stages = stagesCore.getStages(state);
+  for (const stage of [...stages].reverse()) {
+    const result = advancementCore.getStageResult(state, stage.id);
+    if (result && Array.isArray(result.standings) && result.standings.length > 0) return result;
+  }
+  return null;
+}
+
+function getTournamentPointStageResult(state = currentState) {
+  const stages = stagesCore.getStages(state);
+  if (stages.length > 0) {
+    const terminalStage = stages[stages.length - 1];
+    const result = advancementCore.getStageResult(state, terminalStage.id);
+    return result && Array.isArray(result.standings) && result.standings.length > 0 ? result : null;
+  }
+  return state.phase === 'done' || state.phase === 'swiss-ended' || state.phase === 'groups-ended'
+    ? getFinalStageResult(state)
+    : null;
+}
+
+function buildTournamentPointStandings(state = currentState) {
+  const finalResult = getTournamentPointStageResult(state);
+  if (finalResult) {
+    return finalResult.standings
+      .filter(entry => entry.player || entry.displayName)
+      .map((entry, index) => ({
+        rank: Number.isInteger(entry.rank) ? entry.rank : index + 1,
+        player: entry.player || entry.displayName,
+        displayName: entry.displayName || entry.player,
+      }));
+  }
+  if (stagesCore.getStages(state).length > 0) return [];
+  const swissRanking = (state.swissRankingArchive && state.swissRankingArchive.length > 0)
+    ? state.swissRankingArchive
+    : (state.swissRanking || []);
+  return swissRanking.map(entry => ({
+    rank: entry.rank,
+    player: entry.player,
+    displayName: entry.player,
+  }));
+}
+
+function calculatePointAwardsForCurrentTournament(profileId = null) {
+  const settings = getTournamentSettings();
+  const profile = getPointsProfileById(profileId) || getDefaultPointsProfile();
+  const standings = buildTournamentPointStandings(currentState);
+  if (!standings.length) return { ok: false, err: 'no standings available' };
+  const awards = pointsCore.calculateTournamentPoints({
+    standings,
+    entrants: ensureEntrantsList(),
+    profile,
+  }).map(award => ({
+    ...award,
+    tournamentId: currentState._id,
+    tournamentName: currentState.tournamentName,
+    pointsProfileId: profile.id,
+    awardedAt: Date.now(),
+  }));
+  currentState.pointAwards = awards;
+  invalidateDerivedCaches();
+  return { ok: true, awards, pointsProfile: profile };
+}
+
+function listPointAwardsForCurrentTournament() {
+  return Array.isArray(currentState.pointAwards) ? currentState.pointAwards.map(award => ({ ...award })) : [];
+}
+
+function listAllTournamentPointAwards() {
+  const awards = [];
+  for (const item of tournamentStore.list()) {
+    const raw = tournamentStore.load(item.id);
+    if (!raw || !Array.isArray(raw.pointAwards)) continue;
+    awards.push(...raw.pointAwards.map(award => ({
+      ...award,
+      tournamentId: award.tournamentId || item.id,
+      tournamentName: award.tournamentName || raw.tournamentName || item.name,
+    })));
+  }
+  if (currentState._id && Array.isArray(currentState.pointAwards)) {
+    const existing = new Set(awards.map(award => `${award.tournamentId}:${award.profileId}:${award.rank}`));
+    for (const award of currentState.pointAwards) {
+      const key = `${award.tournamentId || currentState._id}:${award.profileId}:${award.rank}`;
+      if (existing.has(key)) continue;
+      awards.push({
+        ...award,
+        tournamentId: award.tournamentId || currentState._id,
+        tournamentName: award.tournamentName || currentState.tournamentName,
+      });
+    }
+  }
+  return awards;
+}
+
+function buildTournamentPointAwardsForState(state, profile) {
+  if (!state || !profile) return [];
+  const standings = buildTournamentPointStandings(state);
+  if (!standings.length) return [];
+  const entrants = entrantsCore.migrateLegacyEntrants(state);
+  return pointsCore.calculateTournamentPoints({
+    standings,
+    entrants,
+    profile,
+  }).map(award => ({
+    ...award,
+    tournamentId: state._id,
+    tournamentName: state.tournamentName || state._id,
+    pointsProfileId: profile.id,
+    awardedAt: Date.now(),
+  }));
+}
+
+function buildTournamentPointAwardsByLeagueBinding(binding) {
+  const tournamentId = String(binding?.tournamentId || '').trim();
+  if (!tournamentId) return [];
+  const raw = currentState._id === tournamentId ? currentState : tournamentStore.load(tournamentId);
+  if (!raw) return [];
+  const profile = getPointsProfileById(binding.pointsProfileId) || getDefaultPointsProfile();
+  return buildTournamentPointAwardsForState({
+    ...raw,
+    _id: raw._id || tournamentId,
+  }, profile);
+}
+
+function buildLeaguePointAwards(league = {}) {
+  return leaguesCore.normalizeTournamentBindings(league).flatMap(binding =>
+    buildTournamentPointAwardsByLeagueBinding(binding).map(award => ({
+      ...award,
+      leagueId: league.id || '',
+      leagueName: league.name || league.id || '',
+      pointsProfileName: getPointsProfileById(award.pointsProfileId)?.name || award.pointsProfileId || '',
+      awardedAt: binding.includedAt || award.awardedAt,
+    })),
+  );
+}
+
+function listAllLeaguePointAwards() {
+  if (leaguePointAwardsCache) return clonePlain(leaguePointAwardsCache);
+  leaguePointAwardsCache = listLeagues().flatMap(league => buildLeaguePointAwards(league));
+  return clonePlain(leaguePointAwardsCache);
+}
+
+function getLeaguePointAwards(league) {
+  const leagueId = league?.id || '';
+  if (!leagueId) return [];
+  return listAllLeaguePointAwards().filter(award => award.leagueId === leagueId);
+}
+
+function loadTournamentSummaryStates() {
+  return tournamentStore.list()
+    .map(item => {
+      const raw = tournamentStore.load(item.id);
+      return raw ? { item, state: restoreState({ ...raw, _id: raw._id || item.id }) } : null;
+    })
+    .filter(Boolean);
+}
+
+function groupAwardsByProfileId(awards) {
+  const grouped = new Map();
+  for (const award of awards) {
+    const key = award.profileId || '';
+    if (!key) continue;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(award);
+  }
+  return grouped;
+}
+
+function getPlayerSummaryCache() {
+  if (playerSummaryCache) return playerSummaryCache;
+  const awardsByProfileId = groupAwardsByProfileId(listAllLeaguePointAwards());
+  const tournamentStates = loadTournamentSummaryStates();
+  playerSummaryCache = new Map();
+  for (const profile of playerRegistry.values()) {
+    playerSummaryCache.set(profile.id, buildGlobalPlayerSummary(profile.id, {
+      playerAwards: awardsByProfileId.get(profile.id) || [],
+      tournamentStates,
+    }));
+  }
+  return playerSummaryCache;
+}
+
+function buildGlobalPlayerSummary(playerId, options = {}) {
+  const profile = getGlobalPlayerProfileById(playerId);
+  if (!profile) return null;
+  if (!options.playerAwards && !options.tournamentStates && playerSummaryCache && playerSummaryCache.has(playerId)) {
+    return clonePlain(playerSummaryCache.get(playerId));
+  }
+  const playerAwards = Array.isArray(options.playerAwards)
+    ? options.playerAwards
+    : listAllLeaguePointAwards().filter(award => award.profileId === playerId);
+  const tournamentStates = Array.isArray(options.tournamentStates)
+    ? options.tournamentStates
+    : loadTournamentSummaryStates();
+  const tournaments = [];
+  for (const { item, state: raw } of tournamentStates) {
+    if (!raw) continue;
+    const entrants = entrantsCore.migrateLegacyEntrants(raw);
+    const entrant = entrants.find(entry => entry.profileId === playerId);
+    const awards = playerAwards.filter(award => award.tournamentId === item.id);
+    if (!entrant && awards.length === 0) continue;
+    const finalResult = getFinalStageResult(raw);
+    const finalStanding = finalResult?.standings?.find(entry => entry.player === entrant?.displayName || entry.displayName === entrant?.displayName) || null;
+    const leagueNames = [...new Set(awards.map(award => award.leagueName).filter(Boolean))];
+    const pointsProfileNames = [...new Set(awards.map(award => award.pointsProfileName).filter(Boolean))];
+    tournaments.push({
+      tournamentId: item.id,
+      tournamentName: raw.tournamentName || item.name || item.id,
+      phase: raw.phase,
+      entrantName: entrant?.displayName || awards[0]?.displayName || profile.displayName,
+      rank: finalStanding?.rank || awards[0]?.rank || null,
+      points: awards.reduce((sum, award) => sum + Number(award.points || 0), 0),
+      leagueName: leagueNames.join(' / '),
+      pointsProfileName: pointsProfileNames.join(' / '),
+      date: raw._createdAt || item.date || null,
+    });
+  }
+  if (currentState._id) {
+    const entrants = ensureEntrantsList();
+    const entrant = entrants.find(entry => entry.profileId === playerId);
+    const awards = playerAwards.filter(award => award.tournamentId === currentState._id);
+    if (entrant || awards.length > 0) {
+      const already = tournaments.some(item => item.tournamentId === currentState._id);
+      if (!already) {
+        const finalResult = getFinalStageResult(currentState);
+        const finalStanding = finalResult?.standings?.find(entry => entry.player === entrant?.displayName || entry.displayName === entrant?.displayName) || null;
+        const leagueNames = [...new Set(awards.map(award => award.leagueName).filter(Boolean))];
+        const pointsProfileNames = [...new Set(awards.map(award => award.pointsProfileName).filter(Boolean))];
+        tournaments.push({
+          tournamentId: currentState._id,
+          tournamentName: currentState.tournamentName,
+          phase: currentState.phase,
+          entrantName: entrant?.displayName || awards[0]?.displayName || profile.displayName,
+          rank: finalStanding?.rank || awards[0]?.rank || null,
+          points: awards.reduce((sum, award) => sum + Number(award.points || 0), 0),
+          leagueName: leagueNames.join(' / '),
+          pointsProfileName: pointsProfileNames.join(' / '),
+          date: currentState._createdAt || null,
+        });
+      }
+    }
+  }
+  const totalPoints = playerAwards.reduce((sum, award) => sum + Number(award.points || 0), 0);
+  return {
+    profile,
+    totalPoints,
+    rankedEvents: playerAwards.length,
+    tournaments: tournaments
+      .sort((a, b) => Number(b.date || 0) - Number(a.date || 0))
+      .slice(0, 12),
+    awards: playerAwards
+      .sort((a, b) => Number(b.awardedAt || 0) - Number(a.awardedAt || 0))
+      .slice(0, 12),
+  };
+}
+
+function buildLeagueLeaderboard(leagueId) {
+  const league = getLeagueById(leagueId);
+  if (!league) return null;
+  return leaguesCore.buildLeagueLeaderboard({
+    league,
+    tournamentAwards: getLeaguePointAwards(league),
+  });
+}
+
+function includeTournamentInLeague(leagueId, tournamentId, options = {}) {
+  const league = getLeagueById(leagueId);
+  const id = String(tournamentId || '').trim();
+  if (!league || !id) return null;
+  if (!tournamentStore.load(id) && currentState._id !== id) return null;
+  const profile = getPointsProfileById(options.pointsProfileId || league.pointsProfileId) || getDefaultPointsProfile();
+  const existing = leaguesCore.normalizeTournamentBindings(league);
+  const binding = existing.find(item => item.tournamentId === id) || { tournamentId: id, includedAt: Date.now() };
+  binding.pointsProfileId = profile.id;
+  const tournamentBindings = [
+    ...existing.filter(item => item.tournamentId !== id),
+    binding,
+  ];
+  return saveLeague(leaguesCore.createLeague({ ...league, tournamentBindings }));
+}
+
+function removeTournamentFromLeague(leagueId, tournamentId) {
+  const league = getLeagueById(leagueId);
+  const id = String(tournamentId || '').trim();
+  if (!league || !id) return null;
+  const tournamentBindings = leaguesCore.normalizeTournamentBindings(league).filter(item => item.tournamentId !== id);
+  return saveLeague(leaguesCore.createLeague({ ...league, tournamentBindings, includedTournamentIds: [] }));
+}
+
+function buildLeagueFinalQualification(leagueId, count = 8) {
+  const leaderboard = buildLeagueLeaderboard(leagueId);
+  if (!leaderboard) return null;
+  return leaguesCore.buildFinalQualification(leaderboard, Number.isInteger(Number(count)) ? Number(count) : 8);
 }
 
 function getPlayerNameById(playerId) {
@@ -868,6 +2049,107 @@ function buildPlayerView(playerNameOrId) {
   });
 }
 
+function buildPlayerViewById(playerId) {
+  const playerName = getPlayerNameById(playerId);
+  if (!playerName) {
+    return {
+      ok: false,
+      code: 'PLAYER_ID_NOT_FOUND',
+      message: '选手身份已失效，请重新输入名称进入本场比赛。',
+    };
+  }
+  return buildPlayerView(playerName);
+}
+
+function listTournamentStages() {
+  return stagesCore.getStages(currentState).map(stage => stagesCore.buildStageViewModel(currentState, stage.id));
+}
+
+function startTournamentStage(stageId) {
+  const stage = stagesCore.getStageById(currentState, stageId);
+  if (!stage) return { ok: false, err: 'stage not found' };
+  currentState.activeStageId = stage.id;
+  if (stage.type === 'swiss') {
+    const ok = startSwiss();
+    return ok ? { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) } : { ok: false, err: 'not enough players' };
+  }
+  if (stage.type === 'groups' || stage.type === 'group_round_robin') {
+    const ok = groupsCore.enterGroups(currentState, stage);
+    return ok ? { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) } : { ok: false, err: 'not enough entrants for groups' };
+  }
+  if (stage.type === 'single_elimination') {
+    const effectiveStage = getEffectiveStageForStart(stage);
+    const ok = top8Core.enterSingleElimination(currentState, effectiveStage);
+    return ok ? { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) } : { ok: false, err: 'not enough top cut players' };
+  }
+  if (stage.type === 'double_elimination') {
+    const ok = doubleEliminationCore.enterDoubleElimination(currentState, stage);
+    return ok ? { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) } : { ok: false, err: 'not enough entrants for double elimination' };
+  }
+  return { ok: false, err: `stage type not implemented: ${stage.type}` };
+}
+
+function generateStageMatches(stageId) {
+  const stage = stagesCore.getStageById(currentState, stageId);
+  if (!stage) return { ok: false, err: 'stage not found' };
+  if (stage.type !== 'swiss') return { ok: false, err: `generate not implemented for stage type: ${stage.type}` };
+  if (currentState.phase !== 'swiss') return { ok: false, err: 'not in swiss phase' };
+  currentState.activeStageId = stage.id;
+  generateRoundMatches();
+  return { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) };
+}
+
+function completeTournamentStage(stageId) {
+  const stage = stagesCore.getStageById(currentState, stageId);
+  if (!stage) return { ok: false, err: 'stage not found' };
+  if (stage.type === 'swiss') {
+    if (currentState.phase !== 'swiss') return { ok: false, err: 'not in swiss phase' };
+    const canComplete = swissCore.canAdvanceRound(currentState);
+    if (!canComplete.ok) return canComplete;
+    endSwiss();
+    return { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) };
+  }
+  if (stage.type === 'groups' || stage.type === 'group_round_robin') {
+    const result = groupsCore.completeGroups(currentState, stage);
+    if (!result.ok) return result;
+    return { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id), result: result.result };
+  }
+  if (stage.type === 'single_elimination') {
+    if (!top8Core.isSingleEliminationStageFinished(currentState, stage)) return { ok: false, err: 'stage is not complete' };
+    const final = top8Core.getSingleEliminationStageMatches(currentState, stage)
+      .find(match => match.phase === 'Finals' && match.done);
+    const bronze = top8Core.getSingleEliminationStageMatches(currentState, stage)
+      .find(match => match.phase === 'Bronze Match' && match.done);
+    const standings = [];
+    if (final?.winner) {
+      standings.push({ rank: 1, player: final.winner });
+      const runnerUp = final.winner === final.p1 ? final.p2 : final.p1;
+      if (runnerUp) standings.push({ rank: 2, player: runnerUp });
+    }
+    if (bronze?.winner) {
+      standings.push({ rank: 3, player: bronze.winner });
+      const fourth = bronze.winner === bronze.p1 ? bronze.p2 : bronze.p1;
+      if (fourth) standings.push({ rank: 4, player: fourth });
+    }
+    advancementCore.setStageResult(currentState, stage.id, {
+      standings,
+      advancers: final?.winner ? [final.winner] : [],
+      metadata: { champion: final?.winner || null },
+    });
+    currentState.phase = 'done';
+    currentState.overlayState = 'podium';
+    return { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id) };
+  }
+  if (stage.type === 'double_elimination') {
+    const result = doubleEliminationCore.completeDoubleElimination(currentState, stage);
+    if (!result.ok) return result;
+    currentState.phase = 'done';
+    currentState.overlayState = 'podium';
+    return { ok: true, stage: stagesCore.buildStageViewModel(currentState, stage.id), result: result.result };
+  }
+  return { ok: false, err: `complete not implemented for stage type: ${stage.type}` };
+}
+
 function loadLatestTournamentIfAny() {
   const list = listTournaments();
   if (list.length === 0) return;
@@ -875,6 +2157,9 @@ function loadLatestTournamentIfAny() {
 }
 
 loadLatestTournamentIfAny();
+loadPlayerRegistry();
+loadLeagueRegistry();
+loadPointsRegistry();
 
 function syncTournamentRequest(tournamentId) {
   const id = (tournamentId || '').trim();
@@ -890,6 +2175,9 @@ function tournamentExists(tournamentId) {
 
 function sendTournamentPage(req, res, folder) {
   if (!tournamentExists(req.params.id)) return res.status(404).send('Tournament not found');
+  res.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
   return res.sendFile(path.join(PUBLIC_DIR, folder, 'index.html'));
 }
 
@@ -904,6 +2192,46 @@ registerRoutes(app, {
   buildClientState,
   listTournaments,
   buildPlayerView,
+  buildPlayerViewById,
+  listTournamentStages,
+  getMatchStage,
+  startTournamentStage,
+  generateStageMatches,
+  completeTournamentStage,
+  advanceTournamentStage,
+  getTournamentSettings,
+  updateTournamentSettings,
+  applyTournamentPreset,
+  listTournamentPresets,
+  listTournamentEntrants,
+  createTournamentEntrant,
+  updateTournamentEntrant,
+  bindTournamentEntrantToGlobalProfile,
+  listPlayerProfiles,
+  createGlobalPlayerProfile,
+  getGlobalPlayerProfileById,
+  getGlobalPlayerProfileByName,
+  updateGlobalPlayerProfile,
+  deleteGlobalPlayerProfile,
+  bindGuestEntrantToGlobalProfile,
+  bindTournamentPlayerToGlobalProfile,
+  listLeagues,
+  createLeague,
+  getLeagueById,
+  updateLeague,
+  deleteLeague,
+  buildLeagueLeaderboard,
+  includeTournamentInLeague,
+  removeTournamentFromLeague,
+  buildLeagueFinalQualification,
+  buildGlobalPlayerSummary,
+  listPointsProfiles,
+  createPointsProfile,
+  updatePointsProfile,
+  deletePointsProfile,
+  getPointsProfileReferences,
+  calculatePointAwardsForCurrentTournament,
+  listPointAwardsForCurrentTournament,
   createTournament,
   loadTournament,
   saveState,
@@ -923,6 +2251,7 @@ registerRoutes(app, {
   enterTop8,
   cancelTop8Confirm,
   getPostMatchOverlayState,
+  getLiveOverlayStateForMatch,
   swapMatchSeats,
   applyResult,
   applyDraw,
@@ -947,7 +2276,7 @@ function startServer({ port = PORT, host = '0.0.0.0' } = {}) {
     buildClientState,
   });
   server.listen(port, host, () => {
-    console.log(`2.2.5-dev.0 server running on ${getPublicBaseUrl()}`);
+    console.log(`3.0.0-beta server running on ${getPublicBaseUrl()}`);
   });
   return server;
 }
