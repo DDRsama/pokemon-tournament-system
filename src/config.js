@@ -4,13 +4,19 @@ const os = require('os');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const PORT = Number(process.env.PORT || 18765);
-const DATA_DIR = process.env.PTS_DATA_DIR || process.env.DATA_DIR || path.join(ROOT_DIR, 'data', 'tournaments');
-const PLAYERS_DIR = process.env.PTS_PLAYERS_DIR || process.env.PLAYERS_DIR || path.join(ROOT_DIR, 'data', 'players');
-const LEAGUES_DIR = process.env.PTS_LEAGUES_DIR || process.env.LEAGUES_DIR || path.join(ROOT_DIR, 'data', 'leagues');
-const POINTS_DIR = process.env.PTS_POINTS_DIR || process.env.POINTS_DIR || path.join(ROOT_DIR, 'data', 'points');
+const DATA_ROOT = String(process.env.PTS_DATA_ROOT || process.env.DATA_ROOT || '').trim();
+function resolveDataPath(envName, legacyEnvName, subdir) {
+  return process.env[envName]
+    || process.env[legacyEnvName]
+    || (DATA_ROOT ? path.join(DATA_ROOT, subdir) : path.join(ROOT_DIR, 'data', subdir));
+}
+const DATA_DIR = resolveDataPath('PTS_DATA_DIR', 'DATA_DIR', 'tournaments');
+const PLAYERS_DIR = resolveDataPath('PTS_PLAYERS_DIR', 'PLAYERS_DIR', 'players');
+const LEAGUES_DIR = resolveDataPath('PTS_LEAGUES_DIR', 'LEAGUES_DIR', 'leagues');
+const POINTS_DIR = resolveDataPath('PTS_POINTS_DIR', 'POINTS_DIR', 'points');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
-const REPORTS_DIR = process.env.PTS_REPORT_DIR || process.env.REPORTS_DIR || path.join(ROOT_DIR, 'data', 'reports');
+const REPORTS_DIR = resolveDataPath('PTS_REPORT_DIR', 'REPORTS_DIR', 'reports');
 const CODEX_PYTHON_BIN = path.join(os.homedir(), '.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'python', 'python.exe');
 const PYTHON_BIN = process.env.PYTHON_BIN
   || process.env.PYTHON
@@ -19,6 +25,7 @@ const PYTHON_BIN = process.env.PYTHON_BIN
 module.exports = {
   ROOT_DIR,
   PORT,
+  DATA_ROOT,
   DATA_DIR,
   PLAYERS_DIR,
   LEAGUES_DIR,

@@ -727,7 +727,31 @@
   }
   .manager-list {
     display: grid;
-    gap: 10px;
+    gap: 6px;
+  }
+  .manager-list .data-item {
+    padding: 10px 12px;
+  }
+  .manager-list .data-top {
+    margin-bottom: 8px;
+  }
+  .manager-list .item-meta {
+    gap: 6px;
+    margin-top: 5px;
+    font-size: 11px;
+  }
+  .manager-list .data-actions {
+    gap: 6px;
+  }
+  .manager-list .data-actions .btn {
+    min-height: 30px;
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+  .manager-list .tag {
+    min-height: 20px;
+    padding: 1px 7px;
+    font-size: 10.5px;
   }
   .detail-block {
     border: 1px solid rgba(71, 85, 105, 0.64);

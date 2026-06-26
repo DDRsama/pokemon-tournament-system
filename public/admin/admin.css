@@ -395,6 +395,12 @@
   .match-card:hover { background: rgba(39, 53, 73, 0.92); }
   .match-card.live { border-color: #f59e0b; box-shadow: 0 0 14px rgba(245,158,11,0.2); }
   .match-card.done { opacity: 0.55; }
+  .match-card.waiting-opponent {
+    border-color: rgba(148, 163, 184, 0.26);
+    background:
+      linear-gradient(135deg, rgba(30, 41, 59, 0.82), rgba(15, 23, 42, 0.78)),
+      rgba(30, 41, 59, 0.86);
+  }
   .match-header { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .match-meta { display: inline-flex; align-items: center; padding: 6px 12px; border-radius: 999px; background: rgba(99,102,241,0.16); color: #c7d2fe; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; white-space: nowrap; }
   .match-header-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
@@ -402,11 +408,24 @@
   .seat-group { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; }
   .seat-group.right { justify-content: flex-end; }
   .player-side { flex: 1; padding: 5px 7px; border-radius: 6px; background: #273549; cursor: pointer; text-align: center; font-size: 13px; transition: background 0.12s; }
-  .player-side:hover:not(.won):not(.lost):not(.tbd) { background: #334155; color: #fff; }
+  .player-side:hover:not(.won):not(.lost):not(.tbd):not(.locked) { background: #334155; color: #fff; }
   .player-side.won { background: #16a34a; color: white; font-weight: 700; }
   .player-side.lost { background: #1e293b; color: #475569; text-decoration: line-through; }
   .player-side.tbd { color: #475569; font-style: italic; cursor: default; }
+  .player-side.locked {
+    cursor: not-allowed;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.88);
+    border: 1px dashed rgba(148, 163, 184, 0.28);
+  }
   .player-side.tv::after { content: ' 📺'; }
+  .match-waiting-note {
+    margin-top: 7px;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
+  }
   .seat-drop-btn { width: 28px; height: 28px; border: none; border-radius: 6px; background: #7f1d1d; color: #fecaca; cursor: pointer; font-size: 11px; flex-shrink: 0; }
   .seat-drop-btn:hover { background: #991b1b; color: #fff; }
   .vs { font-size: 11px; color: #475569; font-weight: 700; flex-shrink: 0; }

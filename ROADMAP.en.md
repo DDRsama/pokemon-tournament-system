@@ -82,6 +82,28 @@ Theme: tournament engine rewrite, league points, and long-term player identity
 - Overlay componentization and theme preparation.
 - Complete UI for group stages, double elimination, team events, and other expanded formats.
 
+## Version 3.1
+
+Status: in development
+
+Theme: experience polish, visual cleanup, and deployment reliability
+
+### Planned Scope
+
+- Keep the standalone `/player/` player-center entry, installable from phone home screens.
+- Keep Docker `/data` single-directory persistence to simplify Synology and single-container deployment.
+- Compact the player-center layout while preserving login, registration, return-to-match, and report-export flows.
+- Fix overlay internal English labels, TopN wording, completed-event podium priority, score visuals, animation clipping, and overflowing labels.
+- Polish admin group-stage visibility, waiting-opponent disabled states, overlay-preview clarity, and home profile-manager list density.
+- Update README files and release notes, restoring the three-language changelog format.
+
+### Out Of Scope
+
+- No full theme system.
+- No real account-login system.
+- No new core tournament-format model.
+- No overlay architecture rewrite.
+
 ## Version 3.x
 
 Theme: language system, theme system, and expanded formats

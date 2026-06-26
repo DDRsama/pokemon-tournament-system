@@ -4,7 +4,11 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=18765
+ENV DATA_ROOT=/data
 ENV DATA_DIR=/data/tournaments
+ENV PLAYERS_DIR=/data/players
+ENV LEAGUES_DIR=/data/leagues
+ENV POINTS_DIR=/data/points
 ENV REPORTS_DIR=/data/reports
 ENV PYTHON_BIN=/usr/local/bin/python
 
@@ -19,7 +23,7 @@ RUN npm install --omit=dev
 COPY src ./src
 COPY public ./public
 
-RUN mkdir -p /data/tournaments /data/reports
+RUN mkdir -p /data/tournaments /data/players /data/leagues /data/points /data/reports
 
 EXPOSE 18765
 

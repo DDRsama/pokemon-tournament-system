@@ -51,7 +51,8 @@ test('admin finished match cards do not expose live or score controls', () => {
   assert.equal(js.includes('function usesGameScoreRules(rules = {}, stage = null)'), true);
   assert.equal(js.includes('${!tournamentFinished && !m.done && isLive'), true);
   assert.equal(js.includes('${isGamesScore && canOperate ?'), true);
-  assert.equal(js.includes('${canOperate && m.p1 ?'), true);
+  assert.equal(js.includes('${canOperate && !p1Placeholder ?'), true);
+  assert.equal(js.includes('${canOperate && !p2Placeholder ?'), true);
 });
 
 test('admin overlay panel has visible fallback and project modal copy flow', () => {

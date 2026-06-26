@@ -54,6 +54,10 @@ test('home player profile manager supports search and pagination', () => {
   assert.equal(profilesJs.includes('最近更新：'), true);
   assert.equal(homeCss.includes('.profile-pager'), true);
   assert.equal(homeCss.includes('.manager-toolbar'), true);
+  assert.equal(html.includes('/home/home.css?v=3.1-visual-polish-1'), true);
+  assert.equal(html.includes('/home/profiles.js?v=3.1-visual-polish-1'), true);
+  assert.equal(homeCss.includes('.manager-list .data-item'), true);
+  assert.equal(homeCss.includes('min-height: 30px;'), true);
 });
 
 test('home tournament creation no longer asks for fixed swiss round count', () => {
@@ -74,4 +78,33 @@ test('home swiss auto-round hint stays on one line across the create grid', () =
   assert.equal(css.includes('.create-rule-readonly'), true);
   assert.equal(css.includes('grid-column: 1 / -1;'), true);
   assert.equal(css.includes('white-space: nowrap;'), true);
+});
+
+test('main pages expose phone home screen icons', () => {
+  [
+    'public/home/index.html',
+    'public/admin/index.html',
+    'public/player/index.html',
+    'public/player-center/index.html',
+    'public/overlay/index.html',
+  ].forEach(relativePath => {
+    const html = readUtf8(relativePath);
+    assert.equal(html.includes('<meta name="theme-color" content="#0f172a">'), true, `${relativePath} should expose theme color`);
+    assert.equal(html.includes('<link rel="icon" type="image/png" sizes="192x192" href="/shared/app-icon-192.png">'), true, `${relativePath} should expose png app icon`);
+    assert.equal(html.includes('<link rel="apple-touch-icon" href="/shared/apple-touch-icon.png">'), true, `${relativePath} should expose iOS app icon`);
+  });
+});
+
+test('player-facing chrome shows the 3.1 release version label', () => {
+  [
+    'public/home/index.html',
+    'public/admin/index.html',
+    'public/player/index.html',
+    'public/player-center/index.html',
+  ].forEach(relativePath => {
+    const html = readUtf8(relativePath);
+    assert.equal(html.includes('<div class="version">3.1.0</div>'), true, `${relativePath} should expose current release label`);
+    assert.equal(html.includes('<div class="version">3.1-beta</div>'), false, `${relativePath} should not expose stale beta label`);
+    assert.equal(html.includes('<div class="version">3.0-beta</div>'), false, `${relativePath} should not expose stale beta label`);
+  });
 });

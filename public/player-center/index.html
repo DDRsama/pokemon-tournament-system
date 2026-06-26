@@ -3,8 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PTS选手中心">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>选手中心 - Pokemon Tournament System</title>
 <link rel="icon" type="image/svg+xml" href="/shared/favicon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="/shared/app-icon-192.png">
+<link rel="apple-touch-icon" href="/shared/apple-touch-icon.png">
+<link rel="manifest" href="/player/manifest.webmanifest">
 <link rel="stylesheet" href="/shared/theme.css">
 <link rel="stylesheet" href="/player/center.css">
 </head>
@@ -14,7 +21,7 @@
       <img class="brand-mark" src="/shared/favicon.svg" alt="">
       <span class="brand-text">Pokemon Tournament System</span>
     </div>
-    <div class="version">3.0-beta</div>
+    <div class="version">3.1.0</div>
   </header>
 
   <main class="app-shell player-center-compact">
@@ -23,6 +30,15 @@
       <h1>选手中心</h1>
       <p>管理你的选手档案，查看正在参加的比赛、历史战绩和联赛积分。</p>
     </header>
+
+    <section class="install-banner hidden" id="installBanner">
+      <div class="install-copy">
+        <div class="section-label">手机入口</div>
+        <strong id="installBannerTitle">添加到主屏幕</strong>
+        <p id="installBannerText">以后可从手机桌面直接进入选手中心。</p>
+      </div>
+      <button class="secondary-action" id="installAppBtn" type="button">添加</button>
+    </section>
 
     <section class="panel identity-panel" id="signedOutView">
       <div class="panel-head">
@@ -121,6 +137,6 @@
   </div>
 
   <div class="toast hidden" id="toast"></div>
-  <script src="/player/center.js?v=3.0-compact-center"></script>
+  <script src="/player/center.js?v=3.1-pwa-install"></script>
 </body>
 </html>

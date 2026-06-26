@@ -171,7 +171,7 @@ function renderOverviewInto(root, s, ctx) {
   const tableTitle = root.querySelector('#ovTableTitle');
   const tableSubtitle = root.querySelector('#ovTableSubtitle');
   if (tableTitle) tableTitle.textContent = '对阵桌';
-  if (tableSubtitle) tableSubtitle.textContent = 'Round ' + s.round;
+  if (tableSubtitle) tableSubtitle.textContent = `第 ${s.round || '-'} 轮`;
   tableList.classList.remove('is-compact');
   tableList.innerHTML = sortedM.map(m => {
     const isLive = s.currentLiveMatch && s.currentLiveMatch.id === m.id;
@@ -183,8 +183,8 @@ function renderOverviewInto(root, s, ctx) {
     else if (m.done) badge = '<span class="status-badge done">已结束</span>';
     else badge = '<span class="status-badge waiting">等待中</span>';
     const dropped2 = new Set(s.droppedPlayers || []);
-    const p1d = m.p1 === 'BYE' ? '轮空' : (m.p1 || 'TBD');
-    const p2d = m.p2 === 'BYE' ? '轮空' : (m.p2 || 'TBD');
+    const p1d = m.p1 === 'BYE' ? '轮空' : (m.p1 || '待定');
+    const p2d = m.p2 === 'BYE' ? '轮空' : (m.p2 || '待定');
     const p1Cls = 'p1n' + (p1W ? ' won' : p2W || dropped2.has(m.p1) ? ' lost' : '');
     const p2Cls = 'p1n right' + (p2W ? ' won' : p1W || dropped2.has(m.p2) ? ' lost' : '');
     return `<div class="ov-card${isBye || m.done ? ' done' : ''}${isLive ? ' live' : ''}">
@@ -897,11 +897,17 @@ function renderStageOverviewInto(root, s, ctx) {
     const phaseBadge = phase && phase !== stageOverviewLabel(s.phase)
       ? '<span class="status-badge waiting">' + escapeHtml(phase) + '</span>'
       : '';
-    const p1d = match.p1 === 'BYE' ? '轮空' : (match.p1 || 'TBD');
-    const p2d = match.p2 === 'BYE' ? '轮空' : (match.p2 || 'TBD');
+    const p1d = match.p1 === 'BYE' ? '轮空' : (match.p1 || '待定');
+    const p2d = match.p2 === 'BYE' ? '轮空' : (match.p2 || '待定');
     const p1Cls = 'p1n' + (p1W ? ' won' : p2W ? ' lost' : '');
     const p2Cls = 'p1n right' + (p2W ? ' won' : p1W ? ' lost' : '');
-    const score = (match.p1Wins || match.p2Wins) ? '<span class="status-badge">' + (match.p1Wins || 0) + '-' + (match.p2Wins || 0) + '</span>' : '';
+    const score = (match.p1Wins || match.p2Wins)
+      ? '<span class="ov-score-pair">'
+        + '<span class="ov-score-cell' + (p1W ? ' win' : '') + '">' + escapeHtml(match.p1Wins || 0) + '</span>'
+        + '<span class="ov-score-sep">-</span>'
+        + '<span class="ov-score-cell' + (p2W ? ' win' : '') + '">' + escapeHtml(match.p2Wins || 0) + '</span>'
+        + '</span>'
+      : '';
     return `<div class="ov-card${isBye || match.done ? ' done' : ''}${isLive ? ' live' : ''}">
       <div class="table-num">${match.table || '?'}</div>
       <div class="player-block">

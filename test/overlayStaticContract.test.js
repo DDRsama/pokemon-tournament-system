@@ -44,7 +44,7 @@ test('overlay routes all 3.0 phases to nonblank views', () => {
   for (const token of required) {
     assert.equal(text.includes(token), true, `overlay should include: ${token}`);
   }
-  assert.equal(html.includes('/shared/overlay/state-router.js?v=3.0-overlay-route-5'), true);
+  assert.equal(html.includes('/shared/overlay/state-router.js?v=3.1-visual-polish-1'), true);
 });
 
 test('overlay localizes elimination labels and avoids hard-coded top8 podium wording', () => {
@@ -177,8 +177,8 @@ test('double elimination overview shows concurrent winners and losers rounds', (
 test('overlay idle view is visible on transparent OBS background', () => {
   const html = readUtf8('public/overlay/index.html');
   const css = readUtf8('public/shared/overlay/overlay.css');
-  assert.equal(html.includes('/shared/overlay/overlay.css?v=3.0-overlay-group-tiebreak-1'), true);
-  assert.equal(html.includes('/shared/overlay/views/swiss-overview.js?v=3.0-overlay-topn-overview-1'), true);
+  assert.equal(html.includes('/shared/overlay/overlay.css?v=3.1-visual-polish-1'), true);
+  assert.equal(html.includes('/shared/overlay/views/swiss-overview.js?v=3.1-visual-polish-1'), true);
   assert.equal(html.includes('rel="preload" as="font" type="font/ttf" href="/shared/fonts/ud-shin-go-sc-r.ttf" crossorigin'), true);
   assert.equal(html.includes('rel="preload" as="image" href="/shared/pokemon-champions-title.png"'), true);
   assert.equal(html.includes('data-pts-overlay-boot="ready"'), true);
@@ -193,10 +193,26 @@ test('overlay ranking move animation has horizontal bleed room', () => {
   const overview = readUtf8('public/shared/overlay/views/swiss-overview.js');
   const css = readUtf8('public/shared/overlay/overlay.css');
   assert.equal(overview.includes("winUp ? ' scale(1.04)' : ''"), true);
-  assert.equal(css.includes('--ov-move-bleed: 64px;'), true);
+  assert.equal(css.includes('--ov-move-bleed: 96px;'), true);
   assert.equal(css.includes('margin-inline: calc(-1 * var(--ov-move-bleed));'), true);
   assert.equal(css.includes('padding-inline: var(--ov-move-bleed);'), true);
+  assert.equal(css.includes('.ov-pitem.is-moving'), true);
+  assert.equal(css.includes('overflow: visible;'), true);
   assert.equal(css.includes('overflow-x: hidden;'), true);
+});
+
+test('overlay stage overview keeps visible labels localized and scores compact', () => {
+  const overview = readUtf8('public/shared/overlay/views/swiss-overview.js');
+  const css = readUtf8('public/shared/overlay/overlay.css');
+
+  assert.equal(overview.includes("tableSubtitle.textContent = `第 ${s.round || '-'} 轮`;"), true);
+  assert.equal(overview.includes("m.p1 || 'TBD'"), false);
+  assert.equal(overview.includes("match.p1 || 'TBD'"), false);
+  assert.equal(overview.includes("m.p1 || '待定'"), true);
+  assert.equal(overview.includes("match.p1 || '待定'"), true);
+  assert.equal(overview.includes('ov-score-pair'), true);
+  assert.equal(css.includes('.ov-score-pair'), true);
+  assert.equal(css.includes('.ov-score-cell.win'), true);
 });
 
 test('top cut final cards leave enough room for Chinese player names', () => {

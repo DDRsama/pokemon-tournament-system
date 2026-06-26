@@ -111,13 +111,48 @@ button {
   border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 8px;
   box-shadow: 0 14px 42px rgba(0, 0, 0, 0.22);
-  padding: 14px;
+  padding: 12px;
   min-width: 0;
   backdrop-filter: blur(14px);
 }
 
 .identity-panel {
   margin-top: 6px;
+}
+
+.install-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(56, 189, 248, 0.14), rgba(250, 204, 21, 0.08)),
+    rgba(11, 20, 35, 0.86);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+}
+
+.install-copy {
+  min-width: 0;
+}
+
+.install-copy strong {
+  display: block;
+  margin-top: 4px;
+  color: #f8fbff;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.install-copy p {
+  margin: 4px 0 0;
+  color: #a8b6cc;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .panel-head,
@@ -130,7 +165,7 @@ button {
 
 h2 {
   margin: 5px 0 0;
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.25;
 }
 
@@ -267,17 +302,17 @@ h2 {
 
 .item-list {
   display: grid;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 5px;
+  margin-top: 8px;
 }
 
 .tournament-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  min-height: 52px;
-  padding: 8px 10px;
+  min-height: 44px;
+  padding: 7px 9px;
   border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: 8px;
   background: rgba(13, 24, 41, 0.86);
@@ -297,7 +332,7 @@ h2 {
 
 .tournament-name {
   color: #f8fbff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -308,7 +343,7 @@ h2 {
 .empty-state {
   margin-top: 4px;
   color: #8ea3bf;
-  font-size: 11px;
+  font-size: 10.5px;
   line-height: 1.35;
 }
 
@@ -332,8 +367,8 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 44px;
-  padding: 8px 10px;
+  min-height: 38px;
+  padding: 7px 9px;
   border-radius: 8px;
   background: rgba(13, 24, 41, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.14);
@@ -342,7 +377,7 @@ h2 {
 .stat span {
   display: block;
   color: #8ea3bf;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -350,13 +385,13 @@ h2 {
   display: block;
   margin-top: 0;
   color: #facc15;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
 }
 
 .content-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 10px;
 }
@@ -397,6 +432,16 @@ h2 {
   background: rgba(250, 204, 21, 0.13);
 }
 
+@media (min-width: 960px) {
+  .content-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr);
+  }
+
+  .wide-panel {
+    grid-column: auto;
+  }
+}
+
 .toast {
   position: fixed;
   right: 18px;
@@ -414,7 +459,28 @@ h2 {
 
 @media (max-width: 720px) {
   .topbar {
-    padding: 0 16px;
+    position: relative;
+    gap: 10px;
+    padding: 0 86px 0 12px;
+  }
+
+  .brand {
+    font-size: 14px;
+    overflow: hidden;
+  }
+
+  .brand-text {
+    min-width: 0;
+  }
+
+  .version {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    height: 24px;
+    padding: 0 8px;
+    font-size: 11px;
+    transform: translateY(-50%);
   }
 
   .app-shell {
@@ -426,13 +492,17 @@ h2 {
   }
 
   .field-grid,
-  .content-grid,
-  .stats-row {
+  .content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .panel-head,
   .profile-card,
+  .install-banner,
   .profile-confirm,
   .modal-dialog,
   .tournament-row {
@@ -440,7 +510,8 @@ h2 {
   }
 
   .panel-head,
-  .profile-card {
+  .profile-card,
+  .install-banner {
     display: grid;
   }
 
@@ -451,7 +522,14 @@ h2 {
 
   .join-action {
     width: auto;
-    min-width: 86px;
+    min-width: 72px;
+  }
+
+  .stat {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    text-align: center;
   }
 
   .tournament-row {

@@ -1,5 +1,6 @@
 (function () {
   const profileKey = 'pts_player_center_profile_id';
+  let deferredInstallPrompt = null;
   const params = new URLSearchParams(location.search);
   const launchedProfileId = (params.get('profileId') || '').trim();
   if (launchedProfileId) localStorage.setItem(profileKey, launchedProfileId);
@@ -44,6 +45,91 @@
     el.classList.remove('hidden');
     clearTimeout(showToast.timer);
     showToast.timer = setTimeout(() => el.classList.add('hidden'), 2600);
+  }
+
+  function isStandaloneMode() {
+    return window.navigator.standalone === true
+      || window.matchMedia?.('(display-mode: standalone)').matches;
+  }
+
+  function isIosDevice() {
+    return /iphone|ipad|ipod/i.test(window.navigator.userAgent || '')
+      || (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
+  }
+
+  function updateInstallBanner() {
+    const banner = qs('installBanner');
+    if (!banner) return;
+    const button = qs('installAppBtn');
+    const title = qs('installBannerTitle');
+    const text = qs('installBannerText');
+    if (isStandaloneMode()) {
+      banner.classList.add('hidden');
+      return;
+    }
+
+    if (deferredInstallPrompt) {
+      title.textContent = '添加到主屏幕';
+      text.textContent = '以后可从手机桌面直接进入选手中心。';
+      button.textContent = '添加';
+      banner.classList.remove('hidden');
+      return;
+    }
+
+    if (isIosDevice()) {
+      title.textContent = '添加到主屏幕';
+      text.textContent = '用 Safari 打开后点分享，再选添加到主屏幕。';
+      button.textContent = '知道了';
+      banner.classList.remove('hidden');
+      return;
+    }
+
+    banner.classList.add('hidden');
+  }
+
+  async function installPlayerCenter() {
+    if (deferredInstallPrompt) {
+      const promptEvent = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      promptEvent.prompt();
+      try {
+        const choice = await promptEvent.userChoice;
+        if (choice?.outcome === 'accepted') showToast('已添加到主屏幕。');
+      } finally {
+        updateInstallBanner();
+      }
+      return;
+    }
+
+    if (isIosDevice()) {
+      showToast('在 Safari 中点分享，再选添加到主屏幕。');
+    }
+  }
+
+  function setupInstallPrompt() {
+    window.addEventListener('beforeinstallprompt', evt => {
+      evt.preventDefault();
+      deferredInstallPrompt = evt;
+      updateInstallBanner();
+    });
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      updateInstallBanner();
+      showToast('已添加到主屏幕。');
+    });
+    qs('installAppBtn')?.addEventListener('click', () => {
+      installPlayerCenter().catch(() => showToast('添加入口失败，请稍后重试。'));
+    });
+    updateInstallBanner();
+  }
+
+  function registerPlayerCenterServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/player/sw.js', { scope: '/player/' })
+        .catch(() => {});
+    });
   }
 
   function phaseText(phase) {
@@ -384,5 +470,7 @@
     qs('profileNameInput').focus();
   });
 
+  setupInstallPrompt();
+  registerPlayerCenterServiceWorker();
   refreshData().catch(() => showToast('加载选手中心失败。'));
 })();

@@ -13,16 +13,16 @@
 
 PTS combines admin management, livestream overlays, player-facing mobile pages, Swiss rounds, Top 8 playoffs, report export, and Docker deployment in one system.
 
-Latest stable version: `2.2.0`
+Latest stable version: `3.1.0`
 
-Current beta version: `3.0.0-beta`
+Current beta version: none
 
 Release channels:
 
 - `latest`: stable Docker image
 - `beta`: beta Docker image
-- Tags such as `3.0.0-beta`: pinned beta image
-- Tags such as `3.0.0`: pinned stable image
+- Tags such as `3.2.0-beta`: pinned beta image
+- Tags such as `3.1.0`: pinned stable image
 
 Roadmap: [ROADMAP.en.md](./ROADMAP.en.md)
 
@@ -82,6 +82,7 @@ PTS started as a simple livestream overlay, then grew into a full tournament too
 - Submit wins
 - View live-room code
 - Export personal reports after the event
+- Open `/player/` as a standalone player center and install it on the phone home screen
 
 ### Reports And Records
 
@@ -164,6 +165,21 @@ Path:
 
 Used for QR-code entry, registration, login, pairing lookup, history, and win submission.
 
+### 4. Player Center
+
+Path:
+
+```text
+/player/
+```
+
+Used for:
+
+- Entering the player center from a phone home-screen icon or a stable link outside tournament time
+- Logging into a player profile through the current lightweight name-confirmation flow
+- Viewing current tournaments, open registration entries, and personal report history
+- Installing the entry on iOS Safari and Android Chrome
+
 ## Project Structure
 
 - `src/`
@@ -174,6 +190,8 @@ Used for QR-code entry, registration, login, pairing lookup, history, and win su
   Livestream overlay page
 - `public/player/`
   Player-facing page
+- `public/player-center/`
+  Standalone player center and phone home-screen entry
 - `public/shared/`
   Shared styles, QR-code script, fonts, and assets
 - `data/`
@@ -213,6 +231,7 @@ After startup:
 - Admin: `/t/<tournamentId>/admin`
 - Overlay: `/t/<tournamentId>/overlay`
 - Player page: `/t/<tournamentId>/player-login`
+- Player center: `/player/`
 
 Examples:
 
@@ -220,8 +239,9 @@ Examples:
 - `http://localhost:18765/t/t_123456/admin`
 - `http://localhost:18765/t/t_123456/overlay`
 - `http://localhost:18765/t/t_123456/player-login`
+- `http://localhost:18765/player/`
 
-Legacy entries `/admin`, `/overlay`, `/player`, and `/player-login` redirect to the home page.
+Legacy entries `/admin`, `/overlay`, and `/player-login` redirect to the home page. `/player` and `/player/` are the standalone player-center entry.
 
 ## Docker Deployment
 
@@ -240,7 +260,7 @@ docker pull ddrsama/pokemon-tournament-system:beta
 You can also pin a specific version:
 
 ```bash
-docker pull ddrsama/pokemon-tournament-system:2.2.0
+docker pull ddrsama/pokemon-tournament-system:3.1.0
 ```
 
 ### Local Development Docker Compose
@@ -257,16 +277,16 @@ This builds the image directly from the current workspace.
 docker compose -f docker-compose.deploy.yml up -d
 ```
 
+To pin a specific stable image:
+
+```bash
+PTS_TAG=3.1.0 docker compose -f docker-compose.deploy.yml up -d
+```
+
 ### Beta Docker Compose Deployment
 
 ```bash
 docker compose -f docker-compose.deploy.yml -f docker-compose.deploy.beta.yml up -d
-```
-
-To pin a specific beta image:
-
-```bash
-PTS_TAG=3.0.0-beta docker compose -f docker-compose.deploy.yml up -d
 ```
 
 Default port:
@@ -275,9 +295,12 @@ Default port:
 18765:18765
 ```
 
-Docker Compose stores persistent data under the project directory by default:
+Docker Compose stores persistent data under `./data` by default:
 
 - `./data/tournaments`
+- `./data/players`
+- `./data/leagues`
+- `./data/points`
 - `./data/reports`
 
 ## GitHub And Docker Releases
@@ -297,8 +320,16 @@ The repository supports two release channels:
   Server port, default `18765`
 - `PUBLIC_BASE_URL`
   Public access URL used for QR codes and player links
+- `DATA_ROOT`
+  Data root directory. Defaults to `/data` in Docker
 - `DATA_DIR`
   Tournament data directory
+- `PLAYERS_DIR`
+  Player profile directory
+- `LEAGUES_DIR`
+  League directory
+- `POINTS_DIR`
+  Points profile directory
 - `REPORTS_DIR`
   Report output directory
 - `PYTHON_BIN`

@@ -79,8 +79,8 @@
       if (overlayState === 'error' || phase === 'error') return 'error';
       if (phase === 'setup' || phase === 'idle' || overlayState === 'idle') return 'idle';
       if (overlayState === 'swiss-ended') return 'swiss-ended';
-      if (phase === 'done' && overlayState === 'top8-result') return 'top8-result';
       if (phase === 'done' && isPodiumReady(state)) return 'podium';
+      if (phase === 'done' && overlayState === 'top8-result') return 'top8-result';
       if (phase === 'done') return 'idle';
       if (phase === 'swiss-ended') return 'swiss-ended';
       if (phase === 'groups-ended' || phase === 'double_elimination-ended') return 'swiss-overview';

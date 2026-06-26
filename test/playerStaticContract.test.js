@@ -9,6 +9,15 @@ function readUtf8(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
 }
 
+function readPngSize(relativePath) {
+  const buffer = fs.readFileSync(path.join(ROOT, relativePath));
+  assert.equal(buffer.toString('ascii', 1, 4), 'PNG', `${relativePath} should be a png file`);
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+  };
+}
+
 test('player page exposes profile registration and guest-login prompts', () => {
   const html = readUtf8('public/player/index.html');
   const required = [
@@ -115,7 +124,7 @@ test('player-facing pages include the shared PTS header', () => {
     '<div class="brand">',
     '<img class="brand-mark" src="/shared/favicon.svg" alt="">',
     '<span class="brand-text">Pokemon Tournament System</span>',
-    '<div class="version">3.0-beta</div>',
+    '<div class="version">3.1.0</div>',
   ];
 
   for (const token of headerTokens) {
@@ -201,7 +210,7 @@ test('player center exposes report export for finished tournaments only', () => 
   const js = readUtf8('public/player-center/center.js');
   const source = html + css + js;
   const required = [
-    '/player/center.js?v=3.0-compact-center',
+    '/player/center.js?v=3.1-pwa-install',
     'function effectiveTournamentPhase(item)',
     'function isTournamentItemFinished(item)',
     'tournaments.filter(item => !isTournamentItemFinished(item)),',
@@ -216,6 +225,7 @@ test('player center exposes report export for finished tournaments only', () => 
   ];
   const forbidden = [
     'tournaments.filter(item => !isFinished(item.phase)),',
+    '/player/center.js?v=3.0-compact-center',
     '/player/center.js?v=3.0-current-tournaments-all',
     '/player/center.js?v=3.0-finished-report-actions',
   ];
@@ -226,6 +236,46 @@ test('player center exposes report export for finished tournaments only', () => 
   for (const token of forbidden) {
     assert.equal(source.includes(token), false, `player center should not contain stale finished report token: ${token}`);
   }
+});
+
+test('player center can be installed from phone home screens', () => {
+  const html = readUtf8('public/player-center/index.html');
+  const css = readUtf8('public/player-center/center.css');
+  const js = readUtf8('public/player-center/center.js');
+  const manifest = JSON.parse(readUtf8('public/player-center/manifest.webmanifest'));
+  const sw = readUtf8('public/player-center/sw.js');
+  const source = html + css + js + sw;
+
+  [
+    '<meta name="apple-mobile-web-app-capable" content="yes">',
+    '<meta name="apple-mobile-web-app-title" content="PTS选手中心">',
+    '<link rel="apple-touch-icon" href="/shared/apple-touch-icon.png">',
+    '<link rel="manifest" href="/player/manifest.webmanifest">',
+    'id="installBanner"',
+    'id="installAppBtn"',
+    'function setupInstallPrompt()',
+    'beforeinstallprompt',
+    'navigator.standalone',
+    "window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1",
+    "navigator.serviceWorker\n        .register('/player/sw.js', { scope: '/player/' })",
+    '.install-banner',
+  ].forEach(token => assert.equal(source.includes(token), true, `installable player center should contain: ${token}`));
+
+  assert.equal(manifest.start_url, '/player/');
+  assert.equal(manifest.scope, '/player/');
+  assert.equal(manifest.display, 'standalone');
+  assert.equal(manifest.icons.some(icon => icon.src === '/shared/app-icon-192.png' && icon.sizes === '192x192'), true);
+  assert.equal(manifest.icons.some(icon => icon.src === '/shared/app-icon-512.png' && icon.sizes === '512x512'), true);
+  assert.equal(sw.includes("if (url.pathname.startsWith('/api/')) return;"), true);
+
+  [
+    ['public/shared/apple-touch-icon.png', 180],
+    ['public/shared/app-icon-192.png', 192],
+    ['public/shared/app-icon-512.png', 512],
+  ].forEach(([relativePath, size]) => {
+    assert.equal(fs.existsSync(path.join(ROOT, relativePath)), true, `missing app icon: ${relativePath}`);
+    assert.deepEqual(readPngSize(relativePath), { width: size, height: size });
+  });
 });
 
 test('player center uses compact tournament list layout', () => {
@@ -239,10 +289,10 @@ test('player center uses compact tournament list layout', () => {
     'class="tournament-main"',
     'class="tournament-actions"',
     '.tournament-actions',
-    'min-height: 52px;',
+    'min-height: 44px;',
     'min-height: 32px;',
-    'font-size: 13px;',
-    'gap: 6px;',
+    'font-size: 12px;',
+    'gap: 5px;',
   ];
   const forbidden = [
     'font-size: clamp(34px, 8vw, 62px);',

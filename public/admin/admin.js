@@ -1016,14 +1016,20 @@ function matchCard(s, m, isTop8) {
       (m.phase && other.phase === m.phase)
     ),
   ) || (m.wasLive && m.done);
-  const cardClass = `match-card${isLive ? ' live' : ''}${m.done ? ' done' : ''}`;
+  const canOperate = canOperateMatch(m, s);
+  const waitingOpponent = !m.done && !canOperate;
+  const cardClass = `match-card${isLive ? ' live' : ''}${m.done ? ' done' : ''}${waitingOpponent ? ' waiting-opponent' : ''}`;
   const p1Won = m.winner === m.p1, p2Won = m.winner === m.p2;
   const featured = new Set(s.featuredSwissPlayers || []);
   const p1Featured = !isTop8 && featured.has(m.p1);
   const p2Featured = !isTop8 && featured.has(m.p2);
-  const canOperate = canOperateMatch(m, s);
   const escP1 = (m.p1 || '').replace(/'/g, "\\'");
   const escP2 = (m.p2 || '').replace(/'/g, "\\'");
+  const p1Placeholder = isPlaceholderEntrant(m.p1);
+  const p2Placeholder = isPlaceholderEntrant(m.p2);
+  const p1Display = m.p1 === 'BYE' ? '轮空' : (p1Placeholder ? '待定' : m.p1);
+  const p2Display = m.p2 === 'BYE' ? '轮空' : (p2Placeholder ? '待定' : m.p2);
+  const lockedClass = waitingOpponent ? ' locked' : '';
   const groupText = isGroupStage(stage) ? matchGroupLabel(m) : '';
   const bracketText = m.bracket === 'winners' ? '胜者组' : m.bracket === 'losers' ? '败者组' : m.bracket === 'grand_final' ? '总决赛' : '';
   const roundText = m.doubleEliminationRound ? `第 ${m.doubleEliminationRound} 轮` : (m.bracketRound ? `第 ${m.bracketRound} 轮` : (m.groupRound ? `第 ${m.groupRound} 轮` : ''));
@@ -1057,16 +1063,17 @@ function matchCard(s, m, isTop8) {
       <div class="seat-group">
         ${!isGamesScore && canOperate ? `<button class="seat-drop-btn" onclick="dropPlayerFromMatchAction('${m.id}','${escP1}')" title="左侧${label}退赛">退</button>` : ''}
         ${isGamesScore && canOperate ? `<div class="score-stack"><button class="btn score-btn" onclick="adjustScore('${m.id}','p1',-1)">-1</button><button class="btn score-btn" onclick="adjustScore('${m.id}','p1',1)">+1</button></div>` : ''}
-        <div class="player-side ${p1Won ? 'won' : p2Won ? 'lost' : ''}${!m.p1?' tbd':''}${p1Featured ? ' tv' : ''}" onclick="${canOperate && m.p1 ? `setResult('${m.id}','${m.p1}')` : ''}">${m.p1 || 'TBD'}</div>
+        <div class="player-side ${p1Won ? 'won' : p2Won ? 'lost' : ''}${p1Placeholder ? ' tbd' : ''}${lockedClass}${p1Featured ? ' tv' : ''}" onclick="${canOperate && !p1Placeholder ? `setResult('${m.id}','${escP1}')` : ''}">${escHtml(p1Display)}</div>
       </div>
       <div class="vs">VS</div>
       <div class="seat-group right">
-        <div class="player-side ${p2Won ? 'won' : p1Won ? 'lost' : ''}${!m.p2?' tbd':''}${p2Featured ? ' tv' : ''}" onclick="${canOperate && m.p2 ? `setResult('${m.id}','${m.p2}')` : ''}">${m.p2 || 'TBD'}</div>
+        <div class="player-side ${p2Won ? 'won' : p1Won ? 'lost' : ''}${p2Placeholder ? ' tbd' : ''}${lockedClass}${p2Featured ? ' tv' : ''}" onclick="${canOperate && !p2Placeholder ? `setResult('${m.id}','${escP2}')` : ''}">${escHtml(p2Display)}</div>
         ${isGamesScore && canOperate ? `<div class="score-stack"><button class="btn score-btn" onclick="adjustScore('${m.id}','p2',1)">+1</button><button class="btn score-btn" onclick="adjustScore('${m.id}','p2',-1)">-1</button></div>` : ''}
         ${!isGamesScore && canOperate ? `<button class="seat-drop-btn" onclick="dropPlayerFromMatchAction('${m.id}','${escP2}')" title="右侧${label}退赛">退</button>` : ''}
       </div>
     </div>
     ${bo3Html}
+    ${waitingOpponent ? '<div class="match-waiting-note">等待对手确认后可操作</div>' : ''}
   </div>`;
 }
 
@@ -1103,8 +1110,9 @@ function renderOverlay(s) {
   const rules = normalizeMatchRules(stage);
   const fallback = document.getElementById('overlayPreviewFallback');
   if (fallback) {
+    fallback.classList.add('hidden');
     const title = live
-      ? `${live.p1 || 'TBD'} vs ${live.p2 || 'TBD'}`
+      ? `${live.p1 || '待定'} vs ${live.p2 || '待定'}`
       : (names[s.overlayState] || s.overlayState || '全场总览');
     const stageName = stage?.name || stageTypeName(stage?.type) || stageStructureLabel(s);
     const progress = stage ? `${stage.completedMatchCount || 0}/${stage.matchCount || 0} 已完成` : '';

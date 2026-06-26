@@ -499,7 +499,7 @@
     box-shadow: 0 0 18px rgba(251,191,36,0.34);
   }
   #state-overview .ov-player-list {
-    --ov-move-bleed: 64px;
+    --ov-move-bleed: 96px;
     margin-top: 12px;
     margin-inline: calc(-1 * var(--ov-move-bleed));
     padding-inline: var(--ov-move-bleed);
@@ -536,6 +536,8 @@
   }
   .ov-pitem.is-moving {
     z-index: 8;
+    overflow: visible;
+    transform-origin: center center;
     border-color: rgba(251,191,36,0.64);
     box-shadow:
       0 28px 70px rgba(0,0,0,0.52),
@@ -927,6 +929,38 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .ov-score-pair {
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 7px;
+    border-radius: 10px;
+    background: rgba(5,8,14,0.44);
+    border: 1px solid rgba(148,163,184,0.18);
+  }
+  .ov-score-cell {
+    width: 25px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    color: #93c5fd;
+    background: rgba(59,130,246,0.14);
+    font-size: 14px;
+    font-weight: 900;
+  }
+  .ov-score-cell.win {
+    color: #111827;
+    background: #facc15;
+    box-shadow: 0 0 16px rgba(250,204,21,0.26);
+  }
+  .ov-score-sep {
+    color: rgba(203,213,225,0.62);
+    font-size: 12px;
+    font-weight: 900;
   }
   #state-overview .ov-table-list.is-group-stage {
     grid-template-columns: 1fr;

@@ -96,7 +96,7 @@ test('overlay router keeps terminal swiss results on ranking view', () => {
   assert.equal(router.resolveViewKey(state), 'swiss-ended');
 });
 
-test('overlay router keeps final live result before podium transition', () => {
+test('overlay router prefers podium over stale final result after tournament ends', () => {
   const router = loadRouter();
   const state = {
     phase: 'done',
@@ -106,7 +106,7 @@ test('overlay router keeps final live result before podium transition', () => {
       { phase: 'Bronze Match', done: true, p1: 'C', p2: 'D', winner: 'C' },
     ],
   };
-  assert.equal(router.resolveViewKey(state), 'top8-result');
+  assert.equal(router.resolveViewKey(state), 'podium');
 });
 
 test('overlay router does not show podium before tournament is done', () => {

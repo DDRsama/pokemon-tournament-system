@@ -47,8 +47,8 @@ test('admin static files do not reintroduce legacy swiss control surface', () =>
 
 test('admin entry uses current cache-busting asset version', () => {
   const html = readUtf8('public/admin/index.html');
-  assert.equal(html.includes('/admin/admin.css?v=3.0-group-tiebreak-1'), true);
-  assert.equal(html.includes('/admin/admin.js?v=3.0-group-tiebreak-1'), true);
+  assert.equal(html.includes('/admin/admin.css?v=3.1-visual-polish-1'), true);
+  assert.equal(html.includes('/admin/admin.js?v=3.1-visual-polish-1'), true);
   assert.equal(html.includes('3.0-swiss-auto-rounds'), false);
   assert.equal(html.includes('3.0-admin-stage-cleanup-20'), false);
   assert.equal(html.includes('3.0-admin-stage-cleanup-19'), false);
@@ -58,6 +58,30 @@ test('admin entry uses current cache-busting asset version', () => {
   assert.equal(html.includes('3.0-admin-stage-cleanup-15'), false);
   assert.equal(html.includes('3.0-admin-stage-cleanup-14'), false);
   assert.equal(html.includes('3.0-admin-stage-cleanup-13'), false);
+});
+
+test('admin waiting opponent matches and overlay preview stay visually clear', () => {
+  const js = readUtf8('public/admin/admin.js');
+  const css = readUtf8('public/admin/admin.css');
+  const html = readUtf8('public/admin/index.html');
+
+  [
+    "waitingOpponent ? ' waiting-opponent' : ''",
+    "p1Placeholder ? ' tbd' : ''",
+    "waitingOpponent ? ' locked' : ''",
+    '等待对手确认后可操作',
+    "fallback.classList.add('hidden');",
+    "live.p1 || '待定'",
+  ].forEach(token => assert.equal(js.includes(token), true, `admin JS should contain: ${token}`));
+
+  [
+    '.match-card.waiting-opponent',
+    '.player-side.locked',
+    '.match-waiting-note',
+    '.player-side:hover:not(.won):not(.lost):not(.tbd):not(.locked)',
+  ].forEach(token => assert.equal(css.includes(token), true, `admin CSS should contain: ${token}`));
+
+  assert.equal(html.includes('overlayPreviewFallback'), true);
 });
 
 test('admin runtime removes legacy swiss controls if stale DOM is injected', () => {
