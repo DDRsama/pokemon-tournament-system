@@ -1117,13 +1117,6 @@ function renderOverlay(s) {
       <div class="overlay-preview-meta">${escHtml(meta)}</div>
     `;
   }
-  const showGameScore = live && (s.overlayState === 'top8-live' || s.overlayState === 'top8-result' || usesGameScoreRules(rules, stage));
-  const boLabel = rules.bestOf ? `BO${rules.bestOf}` : '局分';
-  document.getElementById('overlayStateDisplay').innerHTML = `
-    <div class="overlay-state-row"><strong>叠加层状态：</strong><span class="overlay-state-value">${names[s.overlayState] || s.overlayState}</span></div>
-    ${live ? `<div class="overlay-state-row"><strong>直播桌：</strong>${escHtml(live.p1 || '')} vs ${escHtml(live.p2 || '')} · 桌${escHtml(live.table || '')}</div>` : ''}
-    ${showGameScore ? `<div class="overlay-state-row"><strong>${boLabel}：</strong>${live.p1Wins||0} — ${live.p2Wins||0}</div>` : ''}
-  `;
 }
 
 // ── 启动 ─────────────────────────────────────────────────

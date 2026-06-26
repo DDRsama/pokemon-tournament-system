@@ -10,6 +10,7 @@ const {
   canAdvanceRound,
   endSwiss,
 } = require('../src/core/swiss');
+const standingsCore = require('../src/core/standings');
 
 function standings(players) {
   return players.map((player, index) => ({
@@ -24,6 +25,51 @@ function standings(players) {
     dropped: false,
     rank: index + 1,
   }));
+}
+
+function seededRandom(seed) {
+  return () => {
+    let value = seed += 0x6D2B79F5;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function hasPreviousPair(matches, match) {
+  return matches.some(previous =>
+    previous.p2 !== 'BYE' &&
+    match.p2 !== 'BYE' &&
+    ((previous.p1 === match.p1 && previous.p2 === match.p2) ||
+      (previous.p1 === match.p2 && previous.p2 === match.p1)),
+  );
+}
+
+function playSeededSwiss(playerCount, seed) {
+  const players = Array.from({ length: playerCount }, (_, index) => `P${String(index + 1).padStart(2, '0')}`);
+  const state = freshState({ players, round: 1, _byeSet: new Set() });
+  const random = seededRandom(seed);
+
+  for (let round = 1; round <= recommendedSwissRoundsForPlayerCount(playerCount); round += 1) {
+    state.round = round;
+    const currentStandings = standingsCore.getSortedStandings(state, false, new Set());
+    const result = createRoundMatches(state, currentStandings);
+    assert.equal(
+      result.matches.some(match => hasPreviousPair(state.matches, match)),
+      false,
+      `round ${round} should avoid repeated pairings`,
+    );
+    state._byeSet = result.byeSet;
+    for (const match of result.matches) {
+      if (match.p2 !== 'BYE') {
+        match.winner = random() < 0.5 ? match.p1 : match.p2;
+        match.done = true;
+      }
+    }
+    state.matches.push(...result.matches);
+  }
+
+  return state;
 }
 
 test('hasPlayedEachOther detects previous swiss matches', () => {
@@ -52,6 +98,18 @@ test('createRoundMatches assigns BYE for odd player count and avoids repeat BYE'
   assert.ok(byeMatch);
   assert.notEqual(byeMatch.p1, 'C');
   assert.equal(byeMatch.done, true);
+});
+
+test('createRoundMatches avoids a repeat in the 12-player fourth-round regression case', () => {
+  playSeededSwiss(12, 1200003);
+});
+
+test('createRoundMatches avoids repeats for small swiss fields when a clean pairing exists', () => {
+  for (let playerCount = 9; playerCount <= 16; playerCount += 1) {
+    for (let seed = 1; seed <= 80; seed += 1) {
+      playSeededSwiss(playerCount, playerCount * 100000 + seed);
+    }
+  }
 });
 
 test('recommendedSwissRoundsForPlayerCount follows entrant-count buckets', () => {
