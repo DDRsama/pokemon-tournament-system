@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0f172a">
-<title>Pokemon Tournament System</title>
+<title>选手页 - Pokemon Tournament System</title>
 <link rel="icon" type="image/svg+xml" href="/shared/favicon.svg">
 <link rel="icon" type="image/png" sizes="192x192" href="/shared/app-icon-192.png">
 <link rel="apple-touch-icon" href="/shared/apple-touch-icon.png">
-<link rel="stylesheet" href="/shared/theme.css">
+  <link rel="stylesheet" href="/shared/theme.css?v=3.2-i18n-1">
+  <script src="/shared/i18n.js?v=3.2-i18n-1"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -25,7 +26,7 @@
     height: 56px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 16px;
     padding: 0 24px;
     border-bottom: 1px solid rgba(71, 85, 105, 0.7);
@@ -498,12 +499,12 @@
       <img class="brand-mark" src="/shared/favicon.svg" alt="">
       <span class="brand-text">Pokemon Tournament System</span>
     </div>
-    <div class="version">3.1.0</div>
+    <div class="version">3.2.0</div>
   </header>
 
   <div class="wrap">
     <div class="hero">
-      <div class="eyebrow">PLAYER PORTAL</div>
+      <div class="eyebrow">选手入口</div>
       <h1 id="tournamentName">宝可梦月赛</h1>
       <div class="sub" id="heroSub">输入选手名称以进入本场比赛个人页。</div>
     </div>
@@ -819,7 +820,7 @@ function renderIdentitySummary(view) {
 
 function setTournamentTitle(name) {
   const title = (name || '').trim();
-  document.title = title || 'Pokemon Tournament System';
+  document.title = title || '选手页 - Pokemon Tournament System';
 }
 
 function looksLikePlayerId(value) {

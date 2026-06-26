@@ -47,7 +47,7 @@ test('admin static files do not reintroduce legacy swiss control surface', () =>
 
 test('admin entry uses current cache-busting asset version', () => {
   const html = readUtf8('public/admin/index.html');
-  assert.equal(html.includes('/admin/admin.css?v=3.1-visual-polish-1'), true);
+  assert.equal(html.includes('/admin/admin.css?v=3.2-i18n-1'), true);
   assert.equal(html.includes('/admin/admin.js?v=3.1-visual-polish-1'), true);
   assert.equal(html.includes('3.0-swiss-auto-rounds'), false);
   assert.equal(html.includes('3.0-admin-stage-cleanup-20'), false);

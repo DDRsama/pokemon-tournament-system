@@ -1,9 +1,10 @@
-const CACHE_NAME = 'pts-player-center-v3.1-pwa-1';
+const CACHE_NAME = 'pts-player-center-v3.2-i18n-1';
 const STATIC_ASSETS = [
   '/player/',
-  '/player/center.css',
+  '/player/center.css?v=3.2-i18n-1',
   '/player/center.js?v=3.1-pwa-install',
-  '/shared/theme.css',
+  '/shared/i18n.js?v=3.2-i18n-1',
+  '/shared/theme.css?v=3.2-i18n-1',
   '/shared/favicon.svg',
   '/shared/apple-touch-icon.png',
   '/shared/app-icon-192.png',

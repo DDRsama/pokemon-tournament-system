@@ -124,7 +124,7 @@ test('player-facing pages include the shared PTS header', () => {
     '<div class="brand">',
     '<img class="brand-mark" src="/shared/favicon.svg" alt="">',
     '<span class="brand-text">Pokemon Tournament System</span>',
-    '<div class="version">3.1.0</div>',
+    '<div class="version">3.2.0</div>',
   ];
 
   for (const token of headerTokens) {
@@ -141,7 +141,8 @@ test('player center page has local profile selection and tournament entry points
   const html = readUtf8('public/player-center/index.html');
   const js = readUtf8('public/player-center/center.js');
   const required = [
-    'PLAYER CENTER',
+    '选手中心',
+    '/shared/i18n.js?v=3.2-i18n-1',
     'profileNameInput',
     'currentTournamentList',
     'openTournamentList',

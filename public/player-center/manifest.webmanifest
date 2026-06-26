@@ -1,7 +1,7 @@
 {
-  "name": "PTS 选手中心",
-  "short_name": "PTS选手",
-  "description": "Pokemon Tournament System player center",
+  "name": "PTS 选手中心 / Player Center / プレイヤーセンター",
+  "short_name": "PTS",
+  "description": "Pokemon Tournament System player center / 选手中心 / プレイヤーセンター",
   "start_url": "/player/",
   "scope": "/player/",
   "display": "standalone",

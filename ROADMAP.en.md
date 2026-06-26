@@ -59,7 +59,7 @@ Theme: server-side engineering refactor and unit test expansion
 - Use this as a source-only foundation for later development; push source and tag only, without publishing Docker Hub images.
 ## Version 3.0
 
-Status: in development
+Status: released
 
 Theme: tournament engine rewrite, league points, and long-term player identity
 
@@ -77,14 +77,13 @@ Theme: tournament engine rewrite, league points, and long-term player identity
 
 ### Later Themes
 
-- Language system.
 - Theme system.
 - Overlay componentization and theme preparation.
 - Complete UI for group stages, double elimination, team events, and other expanded formats.
 
 ## Version 3.1
 
-Status: in development
+Status: released
 
 Theme: experience polish, visual cleanup, and deployment reliability
 
@@ -104,15 +103,19 @@ Theme: experience polish, visual cleanup, and deployment reliability
 - No new core tournament-format model.
 - No overlay architecture rewrite.
 
+## Version 3.2.0
+
+Status: released
+
+Theme: Chinese / English / Japanese frontend support
+
+### Main Update
+
+- Added English and Japanese support.
+
 ## Version 3.x
 
-Theme: language system, theme system, and expanded formats
-
-### Language System
-
-- Add a frontend text dictionary for Chinese, English, and Japanese UI labels.
-- Keep tournament names and player names unchanged while translating system labels.
-- Prepare home, admin, player, and overlay pages for language switching.
+Theme: theme system and expanded formats
 
 ### Theme System
 

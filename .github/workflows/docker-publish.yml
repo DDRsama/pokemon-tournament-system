@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version_tag:
-        description: Optional beta version tag, for example 3.2.0-beta
+        description: Optional beta version tag, for example 3.3.0-beta
         required: false
 
 jobs:

@@ -13,7 +13,7 @@
 
 PTS combines admin management, livestream overlays, player-facing mobile pages, Swiss rounds, Top 8 playoffs, report export, and Docker deployment in one system.
 
-Latest stable version: `3.1.0`
+Latest stable version: `3.2.0`
 
 Current beta version: none
 
@@ -21,8 +21,8 @@ Release channels:
 
 - `latest`: stable Docker image
 - `beta`: beta Docker image
-- Tags such as `3.2.0-beta`: pinned beta image
-- Tags such as `3.1.0`: pinned stable image
+- Tags such as `3.3.0-beta`: pinned beta image
+- Tags such as `3.2.0`: pinned stable image
 
 Roadmap: [ROADMAP.en.md](./ROADMAP.en.md)
 
@@ -260,7 +260,7 @@ docker pull ddrsama/pokemon-tournament-system:beta
 You can also pin a specific version:
 
 ```bash
-docker pull ddrsama/pokemon-tournament-system:3.1.0
+docker pull ddrsama/pokemon-tournament-system:3.2.0
 ```
 
 ### Local Development Docker Compose
@@ -280,7 +280,7 @@ docker compose -f docker-compose.deploy.yml up -d
 To pin a specific stable image:
 
 ```bash
-PTS_TAG=3.1.0 docker compose -f docker-compose.deploy.yml up -d
+PTS_TAG=3.2.0 docker compose -f docker-compose.deploy.yml up -d
 ```
 
 ### Beta Docker Compose Deployment
