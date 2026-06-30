@@ -7,11 +7,15 @@ function registerReportsRoutes(app, deps) {
     current,
   } = deps;
 
+function reportLanguage(req) {
+  return String(req.query.lang || req.query.language || 'zh-CN').trim() || 'zh-CN';
+}
+
 app.get('/api/tournaments/:tournamentId/export-report', (req, res) => {
   const ok = syncTournamentRequest(req.params.tournamentId);
   if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
   try {
-    const filePath = exportTournamentReportFile(current());
+    const filePath = exportTournamentReportFile(current(), { language: reportLanguage(req) });
     if (!filePath) return res.status(400).json({ ok: false, err: 'tournament not finished' });
     return res.download(filePath, path.basename(filePath));
   } catch (err) {
@@ -25,7 +29,7 @@ app.get('/api/tournaments/:tournamentId/export-player-report', (req, res) => {
   const playerName = decodeURIComponent(req.query.playerName || '').trim();
   if (!playerName) return res.status(400).json({ ok: false, err: 'missing playerName' });
   try {
-    const filePath = exportPlayerReportFile(playerName, current());
+    const filePath = exportPlayerReportFile(playerName, current(), { language: reportLanguage(req) });
     if (!filePath) return res.status(400).json({ ok: false, err: 'player not finished' });
     return res.download(filePath, path.basename(filePath));
   } catch (err) {

@@ -356,9 +356,9 @@ test('player center PWA caches i18n runtime and uses multilingual install metada
   const sw = fs.readFileSync(path.join(root, 'public/player-center/sw.js'), 'utf8');
   const manifest = fs.readFileSync(path.join(root, 'public/player-center/manifest.webmanifest'), 'utf8');
   assert.match(sw, /\/shared\/i18n\.js\?v=3\.3-i18n-scan-1/);
-  assert.match(sw, /\/shared\/font-loader\.js\?v=3\.3-font-loader-1/);
+  assert.match(sw, /\/shared\/font-loader\.js\?v=3\.3-font-loader-2/);
   assert.match(sw, /\/player\/center\.js\?v=3\.3-entry-name-1/);
-  assert.match(sw, /pts-player-center-v3\.3-report-fonts-2/);
+  assert.match(sw, /pts-player-center-v3\.3-lang-fonts-1/);
   assert.match(manifest, /Player Center/);
   assert.match(manifest, /プレイヤーセンター/);
 });

@@ -1,9 +1,9 @@
-const CACHE_NAME = 'pts-player-center-v3.3-report-fonts-2';
+const CACHE_NAME = 'pts-player-center-v3.3-lang-fonts-1';
 const STATIC_ASSETS = [
   '/player/',
   '/player/center.css?v=3.3-entry-name-1',
   '/player/center.js?v=3.3-entry-name-1',
-  '/shared/font-loader.js?v=3.3-font-loader-1',
+  '/shared/font-loader.js?v=3.3-font-loader-2',
   '/shared/i18n.js?v=3.3-i18n-scan-1',
   '/shared/theme.css?v=3.3-release-1',
   '/shared/fonts/InterVariable.woff2',

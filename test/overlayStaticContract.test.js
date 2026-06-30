@@ -181,7 +181,7 @@ test('overlay idle view is visible on transparent OBS background', () => {
   assert.equal(html.includes('/shared/overlay/core.js?v=3.3-transition-1'), true);
   assert.equal(html.includes('/shared/overlay/transition-manager.js?v=3.3-transition-1'), true);
   assert.equal(html.includes('/shared/overlay/views/swiss-overview.js?v=3.1-visual-polish-1'), true);
-  assert.equal(html.includes('/shared/font-loader.js?v=3.3-font-loader-1'), true);
+  assert.equal(html.includes('/shared/font-loader.js?v=3.3-font-loader-2'), true);
   assert.equal(html.includes('rel="preload" as="image" href="/shared/pokemon-champions-title.png"'), true);
   assert.equal(html.includes('data-pts-overlay-boot="ready"'), true);
   assert.equal(css.includes('#view-idle'), true);

@@ -170,8 +170,8 @@ function getActiveFontConfig() {
   return fontsCore.getActiveFontConfig({ fontsDir: FONTS_DIR, rootDir: ROOT_DIR });
 }
 
-function getPdfFontCandidates() {
-  return fontsCore.getPdfFontCandidates({ fontsDir: FONTS_DIR, rootDir: ROOT_DIR });
+function getPdfFontCandidates(language = 'zh-CN') {
+  return fontsCore.getPdfFontCandidates({ fontsDir: FONTS_DIR, rootDir: ROOT_DIR, language });
 }
 
 function normalizeTop8MatchTables(state = currentState) {
@@ -1813,7 +1813,7 @@ function buildPlayerReportData(playerName, state = currentState) {
   });
 }
 
-function exportTournamentReportFile(state = currentState) {
+function exportTournamentReportFile(state = currentState, options = {}) {
   return pdfReport.exportTournamentReportFile({
     state,
     reportsDir: REPORTS_DIR,
@@ -1821,11 +1821,11 @@ function exportTournamentReportFile(state = currentState) {
     sanitizeFilePart,
     buildTournamentReportData,
     pythonBin: PYTHON_BIN,
-    fontCandidates: getPdfFontCandidates(),
+    fontCandidates: getPdfFontCandidates(options.language),
   });
 }
 
-function exportPlayerReportFile(playerName, state = currentState) {
+function exportPlayerReportFile(playerName, state = currentState, options = {}) {
   return pdfReport.exportPlayerReportFile({
     playerName,
     state,
@@ -1833,7 +1833,7 @@ function exportPlayerReportFile(playerName, state = currentState) {
     sanitizeFilePart,
     buildPlayerReportData,
     pythonBin: PYTHON_BIN,
-    fontCandidates: getPdfFontCandidates(),
+    fontCandidates: getPdfFontCandidates(options.language),
   });
 }
 
@@ -2705,7 +2705,7 @@ function startServer({ port = PORT, host = '0.0.0.0' } = {}) {
     buildClientState,
   });
   server.listen(port, host, () => {
-    console.log(`3.3.0 server running on ${getPublicBaseUrl()}`);
+    console.log(`3.3.1 server running on ${getPublicBaseUrl()}`);
   });
   return server;
 }

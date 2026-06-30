@@ -24,7 +24,7 @@ RUN npm install --omit=dev
 COPY src ./src
 COPY public ./public
 
-RUN mkdir -p /data/tournaments /data/players /data/leagues /data/points /data/fonts /data/reports
+RUN mkdir -p /data/tournaments /data/players /data/leagues /data/points /data/fonts/zh /data/fonts/en /data/fonts/ja /data/reports
 
 EXPOSE 18765
 

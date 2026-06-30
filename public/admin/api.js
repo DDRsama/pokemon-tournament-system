@@ -163,7 +163,8 @@ async function exportReport() {
   if (!currentState || !isTournamentFinished(currentState)) return;
   btn.disabled = true;
   try {
-    window.open(tournamentApi('/export-report'), '_blank');
+    const lang = document.documentElement.getAttribute('lang') || localStorage.getItem('pts_language') || 'zh-CN';
+    window.open(tournamentApi(`/export-report?lang=${encodeURIComponent(lang)}`), '_blank');
   } finally {
     if (currentState) {
       const canExport = isTournamentFinished(currentState);

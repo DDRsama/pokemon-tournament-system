@@ -1501,6 +1501,7 @@
     currentLanguage = normalizeLanguage(lang);
     localStorage.setItem(STORAGE_KEY, currentLanguage);
     document.documentElement.lang = currentLanguage;
+    document.documentElement.setAttribute('data-pts-language', currentLanguage);
     syncSelectors();
     translateNode(document.documentElement);
     dispatchLanguageChange();
@@ -1542,6 +1543,7 @@
     document.documentElement.setAttribute('data-i18n-original-title', document.title || '');
     currentLanguage = initialLanguage();
     document.documentElement.lang = currentLanguage;
+    document.documentElement.setAttribute('data-pts-language', currentLanguage);
     createLanguageSwitcher();
     translateNode(document.documentElement);
     const observer = new MutationObserver(records => {

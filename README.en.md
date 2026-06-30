@@ -13,7 +13,7 @@
 
 PTS combines admin management, livestream overlays, player-facing mobile pages, Swiss rounds, Top 8 playoffs, report export, and Docker deployment in one system.
 
-Latest stable version: `3.3.0`
+Latest stable version: `3.3.1`
 
 Current beta version: none
 
@@ -21,8 +21,8 @@ Release channels:
 
 - `latest`: stable Docker image
 - `beta`: beta Docker image
-- Tags such as `3.3.0-beta`: pinned beta image
-- Tags such as `3.3.0`: pinned stable image
+- Tags such as `3.3.1-beta`: pinned beta image
+- Tags such as `3.3.1`: pinned stable image
 
 Roadmap: [ROADMAP.en.md](./ROADMAP.en.md)
 
@@ -260,7 +260,7 @@ docker pull ddrsama/pokemon-tournament-system:beta
 You can also pin a specific version:
 
 ```bash
-docker pull ddrsama/pokemon-tournament-system:3.3.0
+docker pull ddrsama/pokemon-tournament-system:3.3.1
 ```
 
 ### Local Development Docker Compose
@@ -280,7 +280,7 @@ docker compose -f docker-compose.deploy.yml up -d
 To pin a specific stable image:
 
 ```bash
-PTS_TAG=3.3.0 docker compose -f docker-compose.deploy.yml up -d
+PTS_TAG=3.3.1 docker compose -f docker-compose.deploy.yml up -d
 ```
 
 ### Beta Docker Compose Deployment
@@ -348,7 +348,13 @@ The project bundles redistributable open-source fonts by default:
 - `public/shared/fonts/NotoSansSC-Medium.ttf`
 - `public/shared/fonts/NotoSansJP-Medium.ttf`
 
-For private deployments, you may place licensed private fonts in the data directory's `fonts` subdirectory, for example Docker's default `/data/fonts`. The system detects font files by filename and prefers them for the web UI; PDF reports are generated server-side with embedded fonts, trying `/data/fonts` first and then falling back to bundled static Noto Sans SC/JP Medium TTF report fonts instead of depending on viewer-device fonts. Font licensing for private files is the deployer's responsibility and those files are not bundled in public images.
+For private deployments, place licensed private fonts in language-specific subdirectories under the data directory's `fonts` folder:
+
+- Chinese: `/data/fonts/zh`
+- English: `/data/fonts/en`
+- Japanese: `/data/fonts/ja`
+
+The web UI switches the global font stack when the display language changes, so kanji inside the Japanese UI also uses the Japanese font first. For backward compatibility, fonts placed directly under `/data/fonts` are still detected by filename, but that flat layout is intended only as a migration fallback. PDF reports are generated server-side with embedded fonts, trying the current UI language's font directory first and then falling back to bundled static Noto Sans SC/JP Medium TTF report fonts instead of depending on viewer-device fonts. Font licensing for private files is the deployer's responsibility and those files are not bundled in public images.
 
 The Docker image includes CJK fonts and the `reportlab` runtime.
 

@@ -22,7 +22,7 @@ test('docker deployment persists every data store through a single data mount', 
     'ENV POINTS_DIR=/data/points',
     'ENV FONTS_DIR=/data/fonts',
     'ENV REPORTS_DIR=/data/reports',
-    'RUN mkdir -p /data/tournaments /data/players /data/leagues /data/points /data/fonts /data/reports',
+    'RUN mkdir -p /data/tournaments /data/players /data/leagues /data/points /data/fonts/zh /data/fonts/en /data/fonts/ja /data/reports',
     'DATA_ROOT: /data',
     '- ./data:/data',
   ].forEach(token => assert.equal(source.includes(token), true, `docker config should contain: ${token}`));

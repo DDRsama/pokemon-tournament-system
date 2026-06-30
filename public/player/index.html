@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/shared/app-icon-192.png">
   <link rel="apple-touch-icon" href="/shared/apple-touch-icon.png">
   <link rel="stylesheet" href="/shared/theme.css?v=3.3-release-1">
-  <script src="/shared/font-loader.js?v=3.3-font-loader-1"></script>
+  <script src="/shared/font-loader.js?v=3.3-font-loader-2"></script>
   <script src="/shared/i18n.js?v=3.3-i18n-scan-1"></script>
 <style>
   * { box-sizing: border-box; }
@@ -500,7 +500,7 @@
       <img class="brand-mark" src="/shared/favicon.svg" alt="">
       <span class="brand-text">Pokemon Tournament System</span>
     </div>
-    <div class="version">3.3.0</div>
+    <div class="version">3.3.1</div>
   </header>
 
   <div class="wrap">
@@ -1105,7 +1105,8 @@ async function upgradeGuestProfile(options = {}) {
 
 function exportPlayerReport() {
   if (!playerName) return;
-  const url = tournamentApi(`/export-player-report?playerName=${encodeURIComponent(playerName)}`);
+  const lang = document.documentElement.getAttribute('lang') || localStorage.getItem('pts_language') || 'zh-CN';
+  const url = tournamentApi(`/export-player-report?playerName=${encodeURIComponent(playerName)}&lang=${encodeURIComponent(lang)}`);
   window.open(url, '_blank');
 }
 

@@ -429,7 +429,8 @@
   }
 
   function buildPlayerReportUrl(tournamentId, playerName) {
-    return `/api/tournaments/${encodeURIComponent(tournamentId)}/export-player-report?playerName=${encodeURIComponent(playerName || '')}`;
+    const lang = document.documentElement.getAttribute('lang') || localStorage.getItem('pts_language') || 'zh-CN';
+    return `/api/tournaments/${encodeURIComponent(tournamentId)}/export-player-report?playerName=${encodeURIComponent(playerName || '')}&lang=${encodeURIComponent(lang)}`;
   }
 
   function enterTournament(tournamentId) {
