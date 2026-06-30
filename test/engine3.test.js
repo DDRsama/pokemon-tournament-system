@@ -320,6 +320,32 @@ test('calculateTournamentPoints ignores guest entrants and supports ranked award
   assert.equal(awards[0].profileId, 'pl_a');
 });
 
+test('calculateTournamentPoints gives participation points to ranked entrants outside reported standings', () => {
+  const profile = createPointsProfile({
+    participationPoints: 3,
+    placementPoints: [{ rankMin: 1, rankMax: 8, points: 10 }],
+    eventTierMultiplier: 1,
+  });
+  const awards = calculateTournamentPoints({
+    profile,
+    standings: [
+      { rank: 1, player: 'A', profileId: 'pl_a' },
+      { rank: 8, player: 'B', profileId: 'pl_b' },
+    ],
+    entrants: [
+      { displayName: 'A', profileId: 'pl_a', rankedEligible: true },
+      { displayName: 'B', profileId: 'pl_b', rankedEligible: true },
+      { displayName: 'C', profileId: 'pl_c', rankedEligible: true },
+      { displayName: 'Guest', profileId: null, rankedEligible: false },
+    ],
+  });
+  assert.deepEqual(awards.map(award => [award.profileId, award.rank, award.participationPoints, award.placementPoints, award.points]), [
+    ['pl_a', 1, 3, 10, 13],
+    ['pl_b', 8, 3, 10, 13],
+    ['pl_c', null, 3, 0, 3],
+  ]);
+});
+
 test('default preset can be customized for 3.0 target settings', () => {
   const settings = createDefaultTournamentSettings({
     topCutSize: 4,

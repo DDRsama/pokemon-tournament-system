@@ -11,6 +11,7 @@
     activeSummary: null,
     pendingLogin: null,
     pendingTournament: null,
+    editingProfile: false,
   };
 
   function qs(id) {
@@ -202,6 +203,11 @@
     qs('tournamentConfirmBox').classList.add('hidden');
   }
 
+  function hideProfileEdit() {
+    state.editingProfile = false;
+    qs('profileEditBox').classList.add('hidden');
+  }
+
   function showProfileConfirm(pending) {
     state.pendingLogin = pending;
     const exists = pending.mode === 'login';
@@ -310,6 +316,7 @@
       emptyText: '当前没有可报名的新比赛。',
     });
     hideTournamentConfirm();
+    if (!state.editingProfile) hideProfileEdit();
   }
 
   function setActiveProfile(profileId) {
@@ -356,6 +363,55 @@
     hideProfileConfirm();
   }
 
+  function showProfileEdit() {
+    const profile = getActiveProfile() || state.activeSummary?.profile || null;
+    if (!profile?.id) {
+      showToast('请先登录选手档案。');
+      return;
+    }
+    state.editingProfile = true;
+    qs('profileEditNameInput').value = profile.displayName || '';
+    qs('profileEditBox').classList.remove('hidden');
+    qs('profileEditNameInput').focus();
+    qs('profileEditNameInput').select();
+  }
+
+  async function submitProfileEdit() {
+    const profile = getActiveProfile() || state.activeSummary?.profile || null;
+    if (!profile?.id) {
+      hideProfileEdit();
+      showToast('请先登录选手档案。');
+      return;
+    }
+    const nextName = qs('profileEditNameInput').value.trim();
+    if (!nextName) {
+      showToast('请输入选手名称。');
+      return;
+    }
+    if (nextName === profile.displayName) {
+      hideProfileEdit();
+      return;
+    }
+    const duplicate = state.profiles.find(item => item.id !== profile.id && item.displayName === nextName);
+    if (duplicate) {
+      showToast('这个名称已有选手档案使用。');
+      return;
+    }
+    const res = await api(`/api/player-profiles/${encodeURIComponent(profile.id)}`, {
+      displayName: nextName,
+      aliases: Array.isArray(profile.aliases) ? profile.aliases : [],
+    }, 'PATCH');
+    if (!res.ok || !res.player?.id) {
+      showToast(res.err || '修改名称失败。');
+      return;
+    }
+    state.activeProfileId = res.player.id;
+    localStorage.setItem(profileKey, res.player.id);
+    hideProfileEdit();
+    await refreshData();
+    showToast('档案名称已更新。');
+  }
+
   function getTournamentName(tournamentId) {
     const targetId = String(tournamentId || '').trim();
     const tournament = state.tournaments.find(item => tournamentIdOf(item) === targetId)
@@ -364,10 +420,11 @@
     return tournament?.name || tournament?.tournamentName || targetId || '这场比赛';
   }
 
-  function buildTournamentEntryUrl(tournamentId, profile) {
+  function buildTournamentEntryUrl(tournamentId, profile, entrantName = '') {
     const url = new URL(`/t/${encodeURIComponent(tournamentId)}/player-login`, location.origin);
     url.searchParams.set('profileId', profile.id);
-    url.searchParams.set('name', profile.displayName || '');
+    url.searchParams.set('name', entrantName || profile.displayName || '');
+    url.searchParams.set('profileName', profile.displayName || '');
     return url;
   }
 
@@ -403,22 +460,27 @@
     const tournamentName = getTournamentName(tournamentId);
     state.pendingTournament = { tournamentId, profile };
     qs('tournamentConfirmTitle').textContent = '确认报名';
-    qs('tournamentConfirmMessage').textContent = `将以「${profile.displayName || '当前档案'}」报名「${tournamentName}」。确认后会进入该比赛的选手页。`;
+    qs('tournamentConfirmMessage').textContent = `报名「${tournamentName}」。确认后会进入该比赛的选手页。`;
+    qs('tournamentEntryNameInput').value = profile.displayName || '';
     qs('tournamentConfirmOkBtn').textContent = '确认报名';
     qs('tournamentConfirmBox').classList.remove('hidden');
-    qs('tournamentConfirmCancelBtn').focus();
+    qs('tournamentEntryNameInput').focus();
+    qs('tournamentEntryNameInput').select();
   }
 
   async function confirmTournamentRegistration() {
     const pending = state.pendingTournament;
     if (!pending?.tournamentId || !pending.profile?.id) return;
-    const displayName = String(pending.profile.displayName || '').trim();
-    if (!displayName) {
-      showToast('当前档案缺少选手名称。');
+    const profileName = String(pending.profile.displayName || '').trim();
+    const entrantName = String(qs('tournamentEntryNameInput').value || profileName).trim();
+    if (!entrantName) {
+      showToast('请填写本场参赛名。');
       return;
     }
     const res = await api(`/api/tournaments/${encodeURIComponent(pending.tournamentId)}/player-login`, {
-      playerName: displayName,
+      playerName: entrantName,
+      entrantName,
+      profileName,
       profileId: pending.profile.id,
     });
     if (!res.ok) {
@@ -426,7 +488,7 @@
       return;
     }
     hideTournamentConfirm();
-    location.href = buildTournamentEntryUrl(pending.tournamentId, pending.profile).toString();
+    location.href = buildTournamentEntryUrl(pending.tournamentId, pending.profile, entrantName).toString();
   }
 
   document.addEventListener('click', evt => {
@@ -463,11 +525,33 @@
   qs('tournamentConfirmOkBtn').addEventListener('click', () => {
     confirmTournamentRegistration().catch(() => showToast('报名失败。'));
   });
+  qs('tournamentEntryNameInput').addEventListener('keydown', evt => {
+    if (evt.key === 'Enter') confirmTournamentRegistration().catch(() => showToast('报名失败。'));
+    if (evt.key === 'Escape') hideTournamentConfirm();
+  });
+  qs('editProfileBtn').addEventListener('click', showProfileEdit);
+  qs('profileEditCancelBtn').addEventListener('click', hideProfileEdit);
+  qs('profileEditBox').addEventListener('click', evt => {
+    if (evt.target === qs('profileEditBox')) hideProfileEdit();
+  });
+  qs('profileEditSaveBtn').addEventListener('click', () => {
+    submitProfileEdit().catch(() => showToast('修改名称失败。'));
+  });
+  qs('profileEditNameInput').addEventListener('keydown', evt => {
+    if (evt.key === 'Enter') submitProfileEdit().catch(() => showToast('修改名称失败。'));
+    if (evt.key === 'Escape') hideProfileEdit();
+  });
   qs('changeProfileBtn').addEventListener('click', () => {
     setActiveProfile('');
     hideProfileConfirm();
     hideTournamentConfirm();
+    hideProfileEdit();
     qs('profileNameInput').focus();
+  });
+  window.addEventListener('pts-languagechange', () => {
+    render();
+    updateInstallBanner();
+    window.setTimeout(() => window.PTSI18n?.translateNode?.(document.documentElement), 0);
   });
 
   setupInstallPrompt();

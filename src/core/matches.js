@@ -44,6 +44,7 @@ function isByeEntrant(value) {
 
 function isMatchReady(match) {
   if (!match) return false;
+  if (match.lockedUntilPreviousRoundComplete) return false;
   const a = getMatchEntrant(match, 'a');
   const b = getMatchEntrant(match, 'b');
   return !isPlaceholderEntrant(a)
@@ -106,12 +107,47 @@ function applyDrawToMatch(match) {
   return true;
 }
 
+function getSharedLiveRoomTopCutMatches(state = {}, anchorMatch = null) {
+  const matches = Array.isArray(state.matches) ? state.matches : [];
+  const liveCode = String(state.liveRoomCode || '').trim();
+  if (!liveCode) return [];
+  const stages = Array.isArray(state.stages) && state.stages.length > 0
+    ? state.stages
+    : (Array.isArray(state.tournamentSettings?.stages) ? state.tournamentSettings.stages : []);
+  const stage = stages.find(item => item.id === anchorMatch?.stageId)
+    || stages.find(item => item.id === state.activeStageId)
+    || null;
+  if (!stage || stage.type !== 'single_elimination') return [];
+  const bracketSize = Number(stage.elimination?.bracketSize || state.top8?.length || state.pendingTop8?.length || 0);
+  if (bracketSize !== 4 && bracketSize !== 8) return [];
+  const stageMatches = matches.filter(match => match.stageId === stage.id && !match.done);
+  if (stageMatches.length === 0) return [];
+  const targetRound = anchorMatch && stageMatches.some(match => match.id === anchorMatch.id)
+    ? Number(anchorMatch.bracketRound || 1)
+    : Math.min(...stageMatches.map(match => Number(match.bracketRound || 1)).filter(Number.isFinite));
+  return stageMatches.filter(match =>
+    Number(match.bracketRound || 1) === targetRound
+    && isMatchReady(match)
+  );
+}
+
+function applySharedLiveRoomCodeToTopCut(state = {}, anchorMatch = null) {
+  const liveCode = String(state.liveRoomCode || '').trim();
+  const matches = getSharedLiveRoomTopCutMatches(state, anchorMatch);
+  for (const match of matches) {
+    match.liveRoomCode = liveCode || null;
+  }
+  return matches;
+}
+
 module.exports = {
   validateGameScore,
   getMatchEntrant,
   isPlaceholderEntrant,
   isByeEntrant,
   isMatchReady,
+  getSharedLiveRoomTopCutMatches,
+  applySharedLiveRoomCodeToTopCut,
   applyGameScoreToMatch,
   applyMatchWinner,
   applyDrawToMatch,

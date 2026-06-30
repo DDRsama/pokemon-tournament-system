@@ -140,17 +140,43 @@ function registerRegistryRoutes(app, deps) {
         broadcast();
         return res.json({ ok: true, entrants, profileActions, state: buildClientState() });
       }
+      const createMissingProfiles = (req.body?.createMissingProfiles === true || req.body?.registerProfiles === true)
+        && entrantType !== 'team';
+      const nameForProfile = String(displayName || name || '').trim();
+      let nextProfileId = profileId;
+      let profileAction = nextProfileId ? 'explicit' : 'guest';
+      if (createMissingProfiles && nextProfileId === undefined && nameForProfile) {
+        let profile = typeof getGlobalPlayerProfileByName === 'function'
+          ? getGlobalPlayerProfileByName(nameForProfile)
+          : null;
+        if (profile) {
+          profileAction = 'existing';
+        } else if (typeof createGlobalPlayerProfile === 'function') {
+          profile = createGlobalPlayerProfile({ displayName: nameForProfile });
+          profileAction = 'created';
+        }
+        if (profile?.id) nextProfileId = profile.id;
+      }
       const entrant = createTournamentEntrant({
         displayName: displayName || name,
         entrantType,
         teamName,
         teamRoster,
-        profileId,
+        profileId: nextProfileId,
         source: 'admin',
       });
       saveState();
       broadcast();
-      return res.json({ ok: true, entrant, state: buildClientState() });
+      return res.json({
+        ok: true,
+        entrant,
+        profileAction: {
+          displayName: entrant.displayName || nameForProfile || teamName,
+          profileId: entrant.profileId || null,
+          action: entrant.entryType === 'registered' && profileAction === 'guest' ? 'existing' : profileAction,
+        },
+        state: buildClientState(),
+      });
     } catch (err) {
       return res.status(400).json({ ok: false, err: err.message || 'create entrant failed' });
     }

@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   formatMatchResult,
+  formatReportPhaseLabel,
   buildTournamentReportData,
   buildPlayerReportData,
 } = require('../src/core/reportsData');
@@ -10,6 +11,15 @@ test('formatMatchResult handles draw, bye and score', () => {
   assert.equal(formatMatchResult({ draw: true }), '平局');
   assert.equal(formatMatchResult({ p1: 'A', p2: 'BYE', winner: 'A' }), 'A 轮空获胜');
   assert.equal(formatMatchResult({ p1: 'A', p2: 'B', winner: 'A', p1Wins: 2, p2Wins: 1 }), 'A 获胜，2-1');
+});
+
+test('formatReportPhaseLabel hides internal bracket labels', () => {
+  assert.equal(formatReportPhaseLabel('Round of 16'), '十六强赛');
+  assert.equal(formatReportPhaseLabel('Quarter Finals'), '四分之一决赛');
+  assert.equal(formatReportPhaseLabel('Semi Finals'), '半决赛');
+  assert.equal(formatReportPhaseLabel('Bronze Match'), '季军赛');
+  assert.equal(formatReportPhaseLabel('Finals'), '决赛');
+  assert.equal(formatReportPhaseLabel('grand_final'), '总决赛');
 });
 
 test('buildTournamentReportData includes ranking and live table mark', () => {
@@ -24,6 +34,7 @@ test('buildTournamentReportData includes ranking and live table mark', () => {
   const data = buildTournamentReportData(state, new Date('2026-01-01T00:00:00Z'));
   assert.equal(data.tournamentName, 'Demo');
   assert.equal(data.ranking[0].record, '1-0-0');
+  assert.equal(data.swissRounds[0].label, '瑞士轮第 1 轮');
   assert.equal(data.swissRounds[0].matches[0].tableLabel, '1（直播桌）');
 });
 
@@ -42,10 +53,10 @@ test('buildTournamentReportData includes generic elimination rounds', () => {
     },
   };
   const data = buildTournamentReportData(state, new Date('2026-01-01T00:00:00Z'));
-  assert.equal(data.top8Rounds.some(round => round.label === 'grand_final'), true);
+  assert.equal(data.top8Rounds.some(round => round.label === '总决赛'), true);
   assert.equal(data.top8Rounds[0].matches[0].result, 'A 获胜，2-0');
   assert.equal(data.stages[0].name, '双败阶段');
-  assert.equal(data.stageRounds[0].matches[0].phaseLabel, 'grand_final');
+  assert.equal(data.stageRounds[0].matches[0].phaseLabel, '总决赛');
 });
 
 test('buildTournamentReportData includes top16 round of 16 matches', () => {
@@ -63,10 +74,10 @@ test('buildTournamentReportData includes top16 round of 16 matches', () => {
     ],
   };
   const data = buildTournamentReportData(state, new Date('2026-01-01T00:00:00Z'));
-  assert.equal(data.top8Rounds[0].label, 'Round of 16');
+  assert.equal(data.top8Rounds[0].label, '十六强赛');
   assert.equal(data.top8Rounds[0].matches[0].tableLabel, '1');
   assert.equal(data.top8Rounds[0].matches[0].result, 'P1 获胜，2-0');
-  assert.equal(data.top8Rounds[1].label, 'Quarter Finals');
+  assert.equal(data.top8Rounds[1].label, '四分之一决赛');
 });
 
 test('buildTournamentReportData includes 3.0 settings stages and point awards', () => {
@@ -145,6 +156,6 @@ test('buildPlayerReportData keeps group history after elimination finishes', () 
     getPlayerCompletionStatus: () => ({ finished: true, reason: '冠军', award: '冠军' }),
   });
 
-  assert.deepEqual(data.history.map(item => item.stage), ['A组', 'Finals']);
+  assert.deepEqual(data.history.map(item => item.stage), ['A组', '决赛']);
   assert.deepEqual(data.history.map(item => item.opponent), ['B', 'C']);
 });

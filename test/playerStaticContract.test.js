@@ -124,7 +124,7 @@ test('player-facing pages include the shared PTS header', () => {
     '<div class="brand">',
     '<img class="brand-mark" src="/shared/favicon.svg" alt="">',
     '<span class="brand-text">Pokemon Tournament System</span>',
-    '<div class="version">3.2.0</div>',
+    '<div class="version">3.3.0</div>',
   ];
 
   for (const token of headerTokens) {
@@ -142,7 +142,7 @@ test('player center page has local profile selection and tournament entry points
   const js = readUtf8('public/player-center/center.js');
   const required = [
     '选手中心',
-    '/shared/i18n.js?v=3.2-i18n-1',
+    '/shared/i18n.js?v=3.3-i18n-scan-1',
     'profileNameInput',
     'currentTournamentList',
     'openTournamentList',
@@ -152,6 +152,9 @@ test('player center page has local profile selection and tournament entry points
     '/api/tournaments',
     'data-return-tournament',
     'data-register-tournament',
+    'profileEditBox',
+    'editProfileBtn',
+    '/api/player-profiles/${encodeURIComponent(profile.id)}',
   ];
 
   for (const token of required) {
@@ -171,6 +174,7 @@ test('player center separates return and registration tournament actions', () =>
     'class="modal-overlay hidden" id="tournamentConfirmBox"',
     'class="modal-dialog tournament-confirm"',
     '<button class="secondary-action" id="changeProfileBtn" type="button">登出</button>',
+    '<button class="secondary-action" id="editProfileBtn" type="button">改名</button>',
     "const registeredTournamentIds = new Set(tournaments.map(tournamentIdOf).filter(Boolean));",
     "tournaments.filter(item => !isTournamentItemFinished(item)),",
     "{ action: 'return', emptyText: '当前没有正在参加的比赛。' }",
@@ -211,7 +215,7 @@ test('player center exposes report export for finished tournaments only', () => 
   const js = readUtf8('public/player-center/center.js');
   const source = html + css + js;
   const required = [
-    '/player/center.js?v=3.1-pwa-install',
+    '/player/center.js?v=3.3-entry-name-1',
     'function effectiveTournamentPhase(item)',
     'function isTournamentItemFinished(item)',
     'tournaments.filter(item => !isTournamentItemFinished(item)),',
@@ -229,6 +233,8 @@ test('player center exposes report export for finished tournaments only', () => 
     '/player/center.js?v=3.0-compact-center',
     '/player/center.js?v=3.0-current-tournaments-all',
     '/player/center.js?v=3.0-finished-report-actions',
+    '/player/center.js?v=3.3-profile-rename-1',
+    '/player/center.js?v=3.3-profile-rename-i18n-1',
   ];
 
   for (const token of required) {
@@ -236,6 +242,49 @@ test('player center exposes report export for finished tournaments only', () => 
   }
   for (const token of forbidden) {
     assert.equal(source.includes(token), false, `player center should not contain stale finished report token: ${token}`);
+  }
+});
+
+test('player center registration can separate profile name from tournament entry name', () => {
+  const html = readUtf8('public/player-center/index.html');
+  const js = readUtf8('public/player-center/center.js');
+  const tournamentPage = readUtf8('public/player/index.html');
+  const source = html + js + tournamentPage;
+  const required = [
+    'tournamentEntryNameInput',
+    '本场参赛名',
+    "url.searchParams.set('profileName', profile.displayName || '');",
+    'entrantName',
+    'profileName',
+    "const launchProfileName = (params.get('profileName') || '').trim();",
+  ];
+
+  for (const token of required) {
+    assert.equal(source.includes(token), true, `player center should support entry-name separation token: ${token}`);
+  }
+});
+
+test('player center lets the signed-in player rename their profile', () => {
+  const html = readUtf8('public/player-center/index.html');
+  const css = readUtf8('public/player-center/center.css');
+  const js = readUtf8('public/player-center/center.js');
+  const source = html + css + js;
+  const required = [
+    'id="profileEditBox"',
+    'id="profileEditNameInput"',
+    'id="profileEditSaveBtn"',
+    'id="editProfileBtn"',
+    'function showProfileEdit()',
+    'function submitProfileEdit()',
+    "'PATCH'",
+    '这个名称已有选手档案使用。',
+    '保存后会同步到已经绑定这个档案的比赛记录。',
+    '.profile-actions',
+    '.profile-edit-dialog',
+  ];
+
+  for (const token of required) {
+    assert.equal(source.includes(token), true, `player center profile rename should contain: ${token}`);
   }
 });
 

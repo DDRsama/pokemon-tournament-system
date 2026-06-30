@@ -50,6 +50,26 @@ test('advanceBracket creates semifinals after quarterfinal winners', () => {
   assert.equal(sf1.stageId, 'stage_top_cut_1');
 });
 
+test('advanceBracket shows early semifinals but locks scoring until quarterfinals complete', () => {
+  const state = freshState({ phase: 'top8', pendingTop8: ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8'] });
+  enterTop8(state);
+  applyBo3ScoreToMatch(state.matches.find(match => match.id === 'qf1'), 2, 0);
+  applyBo3ScoreToMatch(state.matches.find(match => match.id === 'qf2'), 0, 2);
+  assert.equal(advanceBracket(state), true);
+  const sf1 = state.matches.find(match => match.id === 'sf1');
+  assert.equal(sf1.p1, 'P1');
+  assert.equal(sf1.p2, 'P5');
+  assert.equal(sf1.lockedUntilPreviousRoundComplete, true);
+  assert.equal(applyBo3ScoreToMatch(sf1, 2, 0), false);
+  assert.equal(applyResultToMatch(sf1, 'P1'), false);
+
+  applyBo3ScoreToMatch(state.matches.find(match => match.id === 'qf3'), 2, 0);
+  applyBo3ScoreToMatch(state.matches.find(match => match.id === 'qf4'), 2, 0);
+  assert.equal(advanceBracket(state), true);
+  assert.equal(sf1.lockedUntilPreviousRoundComplete, false);
+  assert.equal(applyBo3ScoreToMatch(sf1, 2, 0), true);
+});
+
 test('advanceBracket creates final and bronze after semifinals', () => {
   const state = freshState({ phase: 'top8', matches: [
     { id: 'sf1', p1: 'A', p2: 'B', phase: 'Semi Finals', done: true, winner: 'A' },

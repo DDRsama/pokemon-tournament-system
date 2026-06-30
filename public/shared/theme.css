@@ -1,6 +1,6 @@
 :root {
-  --pto-font-sans: "UD Shin Go SC R", "UD新黑体 简体字 R", "UD新黑体 简体字", "Segoe UI Emoji", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-  --pts-font-sans: var(--pto-font-sans);
+  --pts-font-sans: "PTS Inter", "PTS Noto Sans SC", "PTS Noto Sans JP", "Segoe UI Emoji", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --pto-font-sans: var(--pts-font-sans);
 
   --pts-page-bg: #0f172a;
   --pts-page-bg-deep: #08111f;
@@ -57,9 +57,25 @@
 }
 
 @font-face {
-  font-family: "UD Shin Go SC R";
-  src: url("/shared/fonts/ud-shin-go-sc-r.ttf") format("truetype");
-  font-weight: 400;
+  font-family: "PTS Inter";
+  src: url("/shared/fonts/InterVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PTS Noto Sans SC";
+  src: url("/shared/fonts/NotoSansSC-VF.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PTS Noto Sans JP";
+  src: url("/shared/fonts/NotoSansJP-VF.ttf") format("truetype");
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }

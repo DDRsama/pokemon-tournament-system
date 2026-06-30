@@ -3,6 +3,8 @@ function registerStaticRoutes(app, deps) {
     express,
     path,
     PUBLIC_DIR,
+    FONTS_DIR,
+    getActiveFontConfig,
     sendTournamentPage,
   } = deps;
 
@@ -15,8 +17,13 @@ function registerStaticRoutes(app, deps) {
 
   app.use('/home', noStore, express.static(path.join(PUBLIC_DIR, 'home')));
   app.use('/shared', express.static(path.join(PUBLIC_DIR, 'shared')));
+  if (FONTS_DIR) app.use('/user-fonts', express.static(FONTS_DIR));
   app.use('/admin', noStore, express.static(path.join(PUBLIC_DIR, 'admin'), { index: false }));
   app.use('/player', noStore, express.static(path.join(PUBLIC_DIR, 'player-center'), { index: false }));
+  app.get('/api/fonts/active', (req, res) => {
+    res.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    res.json({ ok: true, ...getActiveFontConfig() });
+  });
   app.get('/', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'home', 'index.html')));
   app.get(['/player', '/player/'], (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'player-center', 'index.html')));
   app.get(['/admin', '/admin/', '/overlay', '/overlay/', '/player-login', '/player-login/'], (req, res) => res.redirect(302, '/'));

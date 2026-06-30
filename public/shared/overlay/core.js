@@ -25,6 +25,7 @@
     currentLayer: null,
     bufferLayer: null,
     latestState: null,
+    currentTransitionSignature: '',
     isTransitioning: false,
     pendingState: null,
     managedMode: false,

@@ -47,8 +47,13 @@ test('admin static files do not reintroduce legacy swiss control surface', () =>
 
 test('admin entry uses current cache-busting asset version', () => {
   const html = readUtf8('public/admin/index.html');
-  assert.equal(html.includes('/admin/admin.css?v=3.2-i18n-1'), true);
-  assert.equal(html.includes('/admin/admin.js?v=3.1-visual-polish-1'), true);
+  assert.equal(html.includes('/admin/admin.css?v=3.3-admin-confirm-1'), true);
+  assert.equal(html.includes('/admin/admin.js?v=3.3-confirm-i18n-1'), true);
+  assert.equal(html.includes('/admin/modals.js?v=3.3-single-profile-mode-1'), true);
+  assert.equal(html.includes('/shared/i18n.js?v=3.3-i18n-scan-1'), true);
+  assert.equal(html.includes('/admin/admin.css?v=3.2-i18n-1'), false);
+  assert.equal(html.includes('/admin/admin.js?v=3.1-visual-polish-1'), false);
+  assert.equal(html.includes('/admin/modals.js?v=3.0-bulk-profile-mode'), false);
   assert.equal(html.includes('3.0-swiss-auto-rounds'), false);
   assert.equal(html.includes('3.0-admin-stage-cleanup-20'), false);
   assert.equal(html.includes('3.0-admin-stage-cleanup-19'), false);
@@ -136,35 +141,48 @@ test('admin overlay module keeps live room code configuration', () => {
 
   assert.equal(api.includes('function saveLiveRoomCode()'), true);
   assert.equal(api.includes("document.getElementById('liveRoomCodeInput')?.value"), true);
+  assert.equal(js.includes("api(tournamentApi('/start-live')"), true);
+  assert.equal(js.includes('s.pendingLiveMatch && s.pendingLiveMatch.id === m.id'), true);
+  assert.equal(js.includes('切入直播'), true);
   assert.equal(js.includes("liveRoomCodeInput.value = s.liveRoomCode || '';"), true);
   assert.equal(js.includes("liveRoomCodeSaveBtn?.addEventListener('click', saveLiveRoomCode);"), true);
   assert.equal(state.includes("if (el.closest('[data-admin-modern]')) return;"), true);
   assert.equal(css.includes('.live-room-box'), true);
+  assert.equal(css.includes('.match-card.pending-live'), true);
+  assert.equal(css.includes('.live-start-btn'), true);
 });
 
-test('admin bulk import modal avoids sample player names', () => {
+test('admin entrant import controls avoid sample player names and support single profile creation', () => {
   const html = readUtf8('public/admin/index.html');
   const css = readUtf8('public/admin/admin.css');
   const js = readUtf8('public/admin/modals.js');
+  const adminJs = readUtf8('public/admin/admin.js');
 
   [
+    'id="singleProfileToggle"',
+    'id="singleCreateProfile"',
     'id="bulkText"',
     '<p>每行一个名称</p>',
     'id="bulkCreateProfiles"',
     '未匹配时登记长期档案',
     '默认只绑定已有档案，未匹配保持临时参赛',
-    '/admin/modals.js?v=3.0-bulk-profile-mode',
+    '/admin/modals.js?v=3.3-single-profile-mode-1',
   ].forEach(token => assert.equal(html.includes(token), true, `admin bulk import UI should contain: ${token}`));
   [
+    '.single-profile-toggle',
+    '.single-profile-toggle.hidden',
     '.bulk-profile-toggle',
     '.bulk-profile-toggle.hidden',
   ].forEach(token => assert.equal(css.includes(token), true, `admin bulk import CSS should contain: ${token}`));
   [
     'const createMissingProfiles = entrantType !== \'team\'',
+    "document.getElementById('singleCreateProfile')?.checked === true",
+    "{ action: 'create', displayName: name, createMissingProfiles }",
     'createMissingProfiles,',
     "document.getElementById('bulkProfileToggle')?.classList.toggle('hidden', isTeam);",
     'profileToggle.checked = false;',
   ].forEach(token => assert.equal(js.includes(token), true, `admin bulk import logic should contain: ${token}`));
+  assert.equal(adminJs.includes("document.getElementById('singleProfileToggle')?.classList.toggle('hidden', isTeamTournament(s));"), true);
 
   [
     '张三',
@@ -172,6 +190,25 @@ test('admin bulk import modal avoids sample player names', () => {
     '王五',
     '赵六',
   ].forEach(token => assert.equal(html.includes(token), false, `admin bulk import UI should not contain sample name: ${token}`));
+});
+
+test('admin match scoring actions use project confirm modal with match context', () => {
+  const js = readUtf8('public/admin/admin.js');
+  const css = readUtf8('public/admin/admin.css');
+
+  [
+    'function confirmMatchWrite(match, options = {})',
+    'function buildMatchWriteMessage(match, resultText)',
+    "title: '确认录入胜负'",
+    "title: '确认录入平局'",
+    "title: '确认录入小分'",
+    "okText: '确认判胜'",
+    "okText: '确认记分'",
+    "resultText: `更新小分为 ${pw1}-${pw2}`",
+    'await setBo3Score(matchId, next, pw2)',
+    'await setBo3Score(matchId, pw1, next)',
+  ].forEach(token => assert.equal(js.includes(token), true, `admin scoring confirm should contain: ${token}`));
+  assert.equal(css.includes('white-space: pre-line;'), true);
 });
 
 test('admin stage panel does not reuse legacy config-box shell', () => {

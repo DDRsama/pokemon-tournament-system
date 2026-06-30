@@ -22,9 +22,30 @@ function getSwissHistoryForReport(state = {}) {
   const rounds = [...new Set(swissMatches.map(match => match.round))].sort((a, b) => a - b);
   return rounds.map(round => ({
     kind: 'swiss',
-    label: `瑞士轮 Round ${round}`,
+    label: `瑞士轮第 ${round} 轮`,
     matches: swissMatches.filter(match => match.round === round).sort((a, b) => (a.table || 0) - (b.table || 0)),
   }));
+}
+
+function formatReportPhaseLabel(value) {
+  const label = String(value || '').trim();
+  if (!label) return '';
+  const fixed = {
+    winners: '胜者组',
+    losers: '败者组',
+    grand_final: '总决赛',
+    grand_final_reset: '总决赛重置局',
+    'Round of 32': '三十二强赛',
+    'Round of 16': '十六强赛',
+    'Quarter Finals': '四分之一决赛',
+    'Semi Finals': '半决赛',
+    'Bronze Match': '季军赛',
+    Finals: '决赛',
+  };
+  if (fixed[label]) return fixed[label];
+  const roundOf = label.match(/^Round of (\d+)$/i);
+  if (roundOf) return `${roundOf[1]} 强赛`;
+  return label;
 }
 
 function getTop8HistoryForReport(state = {}) {
@@ -37,7 +58,7 @@ function getTop8HistoryForReport(state = {}) {
   return phases
     .map(phase => ({
       kind: 'elimination',
-      label: phase,
+      label: formatReportPhaseLabel(phase),
       matches: (state.matches || []).filter(match => match.phase === phase || match.bracket === phase).sort((a, b) => (a.table || 0) - (b.table || 0)),
     }))
     .filter(group => group.matches.length > 0);
@@ -152,7 +173,9 @@ function formatMatchResult(match = {}) {
 function mapHistoryItemForReport(match, playerName) {
   const opponent = match.p1 === playerName ? match.p2 : match.p1;
   const result = match.draw ? '平' : match.winner === playerName ? '胜' : '负';
-  const stage = match.phase || match.groupLabel || match.bracket || (typeof match.round === 'number' ? `瑞士轮 Round ${match.round}` : '对局');
+  const stage = match.groupLabel
+    || formatReportPhaseLabel(match.phase || match.bracket)
+    || (typeof match.round === 'number' ? `瑞士轮第 ${match.round} 轮` : '对局');
   const beforeRecord = typeof match.round === 'number'
     ? (match.p1 === playerName ? match.p1RecordBefore : match.p2RecordBefore)
     : null;
@@ -207,7 +230,7 @@ function buildTournamentReportData(state = {}, now = new Date()) {
       label: group.label,
       matches: group.matches.map(match => ({
         tableLabel: `${match.table ?? ''}${match.wasLive ? '（直播桌）' : ''}`,
-        phaseLabel: match.groupLabel || match.phase || match.bracket || match.stagePhase || '',
+        phaseLabel: match.groupLabel || formatReportPhaseLabel(match.phase || match.bracket || match.stagePhase),
         p1: match.p1 || '',
         p2: match.p2 || '',
         result: formatMatchResult(match),
@@ -268,6 +291,7 @@ module.exports = {
   getSwissHistoryForReport,
   getTop8HistoryForReport,
   getStageHistoryForReport,
+  formatReportPhaseLabel,
   buildSettingsSummary,
   buildStageSummary,
   formatMatchResult,

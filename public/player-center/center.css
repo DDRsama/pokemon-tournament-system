@@ -175,6 +175,13 @@ h2 {
   font-size: 13px;
 }
 
+.profile-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -276,6 +283,18 @@ h2 {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.profile-edit-dialog {
+  gap: 14px;
+}
+
+.profile-edit-field {
+  min-width: min(420px, 74vw);
+}
+
+.tournament-entry-field {
+  min-width: min(420px, 74vw);
 }
 
 .modal-overlay {
@@ -509,6 +528,14 @@ h2 {
   .profile-card,
   .install-banner {
     display: grid;
+  }
+
+  .profile-actions {
+    justify-content: stretch;
+  }
+
+  .profile-actions .secondary-action {
+    width: 100%;
   }
 
   .primary-action,

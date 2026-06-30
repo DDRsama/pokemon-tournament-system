@@ -178,8 +178,10 @@ test('overlay idle view is visible on transparent OBS background', () => {
   const html = readUtf8('public/overlay/index.html');
   const css = readUtf8('public/shared/overlay/overlay.css');
   assert.equal(html.includes('/shared/overlay/overlay.css?v=3.1-visual-polish-1'), true);
+  assert.equal(html.includes('/shared/overlay/core.js?v=3.3-transition-1'), true);
+  assert.equal(html.includes('/shared/overlay/transition-manager.js?v=3.3-transition-1'), true);
   assert.equal(html.includes('/shared/overlay/views/swiss-overview.js?v=3.1-visual-polish-1'), true);
-  assert.equal(html.includes('rel="preload" as="font" type="font/ttf" href="/shared/fonts/ud-shin-go-sc-r.ttf" crossorigin'), true);
+  assert.equal(html.includes('/shared/font-loader.js?v=3.3-font-loader-1'), true);
   assert.equal(html.includes('rel="preload" as="image" href="/shared/pokemon-champions-title.png"'), true);
   assert.equal(html.includes('data-pts-overlay-boot="ready"'), true);
   assert.equal(css.includes('#view-idle'), true);
@@ -187,6 +189,26 @@ test('overlay idle view is visible on transparent OBS background', () => {
   assert.equal(css.includes('#state-idle #idleTitle { font-size:56px; font-weight:900; color:rgba(248,250,252,0.94);'), true);
   assert.equal(css.includes('#state-idle #idleSub { font-size:24px; color:rgba(226,232,240,0.78);'), true);
   assert.equal(css.includes('#state-idle .idle-qr-tip { font-size: 20px; color: rgba(226,232,240,0.88); letter-spacing: 0; }'), true);
+});
+
+test('overlay manager crossfades focused same-view state changes', () => {
+  const html = readUtf8('public/overlay/index.html');
+  const core = readUtf8('public/shared/overlay/core.js');
+  const manager = readUtf8('public/shared/overlay/transition-manager.js');
+  const required = [
+    'function getTransitionSignature',
+    'function shouldCrossfadeSameView',
+    "viewKey !== 'swiss-overview'",
+    'previousHadFocus !== nextHasFocus',
+    'overlayState.currentTransitionSignature',
+    'PTSOverlay.getTransitionSignature = getTransitionSignature',
+  ];
+
+  for (const token of required) {
+    assert.equal(manager.includes(token), true, `transition manager should include: ${token}`);
+  }
+  assert.equal(core.includes('currentTransitionSignature'), true);
+  assert.equal(html.includes('/shared/overlay/transition-manager.js?v=3.3-transition-1'), true);
 });
 
 test('overlay ranking move animation has horizontal bleed room', () => {

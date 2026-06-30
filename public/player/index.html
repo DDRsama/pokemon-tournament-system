@@ -6,10 +6,11 @@
 <meta name="theme-color" content="#0f172a">
 <title>选手页 - Pokemon Tournament System</title>
 <link rel="icon" type="image/svg+xml" href="/shared/favicon.svg">
-<link rel="icon" type="image/png" sizes="192x192" href="/shared/app-icon-192.png">
-<link rel="apple-touch-icon" href="/shared/apple-touch-icon.png">
-  <link rel="stylesheet" href="/shared/theme.css?v=3.2-i18n-1">
-  <script src="/shared/i18n.js?v=3.2-i18n-1"></script>
+  <link rel="icon" type="image/png" sizes="192x192" href="/shared/app-icon-192.png">
+  <link rel="apple-touch-icon" href="/shared/apple-touch-icon.png">
+  <link rel="stylesheet" href="/shared/theme.css?v=3.3-release-1">
+  <script src="/shared/font-loader.js?v=3.3-font-loader-1"></script>
+  <script src="/shared/i18n.js?v=3.3-i18n-scan-1"></script>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -499,7 +500,7 @@
       <img class="brand-mark" src="/shared/favicon.svg" alt="">
       <span class="brand-text">Pokemon Tournament System</span>
     </div>
-    <div class="version">3.2.0</div>
+    <div class="version">3.3.0</div>
   </header>
 
   <div class="wrap">
@@ -649,6 +650,7 @@ const storageNameKey = `${storageScope}_player_name`;
 const storageIdKey = `${storageScope}_player_id`;
 const launchName = (params.get('name') || params.get('playerName') || '').trim();
 const launchProfileId = (params.get('profileId') || '').trim();
+const launchProfileName = (params.get('profileName') || '').trim();
 const storedName = localStorage.getItem(storageNameKey) || '';
 const safeStoredName = looksLikePlayerId(storedName) ? '' : storedName;
 const suggestedLoginName = looksLikePlayerId(launchName) ? '' : launchName;
@@ -1006,7 +1008,15 @@ async function submitLogin(options = {}) {
   }
   hideLoginAux();
   const profileId = activeProfileId && !registerProfile && !continueAsGuest ? activeProfileId : '';
-  const res = await api(tournamentApi('/player-login'), { playerName: name, profileId, confirmExisting, registerProfile, continueAsGuest });
+  const res = await api(tournamentApi('/player-login'), {
+    playerName: name,
+    entrantName: name,
+    profileName: launchProfileName || name,
+    profileId,
+    confirmExisting,
+    registerProfile,
+    continueAsGuest,
+  });
   if (res.ok) {
     if (!isUsablePlayerView(res.player)) {
       showLoginCard('选手身份已失效，请重新输入名称进入本场比赛。', {
@@ -1123,6 +1133,11 @@ qs('upgradeProfileBtn').addEventListener('click', () => upgradeGuestProfile());
 qs('logoutBtn').addEventListener('click', logoutPlayer);
 qs('playerNameInput').addEventListener('keydown', evt => {
   if (evt.key === 'Enter') submitLogin();
+});
+window.addEventListener('pts-languagechange', () => {
+  if (lastView) renderPlayerView(lastView);
+  else loadTournamentHeader();
+  window.setTimeout(() => window.PTSI18n?.translateNode?.(document.documentElement), 0);
 });
 
 if (playerName || playerId) {

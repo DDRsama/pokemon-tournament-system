@@ -68,6 +68,7 @@ function enterDoubleElimination(state = {}, stage = null) {
   state.phase = 'double_elimination';
   state.activeStageId = normalizedStage.id;
   state.currentLiveMatch = null;
+  state.pendingLiveMatch = null;
   state.lastLiveMatch = null;
   state.lastResult = null;
   state.overlayState = 'overview';
@@ -246,6 +247,7 @@ function completeDoubleElimination(state = {}, stage = null) {
   });
   state.phase = 'double_elimination-ended';
   state.currentLiveMatch = null;
+  state.pendingLiveMatch = null;
   state.lastLiveMatch = null;
   state.lastResult = null;
   state.overlayState = 'overview';

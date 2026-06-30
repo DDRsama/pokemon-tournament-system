@@ -102,17 +102,98 @@
     return { layer: targetLayer, root, context };
   }
 
+  function matchTransitionKey(match) {
+    if (!match) return '';
+    return [
+      match.id,
+      match.stageId,
+      match.phase || match.bracket || match.stagePhase,
+      match.round || match.groupRound || match.bracketRound || match.doubleEliminationRound,
+      match.table,
+      match.p1,
+      match.p2,
+      match.p1Wins,
+      match.p2Wins,
+      match.winner,
+      match.done ? 'done' : '',
+    ].filter(value => value !== undefined && value !== null && value !== '').join('|');
+  }
+
+  function resultTransitionKey(result) {
+    if (!result) return '';
+    return [
+      result.matchId || result.id,
+      result.stagePhase || result.phase || result.bracket,
+      result.round || result.table,
+      result.p1,
+      result.p2,
+      result.p1Wins,
+      result.p2Wins,
+      result.winner,
+      result.draw ? 'draw' : '',
+    ].filter(value => value !== undefined && value !== null && value !== '').join('|');
+  }
+
+  function getTransitionSignature(viewKey, state) {
+    const phase = state?.phase || '';
+    const overlayMode = state?.overlayState || '';
+    if (viewKey === 'swiss-live' || viewKey === 'top8-live') {
+      return `${viewKey}:${matchTransitionKey(state?.currentLiveMatch || state?.lastLiveMatch)}`;
+    }
+    if (viewKey === 'swiss-result' || viewKey === 'top8-result') {
+      return `${viewKey}:${resultTransitionKey(state?.lastResult) || matchTransitionKey(state?.lastLiveMatch)}`;
+    }
+    if (viewKey === 'swiss-overview') {
+      return [
+        viewKey,
+        phase,
+        overlayMode,
+        matchTransitionKey(state?.currentLiveMatch),
+        resultTransitionKey(state?.lastResult),
+      ].join(':');
+    }
+    return `${viewKey}:${phase}:${overlayMode}`;
+  }
+
+  function shouldCrossfadeSameView(previousState, nextState, viewKey, previousSignature, nextSignature) {
+    if (!previousSignature || previousSignature === nextSignature) return false;
+    if (viewKey !== 'swiss-overview') return false;
+    const previousMode = previousState?.overlayState || '';
+    const nextMode = nextState?.overlayState || '';
+    if (previousMode !== nextMode) return true;
+    const previousHadFocus = !!(previousState?.currentLiveMatch || previousState?.lastResult);
+    const nextHasFocus = !!(nextState?.currentLiveMatch || nextState?.lastResult);
+    return previousHadFocus !== nextHasFocus;
+  }
+
   async function mountView(viewKey, state) {
     const overlayState = PTSOverlay.state;
     const view = PTSOverlay.getView(viewKey);
     if (!view) throw new Error(`View is not registered: ${viewKey}`);
+    const nextTransitionSignature = getTransitionSignature(viewKey, state);
 
     if (overlayState.currentViewKey === viewKey && overlayState.currentView) {
+      const shouldSoftTransition = shouldCrossfadeSameView(
+        overlayState.latestState,
+        state,
+        viewKey,
+        overlayState.currentTransitionSignature,
+        nextTransitionSignature,
+      );
+      if (shouldSoftTransition && overlayState.isTransitioning) {
+        overlayState.pendingState = state;
+        return;
+      }
+      if (shouldSoftTransition) {
+        // Continue into the normal two-layer crossfade path below.
+      } else {
       if (typeof overlayState.currentView.update === 'function') {
         overlayState.currentView.update(overlayState.currentRoot, state, overlayState.currentContext);
       }
       overlayState.latestState = state;
+      overlayState.currentTransitionSignature = nextTransitionSignature;
       return;
+      }
     }
 
     if (overlayState.isTransitioning) {
@@ -177,6 +258,7 @@
       overlayState.currentLayer = newLayer;
       overlayState.bufferLayer = oldLayer;
       overlayState.latestState = state;
+      overlayState.currentTransitionSignature = nextTransitionSignature;
       overlayState.managedMode = true;
     } finally {
       overlayState.isTransitioning = false;
@@ -207,6 +289,7 @@
     overlayState.currentView = null;
     overlayState.currentRoot = null;
     overlayState.currentContext = null;
+    overlayState.currentTransitionSignature = '';
     if (overlayState.currentLayer) resetLayer(overlayState.currentLayer, 'current');
     if (overlayState.bufferLayer) resetLayer(overlayState.bufferLayer, 'buffer');
   }
@@ -214,4 +297,5 @@
   PTSOverlay.mountView = mountView;
   PTSOverlay.updateView = updateView;
   PTSOverlay.destroyCurrentView = destroyCurrentView;
+  PTSOverlay.getTransitionSignature = getTransitionSignature;
 })();

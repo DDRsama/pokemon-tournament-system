@@ -13,7 +13,7 @@
 
 PTS combines admin management, livestream overlays, player-facing mobile pages, Swiss rounds, Top 8 playoffs, report export, and Docker deployment in one system.
 
-Latest stable version: `3.2.0`
+Latest stable version: `3.3.0`
 
 Current beta version: none
 
@@ -22,7 +22,7 @@ Release channels:
 - `latest`: stable Docker image
 - `beta`: beta Docker image
 - Tags such as `3.3.0-beta`: pinned beta image
-- Tags such as `3.2.0`: pinned stable image
+- Tags such as `3.3.0`: pinned stable image
 
 Roadmap: [ROADMAP.en.md](./ROADMAP.en.md)
 
@@ -260,7 +260,7 @@ docker pull ddrsama/pokemon-tournament-system:beta
 You can also pin a specific version:
 
 ```bash
-docker pull ddrsama/pokemon-tournament-system:3.2.0
+docker pull ddrsama/pokemon-tournament-system:3.3.0
 ```
 
 ### Local Development Docker Compose
@@ -280,7 +280,7 @@ docker compose -f docker-compose.deploy.yml up -d
 To pin a specific stable image:
 
 ```bash
-PTS_TAG=3.2.0 docker compose -f docker-compose.deploy.yml up -d
+PTS_TAG=3.3.0 docker compose -f docker-compose.deploy.yml up -d
 ```
 
 ### Beta Docker Compose Deployment
@@ -301,6 +301,7 @@ Docker Compose stores persistent data under `./data` by default:
 - `./data/players`
 - `./data/leagues`
 - `./data/points`
+- `./data/fonts`
 - `./data/reports`
 
 ## GitHub And Docker Releases
@@ -330,6 +331,8 @@ The repository supports two release channels:
   League directory
 - `POINTS_DIR`
   Points profile directory
+- `FONTS_DIR`
+  Private font directory
 - `REPORTS_DIR`
   Report output directory
 - `PYTHON_BIN`
@@ -337,11 +340,17 @@ The repository supports two release channels:
 
 ## Fonts And Reports
 
-The project includes a UI font based on the Pokemon game style:
+The project bundles redistributable open-source fonts by default:
 
-- `public/shared/fonts/ud-shin-go-sc-r.ttf`
+- `public/shared/fonts/InterVariable.woff2`
+- `public/shared/fonts/NotoSansSC-VF.ttf`
+- `public/shared/fonts/NotoSansJP-VF.ttf`
+- `public/shared/fonts/NotoSansSC-Medium.ttf`
+- `public/shared/fonts/NotoSansJP-Medium.ttf`
 
-Report export tries to use available Chinese fonts first. The Docker image includes Chinese fonts and the `reportlab` runtime.
+For private deployments, you may place licensed private fonts in the data directory's `fonts` subdirectory, for example Docker's default `/data/fonts`. The system detects font files by filename and prefers them for the web UI; PDF reports are generated server-side with embedded fonts, trying `/data/fonts` first and then falling back to bundled static Noto Sans SC/JP Medium TTF report fonts instead of depending on viewer-device fonts. Font licensing for private files is the deployer's responsibility and those files are not bundled in public images.
+
+The Docker image includes CJK fonts and the `reportlab` runtime.
 
 ## Roadmap
 

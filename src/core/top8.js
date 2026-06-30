@@ -321,7 +321,7 @@ function validateBo3Score(p1Wins, p2Wins) {
 }
 
 function applyBo3ScoreToMatch(match, p1Wins, p2Wins) {
-  if (!isMatchReady(match)) return false;
+  if (!isMatchReady(match) || match.lockedUntilPreviousRoundComplete) return false;
   const score = validateBo3Score(p1Wins, p2Wins);
   if (!score) return false;
   match.p1Wins = score.p1Wins;
@@ -339,7 +339,7 @@ function applyBo3ScoreToMatch(match, p1Wins, p2Wins) {
 }
 
 function applyResultToMatch(match, winnerId) {
-  if (!isMatchReady(match) || (winnerId !== match.p1 && winnerId !== match.p2)) return false;
+  if (!isMatchReady(match) || match.lockedUntilPreviousRoundComplete || (winnerId !== match.p1 && winnerId !== match.p2)) return false;
   match.winner = winnerId;
   match.done = true;
   match.draw = false;
@@ -411,12 +411,22 @@ function advanceBracket(state) {
       passChanged = result.changed || passChanged;
       passChanged = syncSlot(result.match, 'p1', qf1 && qf1.done ? qf1.winner : null) || passChanged;
       passChanged = syncSlot(result.match, 'p2', qf2 && qf2.done ? qf2.winner : null) || passChanged;
+      const quarterFinalsComplete = [qf1, qf2, qf3, qf4].every(match => match && match.done && match.winner);
+      if (result.match.lockedUntilPreviousRoundComplete !== !quarterFinalsComplete) {
+        result.match.lockedUntilPreviousRoundComplete = !quarterFinalsComplete;
+        passChanged = true;
+      }
     }
     if ([qf3, qf4].some(match => match && match.done && match.winner)) {
       const result = ensureMatch(matches, 'sf2', 'Semi Finals', 2, 2, stageId);
       passChanged = result.changed || passChanged;
       passChanged = syncSlot(result.match, 'p1', qf3 && qf3.done ? qf3.winner : null) || passChanged;
       passChanged = syncSlot(result.match, 'p2', qf4 && qf4.done ? qf4.winner : null) || passChanged;
+      const quarterFinalsComplete = [qf1, qf2, qf3, qf4].every(match => match && match.done && match.winner);
+      if (result.match.lockedUntilPreviousRoundComplete !== !quarterFinalsComplete) {
+        result.match.lockedUntilPreviousRoundComplete = !quarterFinalsComplete;
+        passChanged = true;
+      }
     }
 
     const sf1 = matches.find(match => match.id === 'sf1');
@@ -429,6 +439,13 @@ function advanceBracket(state) {
       passChanged = syncSlot(final.match, 'p2', sf2 && sf2.done ? sf2.winner : null) || passChanged;
       passChanged = syncSlot(bronze.match, 'p1', loserOf(sf1)) || passChanged;
       passChanged = syncSlot(bronze.match, 'p2', loserOf(sf2)) || passChanged;
+      const semifinalsComplete = [sf1, sf2].every(match => match && match.done && match.winner);
+      for (const match of [final.match, bronze.match]) {
+        if (match.lockedUntilPreviousRoundComplete !== !semifinalsComplete) {
+          match.lockedUntilPreviousRoundComplete = !semifinalsComplete;
+          passChanged = true;
+        }
+      }
     }
     return passChanged;
   };

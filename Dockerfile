@@ -9,6 +9,7 @@ ENV DATA_DIR=/data/tournaments
 ENV PLAYERS_DIR=/data/players
 ENV LEAGUES_DIR=/data/leagues
 ENV POINTS_DIR=/data/points
+ENV FONTS_DIR=/data/fonts
 ENV REPORTS_DIR=/data/reports
 ENV PYTHON_BIN=/usr/local/bin/python
 
@@ -23,7 +24,7 @@ RUN npm install --omit=dev
 COPY src ./src
 COPY public ./public
 
-RUN mkdir -p /data/tournaments /data/players /data/leagues /data/points /data/reports
+RUN mkdir -p /data/tournaments /data/players /data/leagues /data/points /data/fonts /data/reports
 
 EXPOSE 18765
 

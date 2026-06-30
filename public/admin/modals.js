@@ -69,9 +69,12 @@ async function addPlayer() {
   const name = document.getElementById('playerInput').value.trim();
   if (!name) return;
   const entrantType = currentState?.tournamentSettings?.entrantType === 'team' ? 'team' : 'player';
+  const createMissingProfiles = entrantType !== 'team'
+    && document.getElementById('singleCreateProfile')?.checked === true;
   const res = entrantType === 'team'
     ? await api(tournamentApi('/entrants'), { action: 'create', entrantType: 'team', teamName: name, teamRoster: [] })
-    : await api(tournamentApi('/entrants'), { action: 'create', displayName: name });
+    : await api(tournamentApi('/entrants'), { action: 'create', displayName: name, createMissingProfiles });
+  if (res.profileAction?.action === 'created') toast('已新增长期档案');
   if (res.state) render(res.state);
   document.getElementById('playerInput').value = '';
   document.getElementById('playerInput').focus();

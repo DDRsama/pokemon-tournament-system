@@ -302,6 +302,96 @@ test('admin-created player entrants auto-bind existing player profiles by name',
     const summaryAfterAdd = await api('GET', `/api/player-profiles/${playerId}/summary`);
     assert.equal(summaryAfterAdd.summary.tournaments[0].tournamentId, tournamentId);
     assert.equal(summaryAfterAdd.summary.tournaments[0].entrantName, 'Registered Admin');
+
+    const renamed = await api('PATCH', `/api/player-profiles/${playerId}`, {
+      displayName: 'Registered Admin 2',
+    });
+    assert.equal(renamed.player.displayName, 'Registered Admin 2');
+    assert.equal(renamed.player.aliases.includes('Registered Admin'), true);
+
+    const renamedState = await api('GET', `/api/tournaments/${tournamentId}/state`);
+    assert.equal(renamedState.players.includes('Registered Admin'), false);
+    assert.equal(renamedState.players.includes('Registered Admin 2'), true);
+    assert.equal(renamedState.entrants.find(entry => entry.profileId === playerId).displayName, 'Registered Admin 2');
+    assert.equal(renamedState.playerProfiles['Registered Admin'], undefined);
+    assert.equal(renamedState.playerProfiles['Registered Admin 2'].globalProfileId, playerId);
+
+    const summaryAfterRename = await api('GET', `/api/player-profiles/${playerId}/summary`);
+    assert.equal(summaryAfterRename.summary.tournaments[0].entrantName, 'Registered Admin 2');
+  } finally {
+    server.close();
+    fs.rmSync(root, { recursive: true, force: true });
+    clearAppModuleCache();
+  }
+});
+
+test('player center registration can use a tournament entry name without renaming profile-bound history', async () => {
+  const root = makeTempDir();
+  process.env.PTS_DATA_DIR = path.join(root, 'tournaments');
+  process.env.PTS_PLAYERS_DIR = path.join(root, 'players');
+  process.env.PTS_LEAGUES_DIR = path.join(root, 'leagues');
+  process.env.PTS_POINTS_DIR = path.join(root, 'points');
+  process.env.PTS_REPORT_DIR = path.join(root, 'reports');
+  clearAppModuleCache();
+
+  const { app } = require('../src/app');
+  const server = app.listen(0);
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  async function api(method, apiPath, body = null) {
+    const response = await fetch(`${baseUrl}${apiPath}`, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const payload = await response.json();
+    assert.equal(response.status, 200, `${method} ${apiPath}: ${JSON.stringify(payload)}`);
+    return payload;
+  }
+
+  try {
+    const created = await api('POST', '/api/tournaments', { action: 'create', name: 'Custom Entry Name Flow' });
+    const tournamentId = created.id;
+    const profile = await api('POST', '/api/player-profiles', { action: 'create', displayName: 'Profile Main' });
+    const playerId = profile.player.id;
+
+    const login = await api('POST', `/api/tournaments/${tournamentId}/player-login`, {
+      playerName: 'Funny Match ID',
+      entrantName: 'Funny Match ID',
+      profileName: 'Profile Main',
+      profileId: playerId,
+    });
+    assert.equal(login.ok, true);
+    assert.equal(login.registeredProfile, true);
+    assert.equal(login.player.playerName, 'Funny Match ID');
+    assert.equal(login.player.globalProfileId, playerId);
+
+    const state = await api('GET', `/api/tournaments/${tournamentId}/state`);
+    const entrant = state.entrants.find(entry => entry.profileId === playerId);
+    assert.equal(entrant.displayName, 'Funny Match ID');
+    assert.equal(entrant.displayNameSource, 'custom');
+    assert.equal(state.playerProfiles['Funny Match ID'].globalProfileId, playerId);
+    assert.equal(state.playerProfiles['Funny Match ID'].displayNameSource, 'custom');
+
+    const summary = await api('GET', `/api/player-profiles/${playerId}/summary`);
+    assert.equal(summary.summary.tournaments[0].entrantName, 'Funny Match ID');
+
+    await api('PATCH', `/api/player-profiles/${playerId}`, {
+      displayName: 'Profile Main 2',
+    });
+
+    const renamedState = await api('GET', `/api/tournaments/${tournamentId}/state`);
+    const renamedEntrant = renamedState.entrants.find(entry => entry.profileId === playerId);
+    assert.equal(renamedEntrant.displayName, 'Funny Match ID');
+    assert.equal(renamedEntrant.displayNameSource, 'custom');
+    assert.equal(renamedState.players.includes('Funny Match ID'), true);
+    assert.equal(renamedState.players.includes('Profile Main 2'), false);
+    assert.equal(renamedState.playerProfiles['Funny Match ID'].globalProfileId, playerId);
+    assert.equal(renamedState.playerProfiles['Funny Match ID'].displayNameSource, 'custom');
+
+    const summaryAfterRename = await api('GET', `/api/player-profiles/${playerId}/summary`);
+    assert.equal(summaryAfterRename.summary.profile.displayName, 'Profile Main 2');
+    assert.equal(summaryAfterRename.summary.tournaments[0].entrantName, 'Funny Match ID');
   } finally {
     server.close();
     fs.rmSync(root, { recursive: true, force: true });
@@ -497,6 +587,67 @@ test('BO5 top cut score route waits for three wins', async () => {
     const finishedMatch = state.matches.find(match => match.id === semi.id);
     assert.equal(finishedMatch.done, true);
     assert.equal(finishedMatch.winner, semi.p1);
+  } finally {
+    server.close();
+    fs.rmSync(root, { recursive: true, force: true });
+    clearAppModuleCache();
+  }
+});
+
+test('live table setup waits in pending state before switching overlay to live view', async () => {
+  const root = makeTempDir();
+  process.env.PTS_DATA_DIR = path.join(root, 'tournaments');
+  process.env.PTS_PLAYERS_DIR = path.join(root, 'players');
+  process.env.PTS_LEAGUES_DIR = path.join(root, 'leagues');
+  process.env.PTS_POINTS_DIR = path.join(root, 'points');
+  process.env.PTS_REPORT_DIR = path.join(root, 'reports');
+  clearAppModuleCache();
+
+  const { app } = require('../src/app');
+  const server = app.listen(0);
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  async function api(method, apiPath, body = null) {
+    const response = await fetch(`${baseUrl}${apiPath}`, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const payload = await response.json();
+    assert.equal(response.status, 200, `${method} ${apiPath}: ${JSON.stringify(payload)}`);
+    return payload;
+  }
+
+  try {
+    const created = await api('POST', '/api/tournaments', { action: 'create', name: 'Live Buffer Flow' });
+    const tournamentId = created.id;
+    for (const displayName of ['A', 'B', 'C', 'D']) {
+      const added = await api('POST', `/api/tournaments/${tournamentId}/entrants`, {
+        action: 'create',
+        displayName,
+      });
+      assert.equal(added.ok, true);
+    }
+    await api('POST', `/api/tournaments/${tournamentId}/config`, { liveRoomCode: 'ROOM42' });
+    await api('POST', `/api/tournaments/${tournamentId}/start-swiss`, { rounds: 1 });
+    let state = await api('GET', `/api/tournaments/${tournamentId}/state`);
+    const match = state.matches.find(item => item.round === 1 && (item.p1 === 'A' || item.p2 === 'A')) || state.matches[0];
+    assert.ok(match);
+
+    const pending = await api('POST', `/api/tournaments/${tournamentId}/set-live`, { matchId: match.id });
+    assert.equal(pending.state.overlayState, 'overview');
+    assert.equal(pending.state.currentLiveMatch, null);
+    assert.equal(pending.state.pendingLiveMatch.id, match.id);
+    assert.equal(pending.state.matches.find(item => item.id === match.id).liveRoomCode, 'ROOM42');
+
+    const playerView = await api('GET', `/api/tournaments/${tournamentId}/player-view/${encodeURIComponent(match.p1)}`);
+    assert.equal(playerView.liveRoomCode, 'ROOM42');
+    assert.equal(playerView.activeMatch.isLiveTable, false);
+
+    const live = await api('POST', `/api/tournaments/${tournamentId}/start-live`, { matchId: match.id });
+    assert.equal(live.state.pendingLiveMatch, null);
+    assert.equal(live.state.currentLiveMatch.id, match.id);
+    assert.equal(live.state.overlayState, 'live');
   } finally {
     server.close();
     fs.rmSync(root, { recursive: true, force: true });

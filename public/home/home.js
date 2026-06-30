@@ -163,6 +163,11 @@ document.addEventListener('keydown', evt => {
 
 resetPointsProfileForm();
 updateCreateTournamentHint();
+window.addEventListener('pts-languagechange', () => {
+  renderAll();
+  updateCreateTournamentHint();
+  window.setTimeout(() => window.PTSI18n?.translateNode?.(document.documentElement), 0);
+});
 loadAll().catch(err => {
   els.tournamentList.innerHTML = `<div class="empty">${escHtml(err.message || '加载失败')}</div>`;
 });

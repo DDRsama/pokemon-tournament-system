@@ -1,4 +1,4 @@
-const { isMatchReady } = require('../core/matches');
+const { isMatchReady, applySharedLiveRoomCodeToTopCut } = require('../core/matches');
 const { usesGameScore } = require('../core/rules');
 
 function registerPlayersRoutes(app, deps) {
@@ -25,6 +25,15 @@ function registerPlayersRoutes(app, deps) {
     validatePublicBaseUrlAccess,
     getMatchStage,
   } = deps;
+
+  const profileMatchesName = (profile, name) => (
+    !!profile
+    && !!name
+    && (
+      profile.displayName === name
+      || (Array.isArray(profile.aliases) && profile.aliases.includes(name))
+    )
+  );
 
   function isGameScoreMatch(match) {
     const stage = typeof getMatchStage === 'function' ? getMatchStage(match) : null;
@@ -68,14 +77,20 @@ function registerPlayersRoutes(app, deps) {
     if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
     current().publicBaseUrlOverride = (req.body.publicBaseUrlOverride || '').trim();
     current().liveRoomCode = (req.body.liveRoomCode || '').trim();
+    if (current().pendingLiveMatch && current().pendingLiveMatch.id) {
+      current().pendingLiveMatch.liveRoomCode = current().liveRoomCode || null;
+    }
     if (current().currentLiveMatch) {
       current().currentLiveMatch.liveRoomCode = current().liveRoomCode || null;
     }
     if (current().lastLiveMatch && current().lastLiveMatch.id) {
       current().lastLiveMatch.liveRoomCode = current().liveRoomCode || null;
     }
+    const sharedTopCutMatches = applySharedLiveRoomCodeToTopCut(current());
     current().matches = current().matches.map(match =>
-      match.wasLive ? { ...match, liveRoomCode: current().liveRoomCode || null } : match,
+      match.wasLive || sharedTopCutMatches.some(item => item.id === match.id)
+        ? { ...match, liveRoomCode: current().liveRoomCode || null }
+        : match,
     );
     saveState();
     broadcast();
@@ -83,11 +98,12 @@ function registerPlayersRoutes(app, deps) {
   });
 
   app.post('/api/tournaments/:tournamentId/player-login', (req, res) => {
-    const { playerName, profileId, confirmExisting, registerProfile, continueAsGuest } = req.body || {};
+    const { playerName, entrantName, profileName, profileId, confirmExisting, registerProfile, continueAsGuest } = req.body || {};
     const ok = syncTournamentRequest(req.params.tournamentId);
     if (!ok) return res.status(404).json({ ok: false, err: 'tournament not found' });
-    const name = (playerName || '').trim();
+    const name = (entrantName || playerName || '').trim();
     if (!name) return res.status(400).json({ ok: false, err: 'missing name' });
+    const profileLookupName = String(profileName || playerName || name || '').trim();
     const requestedProfileId = String(profileId || '').trim();
     const requestedProfile = requestedProfileId && typeof getGlobalPlayerProfileById === 'function'
       ? getGlobalPlayerProfileById(requestedProfileId)
@@ -99,14 +115,14 @@ function registerPlayersRoutes(app, deps) {
         message: '选手档案不存在或已被删除，请返回选手中心重新选择。',
       });
     }
-    const profileMatchesName = profile => (
-      !!profile
+    const requestedProfileMatchesName = requestedProfile
       && (
-        profile.displayName === name
-        || (Array.isArray(profile.aliases) && profile.aliases.includes(name))
-      )
+        profileMatchesName(requestedProfile, profileLookupName)
+        || (!profileName && !playerName)
+      );
+    const getEntryDisplayNameSource = profile => (
+      profile && name === profile.displayName ? 'profile' : 'custom'
     );
-    const requestedProfileMatchesName = profileMatchesName(requestedProfile);
 
     const buildLoginResponse = (flags = {}) => {
       const session = ensurePlayerSession(name);
@@ -117,7 +133,7 @@ function registerPlayersRoutes(app, deps) {
     if (current().phase === 'setup') {
       if (!exists) {
         let globalProfile = requestedProfileMatchesName ? requestedProfile : (typeof getGlobalPlayerProfileByName === 'function'
-          ? getGlobalPlayerProfileByName(name)
+          ? getGlobalPlayerProfileByName(profileLookupName || name)
           : null);
         if (!globalProfile && !registerProfile && !continueAsGuest) {
           return res.json({
@@ -127,11 +143,13 @@ function registerPlayersRoutes(app, deps) {
           });
         }
         if (!globalProfile && registerProfile && typeof createGlobalPlayerProfile === 'function') {
-          globalProfile = createGlobalPlayerProfile({ displayName: name });
+          globalProfile = createGlobalPlayerProfile({ displayName: profileLookupName || name });
         }
         addPlayer(name);
         if (globalProfile && typeof bindTournamentPlayerToGlobalProfile === 'function') {
-          bindTournamentPlayerToGlobalProfile(name, globalProfile.id);
+          bindTournamentPlayerToGlobalProfile(name, globalProfile.id, {
+            displayNameSource: getEntryDisplayNameSource(globalProfile),
+          });
         }
         saveState();
         broadcast();
@@ -147,7 +165,9 @@ function registerPlayersRoutes(app, deps) {
           : null;
         if (!currentProfile?.globalProfileId || currentProfile.globalProfileId === requestedProfile.id) {
           if (typeof bindTournamentPlayerToGlobalProfile === 'function') {
-            bindTournamentPlayerToGlobalProfile(name, requestedProfile.id);
+            bindTournamentPlayerToGlobalProfile(name, requestedProfile.id, {
+              displayNameSource: getEntryDisplayNameSource(requestedProfile),
+            });
             saveState();
             broadcast();
           }
@@ -218,7 +238,9 @@ function registerPlayersRoutes(app, deps) {
     if (!globalProfile || typeof bindTournamentPlayerToGlobalProfile !== 'function') {
       return res.status(500).json({ ok: false, err: 'profile binding unavailable' });
     }
-    const bound = bindTournamentPlayerToGlobalProfile(name, globalProfile.id);
+    const bound = bindTournamentPlayerToGlobalProfile(name, globalProfile.id, {
+      displayNameSource: name === globalProfile.displayName ? 'profile' : 'custom',
+    });
     if (!bound) return res.status(404).json({ ok: false, err: 'player or profile not found' });
     saveState();
     broadcast();

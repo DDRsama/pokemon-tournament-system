@@ -9,6 +9,13 @@ function createEntrantId(tournamentId, displayName) {
   return `entry_${safeTournament}_${safeName}`;
 }
 
+function normalizeDisplayNameSource(raw = {}, displayName = '') {
+  const explicit = String(raw.displayNameSource || raw.entryNameSource || raw.nameSource || '').trim();
+  if (['profile', 'custom', 'manual'].includes(explicit)) return explicit;
+  if (raw.profileId) return 'profile';
+  return 'manual';
+}
+
 function normalizeEntrant(raw = {}) {
   const displayName = String(raw.displayName || raw.name || raw.teamName || '').trim();
   const entrantType = raw.entrantType || (raw.teamRoster || raw.teamName ? 'team' : 'player');
@@ -20,6 +27,7 @@ function normalizeEntrant(raw = {}) {
     tournamentId: raw.tournamentId || null,
     profileId: raw.profileId || null,
     displayName,
+    displayNameSource: normalizeDisplayNameSource(raw, displayName),
     entryType: raw.entryType || (raw.profileId ? 'registered' : 'guest'),
     entrantType,
     teamRoster,
@@ -47,11 +55,13 @@ function createGuestEntrant({ tournamentId, displayName, id = null, source = 'ma
 
 function createRegisteredEntrant({ tournamentId, profile, displayName = null, id = null, source = 'manual', entrantType = 'player', teamRoster = [] } = {}) {
   if (!profile || !profile.id) throw new Error('missing player profile');
+  const entrantName = String(displayName || profile.displayName || '').trim();
   return normalizeEntrant({
     id,
     tournamentId,
     profileId: profile.id,
-    displayName: displayName || profile.displayName,
+    displayName: entrantName,
+    displayNameSource: entrantName && entrantName !== profile.displayName ? 'custom' : 'profile',
     entryType: 'registered',
     entrantType,
     teamRoster,
@@ -62,10 +72,13 @@ function createRegisteredEntrant({ tournamentId, profile, displayName = null, id
 
 function bindEntrantToProfile(entrant, profile) {
   if (!entrant || !profile || !profile.id) throw new Error('missing entrant or profile');
+  const entrantName = String(entrant.displayName || profile.displayName || '').trim();
+  const source = entrant.displayNameSource || (entrantName === profile.displayName ? 'profile' : 'custom');
   return normalizeEntrant({
     ...entrant,
     profileId: profile.id,
-    displayName: entrant.displayName || profile.displayName,
+    displayName: entrantName,
+    displayNameSource: source,
     entryType: 'registered',
     rankedEligible: true,
   });
@@ -81,6 +94,7 @@ function entrantFromLegacyPlayer(name, state = {}) {
     tournamentId: state._id || null,
     profileId,
     displayName,
+    displayNameSource: profileId ? profile?.displayNameSource || 'profile' : 'manual',
     entryType: profileId ? 'registered' : 'guest',
     entrantType: 'player',
     source: profileId ? 'legacy_bound_profile' : 'legacy_player_list',
@@ -128,6 +142,7 @@ function createTeamEntrant({ tournamentId, teamName, teamRoster = [], id = null,
     entrantType: 'team',
     teamRoster,
     source,
+    displayNameSource: profileId ? 'custom' : 'manual',
     rankedEligible,
   });
 }
@@ -153,6 +168,11 @@ function patchEntrant(entrant = {}, patch = {}) {
     teamRoster: Array.isArray(patch.teamRoster) ? patch.teamRoster : current.teamRoster,
     profileId: Object.prototype.hasOwnProperty.call(patch, 'profileId') ? patch.profileId : current.profileId,
     rankedEligible: Object.prototype.hasOwnProperty.call(patch, 'rankedEligible') ? !!patch.rankedEligible : current.rankedEligible,
+    displayNameSource: patch.displayNameSource || (
+      (patch.displayName || patch.name || patch.teamName) && current.profileId
+        ? 'custom'
+        : current.displayNameSource
+    ),
     entryType: patch.entryType || (patch.profileId ? 'registered' : current.entryType),
     updatedAt: Date.now(),
   };

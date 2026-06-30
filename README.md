@@ -13,7 +13,7 @@
 它最初以宝可梦 VGC 线下赛事为主要开发目标，但由于核心流程围绕瑞士轮、淘汰赛、直播桌管理与战报整理展开，因此同样适用于 PTCG、游戏王等采用瑞士轮结构的对战赛事。
 它将后台管理、直播叠加层、选手端页面、瑞士轮与淘汰赛流程、战报导出，以及 Docker 部署能力整合到同一套系统中，目标是尽可能覆盖一场比赛从报名到赛后整理的完整流程。
 
-最新稳定版：`3.2.0`
+最新稳定版：`3.3.0`
 
 当前 beta 版：暂无
 
@@ -22,7 +22,7 @@
 - `latest`：稳定版 Docker 镜像
 - `beta`：测试版 Docker 镜像
 - 形如 `3.3.0-beta` 的 tag：具体 beta 版本镜像
-- 形如 `3.2.0` 的 tag：具体稳定版镜像
+- 形如 `3.3.0` 的 tag：具体稳定版镜像
 
 版本路线图：[ROADMAP.md](./ROADMAP.md)
 
@@ -274,7 +274,7 @@ docker pull ddrsama/pokemon-tournament-system:beta
 也可以指定具体版本：
 
 ```bash
-docker pull ddrsama/pokemon-tournament-system:3.2.0
+docker pull ddrsama/pokemon-tournament-system:3.3.0
 ```
 
 ### 本地开发用 Docker Compose
@@ -298,7 +298,7 @@ docker compose -f docker-compose.deploy.yml up -d
 如果要锁定某个具体稳定版本，也可以显式指定：
 
 ```bash
-PTS_TAG=3.2.0 docker compose -f docker-compose.deploy.yml up -d
+PTS_TAG=3.3.0 docker compose -f docker-compose.deploy.yml up -d
 ```
 
 ### 部署 Beta Docker Compose
@@ -321,6 +321,7 @@ Docker Compose 默认将数据持久化到项目目录下的 `./data`：
 - `./data/players`
 - `./data/leagues`
 - `./data/points`
+- `./data/fonts`
 - `./data/reports`
 
 ## GitHub 与 Docker 发布
@@ -357,6 +358,8 @@ Docker Compose 默认将数据持久化到项目目录下的 `./data`：
   联赛目录
 - `POINTS_DIR`
   积分方案目录
+- `FONTS_DIR`
+  私有字体目录
 - `REPORTS_DIR`
   战报输出目录
 - `PYTHON_BIN`
@@ -364,11 +367,17 @@ Docker Compose 默认将数据持久化到项目目录下的 `./data`：
 
 ## 字体与战报
 
-项目根据游戏字体，内置了界面字体资源：
+项目默认内置可再分发的开源字体资源：
 
-- `public/shared/fonts/ud-shin-go-sc-r.ttf`
+- `public/shared/fonts/InterVariable.woff2`
+- `public/shared/fonts/NotoSansSC-VF.ttf`
+- `public/shared/fonts/NotoSansJP-VF.ttf`
+- `public/shared/fonts/NotoSansSC-Medium.ttf`
+- `public/shared/fonts/NotoSansJP-Medium.ttf`
 
-战报导出会优先尝试使用可用中文字体；Docker 镜像中已包含中文字体与 `reportlab` 运行环境。
+如需在自用部署中使用已授权的私有字体，可将 `.ttf / .otf / .ttc / .woff / .woff2` 放入数据目录的 `fonts` 子目录，例如 Docker 默认的 `/data/fonts`。系统会根据文件名自动识别中英日字体并优先用于网页界面；PDF 战报由服务端生成并嵌入字体，优先尝试 `/data/fonts` 中可被 `reportlab` 注册的字体，再回退到项目内置的 Noto Sans SC/JP Medium 静态 TTF 战报字体，不依赖查看设备本地字体。私有字体授权由部署者自行确认，不会打包进公开镜像。
+
+Docker 镜像中已包含中文字体与 `reportlab` 运行环境。
 
 ## 路线图
 

@@ -14,6 +14,7 @@ const DATA_DIR = resolveDataPath('PTS_DATA_DIR', 'DATA_DIR', 'tournaments');
 const PLAYERS_DIR = resolveDataPath('PTS_PLAYERS_DIR', 'PLAYERS_DIR', 'players');
 const LEAGUES_DIR = resolveDataPath('PTS_LEAGUES_DIR', 'LEAGUES_DIR', 'leagues');
 const POINTS_DIR = resolveDataPath('PTS_POINTS_DIR', 'POINTS_DIR', 'points');
+const FONTS_DIR = resolveDataPath('PTS_FONTS_DIR', 'FONTS_DIR', 'fonts');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
 const REPORTS_DIR = resolveDataPath('PTS_REPORT_DIR', 'REPORTS_DIR', 'reports');
@@ -30,6 +31,7 @@ module.exports = {
   PLAYERS_DIR,
   LEAGUES_DIR,
   POINTS_DIR,
+  FONTS_DIR,
   PUBLIC_DIR,
   PUBLIC_BASE_URL,
   REPORTS_DIR,

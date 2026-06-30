@@ -6,6 +6,7 @@ function buildReportPythonSource() {
   return `
 import json
 import os
+import re
 import sys
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -20,20 +21,20 @@ payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
 report_type = payload.get("type")
 target_path = payload["targetPath"]
 data = payload["data"]
+font_candidates = payload.get("fontCandidates", [])
 
-font_candidates = [
-    os.path.join(os.getcwd(), "public", "shared", "fonts", "ud-shin-go-sc-r.ttf"),
-    "/app/public/shared/fonts/ud-shin-go-sc-r.ttf",
-    r"C:\\\\Windows\\\\Fonts\\\\msyh.ttc",
-    r"C:\\\\Windows\\\\Fonts\\\\simhei.ttf",
-    r"C:\\\\Windows\\\\Fonts\\\\simsun.ttc",
-]
+def normalize_font_name(font_path):
+    base = os.path.splitext(os.path.basename(font_path))[0]
+    safe = re.sub(r'[^A-Za-z0-9_-]+', '-', base).strip('-')
+    return safe or 'ReportFont'
+
 font_name = "Helvetica"
 for font_path in font_candidates:
     if os.path.exists(font_path):
         try:
-            pdfmetrics.registerFont(TTFont("ReportFont", font_path))
-            font_name = "ReportFont"
+            candidate_name = normalize_font_name(font_path)
+            pdfmetrics.registerFont(TTFont(candidate_name, font_path))
+            font_name = candidate_name
             break
         except Exception:
             pass
@@ -73,13 +74,6 @@ if report_type == "tournament":
     story.append(Paragraph(data["tournamentName"], styles["TitleCN"]))
     story.append(Paragraph("导出时间：{}".format(data["generatedAt"]), styles["MetaCN"]))
     story.append(Spacer(1, 6))
-    settings = data.get("settings", {})
-    story.append(Paragraph("比赛设置", styles["HeadingCN"]))
-    settings_rows = [
-        ["Preset", settings.get("presetId", "-"), "游戏", settings.get("game", "-")],
-        ["参赛单位", settings.get("entrantType", "-"), "", ""],
-    ]
-    story.append(make_table([["项目", "内容", "项目", "内容"], *settings_rows], [26*mm, 60*mm, 26*mm, 60*mm]))
 
     stages = data.get("stages", [])
     if stages:
@@ -115,17 +109,6 @@ if report_type == "tournament":
             for match in group.get("matches", []):
                 rows.append([match["tableLabel"], match["p1"], match["p2"], match["result"]])
             story.append(make_table(rows, [20*mm, 60*mm, 60*mm, 34*mm]))
-            story.append(Spacer(1, 8))
-
-    if data.get("stageRounds"):
-        story.append(PageBreak())
-        story.append(Paragraph("3.0 阶段对局", styles["HeadingCN"]))
-        for group in data.get("stageRounds", []):
-            story.append(Paragraph(group["label"], styles["BodyCN"]))
-            rows = [["桌号", "阶段", "选手A", "选手B", "结果"]]
-            for match in group.get("matches", []):
-                rows.append([match["tableLabel"], match.get("phaseLabel", ""), match["p1"], match["p2"], match["result"]])
-            story.append(make_table(rows, [16*mm, 34*mm, 46*mm, 46*mm, 34*mm]))
             story.append(Spacer(1, 8))
 
     if data.get("pointAwards"):
@@ -166,11 +149,11 @@ print(target_path)
 `;
 }
 
-function runPythonReport({ pythonBin, reportsDir, reportType, data, targetPath }) {
+function runPythonReport({ pythonBin, reportsDir, reportType, data, targetPath, fontCandidates = [] }) {
   fs.mkdirSync(reportsDir, { recursive: true });
   const scriptPath = path.join(reportsDir, '_render_report.py');
   fs.writeFileSync(scriptPath, buildReportPythonSource(), 'utf8');
-  const payload = JSON.stringify({ type: reportType, data, targetPath });
+  const payload = JSON.stringify({ type: reportType, data, targetPath, fontCandidates });
   const result = spawnSync(pythonBin, [scriptPath], {
     input: payload,
     encoding: 'utf8',
@@ -184,7 +167,7 @@ function runPythonReport({ pythonBin, reportsDir, reportType, data, targetPath }
   return targetPath;
 }
 
-function exportTournamentReportFile({ state, reportsDir, pythonBin, isTournamentFinished, sanitizeFilePart, buildTournamentReportData }) {
+function exportTournamentReportFile({ state, reportsDir, pythonBin, isTournamentFinished, sanitizeFilePart, buildTournamentReportData, fontCandidates = [] }) {
   if (!isTournamentFinished(state)) return null;
   const fileName = `${sanitizeFilePart(state.tournamentName, 'tournament')}-report.pdf`;
   const targetPath = path.join(reportsDir, fileName);
@@ -194,11 +177,12 @@ function exportTournamentReportFile({ state, reportsDir, pythonBin, isTournament
     reportType: 'tournament',
     data: buildTournamentReportData(state),
     targetPath,
+    fontCandidates,
   });
   return targetPath;
 }
 
-function exportPlayerReportFile({ playerName, state, reportsDir, pythonBin, sanitizeFilePart, buildPlayerReportData }) {
+function exportPlayerReportFile({ playerName, state, reportsDir, pythonBin, sanitizeFilePart, buildPlayerReportData, fontCandidates = [] }) {
   const reportData = buildPlayerReportData(playerName, state);
   if (!reportData) return null;
   const fileName = `${sanitizeFilePart(state.tournamentName, 'tournament')}-${sanitizeFilePart(playerName, 'player')}-report.pdf`;
@@ -209,6 +193,7 @@ function exportPlayerReportFile({ playerName, state, reportsDir, pythonBin, sani
     reportType: 'player',
     data: reportData,
     targetPath,
+    fontCandidates,
   });
   return targetPath;
 }

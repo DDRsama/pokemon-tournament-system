@@ -172,6 +172,7 @@ function normalizeGroupSchedule(state = {}, stage = null) {
     .filter(match => match.stageId !== stage.id)
     .concat(normalizedMatches);
   if (state.currentLiveMatch && !normalizedIds.has(state.currentLiveMatch.id)) state.currentLiveMatch = null;
+  if (state.pendingLiveMatch && !normalizedIds.has(state.pendingLiveMatch.id)) state.pendingLiveMatch = null;
   if (state.lastLiveMatch && !normalizedIds.has(state.lastLiveMatch.id)) state.lastLiveMatch = null;
   const rounds = [...new Set(normalizedMatches.map(match => normalizeGroupRound(match.groupRound, 1)))]
     .sort((a, b) => a - b);
@@ -196,6 +197,7 @@ function enterGroups(state = {}, stage = null, options = {}) {
   state.phase = 'groups';
   state.activeStageId = stage.id;
   state.currentLiveMatch = null;
+  state.pendingLiveMatch = null;
   state.lastLiveMatch = null;
   state.lastResult = null;
   state.overlayState = 'overview';
@@ -274,6 +276,7 @@ function advanceGroupRound(state = {}, stage = null) {
     [stage.id]: nextRound,
   };
   state.currentLiveMatch = null;
+  state.pendingLiveMatch = null;
   state.lastLiveMatch = null;
   state.lastResult = null;
   state.overlayState = 'overview';
@@ -416,6 +419,7 @@ function completeGroups(state = {}, stage = null) {
   archiveGroupMatches(state, stage.id);
   state.phase = 'groups-ended';
   state.currentLiveMatch = null;
+  state.pendingLiveMatch = null;
   state.lastLiveMatch = null;
   state.lastResult = null;
   state.overlayState = 'overview';

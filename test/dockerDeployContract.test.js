@@ -20,8 +20,9 @@ test('docker deployment persists every data store through a single data mount', 
     'ENV PLAYERS_DIR=/data/players',
     'ENV LEAGUES_DIR=/data/leagues',
     'ENV POINTS_DIR=/data/points',
+    'ENV FONTS_DIR=/data/fonts',
     'ENV REPORTS_DIR=/data/reports',
-    'RUN mkdir -p /data/tournaments /data/players /data/leagues /data/points /data/reports',
+    'RUN mkdir -p /data/tournaments /data/players /data/leagues /data/points /data/fonts /data/reports',
     'DATA_ROOT: /data',
     '- ./data:/data',
   ].forEach(token => assert.equal(source.includes(token), true, `docker config should contain: ${token}`));
@@ -40,11 +41,13 @@ test('readmes document every persistent data directory', () => {
       './data/players',
       './data/leagues',
       './data/points',
+      './data/fonts',
       './data/reports',
       'DATA_ROOT',
       'PLAYERS_DIR',
       'LEAGUES_DIR',
       'POINTS_DIR',
+      'FONTS_DIR',
     ].forEach(token => assert.equal(text.includes(token), true, `${relativePath} should document: ${token}`));
   }
 });

@@ -3,15 +3,31 @@ async function setLive(id) {
   const res = await api(tournamentApi('/set-live'), { matchId: id });
   if (res.state) render(res.state);
 }
+async function startLive(id) {
+  const res = await api(tournamentApi('/start-live'), { matchId: id });
+  if (res.state) render(res.state);
+}
 async function setResult(id, winner) {
   const match = findCurrentMatch(id);
   if (match && !canOperateMatch(match, currentState)) return;
+  const confirmed = await confirmMatchWrite(match, {
+    title: '确认录入胜负',
+    okText: '确认判胜',
+    resultText: `判定「${winner}」获胜`,
+  });
+  if (!confirmed) return;
   const res = await api(tournamentApi('/result'), { matchId: id, winnerId: winner });
   if (res.state) render(res.state);
 }
 async function setDraw(id) {
   const match = findCurrentMatch(id);
   if (match && !canOperateMatch(match, currentState)) return;
+  const confirmed = await confirmMatchWrite(match, {
+    title: '确认录入平局',
+    okText: '确认平局',
+    resultText: '记录为平局',
+  });
+  if (!confirmed) return;
   const res = await api(tournamentApi('/draw'), { matchId: id });
   if (res.state) render(res.state);
 }
@@ -33,6 +49,13 @@ async function dropPlayerFromMatchAction(matchId, playerName) {
 async function setBo3Score(id, pw1, pw2) {
   const match = findCurrentMatch(id);
   if (match && !canOperateMatch(match, currentState)) return;
+  const confirmed = await confirmMatchWrite(match, {
+    title: '确认录入小分',
+    okText: '确认记分',
+    resultText: `更新小分为 ${pw1}-${pw2}`,
+    tone: 'normal',
+  });
+  if (!confirmed) return;
   const res = await api(tournamentApi('/bo3-score'), { matchId: id, p1Wins: pw1, p2Wins: pw2 });
   if (res.state) render(res.state);
 }
@@ -52,6 +75,48 @@ function canOperateMatch(match, state = currentState) {
     && !isTournamentFinished(state)
     && !isPlaceholderEntrant(match.p1)
     && !isPlaceholderEntrant(match.p2);
+}
+
+function matchStageLabel(match, state = currentState) {
+  const stage = Array.isArray(state?.stages) ? state.stages.find(item => item.id === match?.stageId) : null;
+  if (stage?.name) return stage.name;
+  if (stage?.type) return stageTypeName(stage.type);
+  if (match?.phase) return eliminationPhaseLabel(match.phase);
+  if (typeof match?.round === 'number') return `瑞士轮第 ${match.round} 轮`;
+  if (typeof match?.groupRound === 'number') return `小组赛第 ${match.groupRound} 轮`;
+  return '当前阶段';
+}
+
+function matchTableLabel(match) {
+  const parts = [];
+  if (match?.groupLabel) parts.push(match.groupLabel);
+  if (match?.bracket === 'winners') parts.push('胜者组');
+  if (match?.bracket === 'losers') parts.push('败者组');
+  if (match?.bracket === 'grand_final') parts.push('总决赛');
+  if (match?.phase) parts.push(eliminationPhaseLabel(match.phase));
+  if (typeof match?.round === 'number') parts.push(`第 ${match.round} 轮`);
+  if (typeof match?.groupRound === 'number') parts.push(`第 ${match.groupRound} 轮`);
+  if (match?.table) parts.push(`桌 ${match.table}`);
+  return parts.join(' · ') || '对局';
+}
+
+function buildMatchWriteMessage(match, resultText) {
+  const p1 = match?.p1 || '待定';
+  const p2 = match?.p2 || '待定';
+  return [
+    `${matchStageLabel(match)} · ${matchTableLabel(match)}`,
+    `${p1} vs ${p2}`,
+    resultText,
+  ].filter(Boolean).join('\n');
+}
+
+function confirmMatchWrite(match, options = {}) {
+  if (!match) return Promise.resolve(false);
+  return confirmAction(buildMatchWriteMessage(match, options.resultText), {
+    title: options.title || '确认录入赛果',
+    okText: options.okText || '确认',
+    tone: options.tone || 'danger',
+  });
 }
 
 function roundStats(round, matches) {
@@ -348,6 +413,7 @@ function render(s) {
   document.getElementById('playerInput').placeholder = `${label}名称...`;
   document.getElementById('bulkAddBtn').textContent = `批量导入${label}`;
   document.getElementById('bulkModalTitle').textContent = `批量导入${label}`;
+  document.getElementById('singleProfileToggle')?.classList.toggle('hidden', isTeamTournament(s));
   document.getElementById('playerEntrySectionTitle').textContent = isTeamTournament(s) ? '📱 参赛端' : '📱 选手端';
   document.querySelector('.player-qr-label').textContent = isTeamTournament(s) ? '参赛二维码' : '选手二维码';
   document.querySelector('.player-qr-tip').textContent = isTeamTournament(s) ? '扫码进入参赛页面' : '扫码进入选手个人页';
@@ -998,6 +1064,7 @@ function renderFinalSummary(s, stage, standings) {
 // ── 对局卡片 ─────────────────────────────────────────────
 function matchCard(s, m, isTop8) {
   const isLive = s.currentLiveMatch && s.currentLiveMatch.id === m.id;
+  const isPendingLive = s.pendingLiveMatch && s.pendingLiveMatch.id === m.id;
   const tournamentFinished = isTournamentFinished(s);
   const stage = Array.isArray(s.stages) ? s.stages.find(item => item.id === m.stageId) : null;
   const rules = stage && stage.matchRules ? stage.matchRules : {};
@@ -1006,7 +1073,8 @@ function matchCard(s, m, isTop8) {
   const bestOf = Number(rules.bestOf || (isGamesScore ? 3 : 1));
   const maxWins = Math.max(1, Math.floor(bestOf / 2) + 1);
   const allowDraw = rules.allowDraw !== false && !isGamesScore;
-  const hasOtherLiveMatch = s.currentLiveMatch && s.currentLiveMatch.id !== m.id;
+  const hasOtherLiveMatch = (s.currentLiveMatch && s.currentLiveMatch.id !== m.id)
+    || (s.pendingLiveMatch && s.pendingLiveMatch.id !== m.id);
   const liveClosedThisScope = s.matches.some(other =>
     other.id !== m.id &&
     other.wasLive &&
@@ -1018,7 +1086,7 @@ function matchCard(s, m, isTop8) {
   ) || (m.wasLive && m.done);
   const canOperate = canOperateMatch(m, s);
   const waitingOpponent = !m.done && !canOperate;
-  const cardClass = `match-card${isLive ? ' live' : ''}${m.done ? ' done' : ''}${waitingOpponent ? ' waiting-opponent' : ''}`;
+  const cardClass = `match-card${isLive ? ' live' : ''}${isPendingLive ? ' pending-live' : ''}${m.done ? ' done' : ''}${waitingOpponent ? ' waiting-opponent' : ''}`;
   const p1Won = m.winner === m.p1, p2Won = m.winner === m.p2;
   const featured = new Set(s.featuredSwissPlayers || []);
   const p1Featured = !isTop8 && featured.has(m.p1);
@@ -1051,9 +1119,11 @@ function matchCard(s, m, isTop8) {
       <div class="match-header-actions">
         ${!tournamentFinished && !m.done && isLive
           ? `<button class="btn live-btn active" onclick="setLive('${m.id}')">取消直播</button>`
+          : (!tournamentFinished && !m.done && isPendingLive
+              ? `<button class="btn live-btn pending" onclick="setLive('${m.id}')">取消候场</button><button class="btn live-start-btn" onclick="startLive('${m.id}')">切入直播</button>`
           : (!tournamentFinished && !m.done && !hasOtherLiveMatch && !liveClosedThisScope
               ? `<button class="btn live-btn" onclick="setLive('${m.id}')">${m.liveRoomCode ? `设为直播(${m.liveRoomCode})` : '设为直播'}</button>`
-              : '')}
+              : ''))}
         ${canOperate && !m.done ? `<button class="btn match-btn" onclick="swapSeats('${m.id}')">换座</button>` : ''}
         ${allowDraw && canOperate && !m.done ? `<button class="btn match-btn warn" onclick="setDraw('${m.id}')">平局</button>` : ''}
         ${m.done ? '<span style="color:#22c55e;font-weight:700;">✅</span>' : ''}
@@ -1077,7 +1147,7 @@ function matchCard(s, m, isTop8) {
   </div>`;
 }
 
-function adjustScore(matchId, side, delta) {
+async function adjustScore(matchId, side, delta) {
   const m = currentState.matches.find(x => x.id === matchId);
   if (!m) return;
   if (!canOperateMatch(m, currentState)) return;
@@ -1088,10 +1158,12 @@ function adjustScore(matchId, side, delta) {
   const pw2 = Math.max(0, m.p2Wins || 0);
   if (side === 'p1') {
     const next = Math.max(0, Math.min(maxWins, pw1 + delta));
-    setBo3Score(matchId, next, pw2);
+    if (next === pw1) return;
+    await setBo3Score(matchId, next, pw2);
   } else {
     const next = Math.max(0, Math.min(maxWins, pw2 + delta));
-    setBo3Score(matchId, pw1, next);
+    if (next === pw2) return;
+    await setBo3Score(matchId, pw1, next);
   }
 }
 
@@ -1164,6 +1236,10 @@ liveRoomCodeInput?.addEventListener('keydown', evt => {
     evt.preventDefault();
     liveRoomCodeSaveBtn?.click();
   }
+});
+window.addEventListener('pts-languagechange', () => {
+  if (currentState) render(currentState);
+  window.setTimeout(() => window.PTSI18n?.translateNode?.(document.documentElement), 0);
 });
 apiGet('/state').then(state => { if (state && state.phase) render(state); });
 

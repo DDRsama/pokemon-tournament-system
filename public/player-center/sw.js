@@ -1,10 +1,14 @@
-const CACHE_NAME = 'pts-player-center-v3.2-i18n-1';
+const CACHE_NAME = 'pts-player-center-v3.3-report-fonts-2';
 const STATIC_ASSETS = [
   '/player/',
-  '/player/center.css?v=3.2-i18n-1',
-  '/player/center.js?v=3.1-pwa-install',
-  '/shared/i18n.js?v=3.2-i18n-1',
-  '/shared/theme.css?v=3.2-i18n-1',
+  '/player/center.css?v=3.3-entry-name-1',
+  '/player/center.js?v=3.3-entry-name-1',
+  '/shared/font-loader.js?v=3.3-font-loader-1',
+  '/shared/i18n.js?v=3.3-i18n-scan-1',
+  '/shared/theme.css?v=3.3-release-1',
+  '/shared/fonts/InterVariable.woff2',
+  '/shared/fonts/NotoSansSC-VF.ttf',
+  '/shared/fonts/NotoSansJP-VF.ttf',
   '/shared/favicon.svg',
   '/shared/apple-touch-icon.png',
   '/shared/app-icon-192.png',

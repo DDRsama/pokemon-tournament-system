@@ -200,6 +200,19 @@
       '链接已放在下面的文本框中。': 'The link is in the text box below.',
       '直播桌房号已保存': 'Live room code saved',
       '直播桌房号已清空': 'Live room code cleared',
+      '取消候场': 'Cancel Staging',
+      '切入直播': 'Go Live',
+      '确认录入胜负': 'Confirm Match Result',
+      '确认判胜': 'Confirm Win',
+      '判定': 'Set',
+      '获胜': 'as winner',
+      '确认录入平局': 'Confirm Draw',
+      '确认平局': 'Confirm Draw',
+      '记录为平局': 'Record as draw',
+      '确认录入小分': 'Confirm Game Score',
+      '确认记分': 'Confirm Score',
+      '更新小分为': 'Update score to',
+      '确认录入赛果': 'Confirm Match Result',
       '不能使用 localhost 或 127.0.0.1 这类自机地址': 'Do not use localhost or 127.0.0.1 as a public address',
       '确认操作': 'Confirm Action',
       '对局退赛': 'Match Drop',
@@ -311,6 +324,7 @@
       '过往记录': 'Past Records',
       '报名': 'Register',
       '确认报名': 'Confirm Registration',
+      '本场参赛名': 'Entry Name',
       '导出战报': 'Export Report',
       '返回': 'Return',
       '知道了': 'OK',
@@ -320,6 +334,7 @@
       '请先选择或登记选手档案。': 'Select or register a player profile first.',
       '请输入选手名称。': 'Enter a player name.',
       '当前档案缺少选手名称。': 'The current profile has no player name.',
+      '请填写本场参赛名。': 'Enter an entry name for this tournament.',
       '当前没有正在参加的比赛。': 'No current tournaments.',
       '当前没有可报名的新比赛。': 'No new tournaments open for registration.',
       '暂无过往比赛记录。': 'No past tournament records.',
@@ -585,6 +600,19 @@
       '链接已放在下面的文本框中。': 'リンクは下のテキスト欄にあります。',
       '直播桌房号已保存': '配信部屋番号を保存しました',
       '直播桌房号已清空': '配信部屋番号をクリアしました',
+      '取消候场': '待機を取消',
+      '切入直播': '配信へ切替',
+      '确认录入胜负': '勝敗入力確認',
+      '确认判胜': '勝利確定',
+      '判定': '判定：',
+      '获胜': '勝利',
+      '确认录入平局': '引き分け入力確認',
+      '确认平局': '引き分け確定',
+      '记录为平局': '引き分けとして記録',
+      '确认录入小分': 'ゲームスコア入力確認',
+      '确认记分': 'スコア確定',
+      '更新小分为': 'スコアを更新：',
+      '确认录入赛果': '試合結果入力確認',
       '不能使用 localhost 或 127.0.0.1 这类自机地址': 'localhost や 127.0.0.1 のような自端末アドレスは使えません',
       '确认操作': '操作確認',
       '对局退赛': '対戦ドロップ',
@@ -696,6 +724,7 @@
       '过往记录': '過去の記録',
       '报名': '参加登録',
       '确认报名': '参加登録確認',
+      '本场参赛名': '大会用プレイヤー名',
       '返回': '戻る',
       '知道了': 'OK',
       '确认注册': '登録確認',
@@ -704,6 +733,7 @@
       '请先选择或登记选手档案。': '先にプレイヤープロフィールを選択または登録してください。',
       '请输入选手名称。': 'プレイヤー名を入力してください。',
       '当前档案缺少选手名称。': '現在のプロフィールにプレイヤー名がありません。',
+      '请填写本场参赛名。': 'この大会で使うプレイヤー名を入力してください。',
       '当前没有正在参加的比赛。': '参加中の大会はありません。',
       '当前没有可报名的新比赛。': '参加登録できる大会はありません。',
       '暂无过往比赛记录。': '過去の大会記録はありません。',
@@ -796,6 +826,36 @@
       '暂无可添加比赛': 'No tournaments to add',
       '暂无历史对局': 'No match history',
       '暂无其他': 'No other entries',
+      '联赛管理': 'League Management',
+      '积分规则管理': 'Points Rule Management',
+      '选择积分规则': 'Select Points Rule',
+      '新建档案': 'New Profile',
+      '新建规则': 'New Rule',
+      '编辑选手档案': 'Edit Player Profile',
+      '编辑积分规则': 'Edit Points Rule',
+      '？此操作不可恢复。': '? This action cannot be undone.',
+      '？删除联赛不会删除源比赛。': '? Deleting the league will not delete source tournaments.',
+      '？有参赛记录或积分记录的档案不能删除。': '? Profiles with tournament or points records cannot be deleted.',
+      '？正在被联赛使用的规则不会被删除。': '? Rules currently used by leagues will not be deleted.',
+      '🎮赛事管理': '🎮 Tournament Admin',
+      '🧩 阶段': '🧩 Stages',
+      '📋 选手': '📋 Players',
+      '📋 队伍': '📋 Teams',
+      '🏆 淘汰赛阶段': '🏆 Playoff Stage',
+      '🌐 访问地址': '🌐 Access Address',
+      '📺 叠加层': '📺 Overlay',
+      '📱 选手端': '📱 Player Page',
+      '📱 参赛端': '📱 Entrant Page',
+      'OBS 设置': 'OBS Settings',
+      '等待比赛开始': 'Waiting for tournament start',
+      '直播房号': 'Live Room Code',
+      '改名': 'Rename',
+      '修改档案名称': 'Edit Profile Name',
+      '保存后会同步到已经绑定这个档案的比赛记录。': 'After saving, linked tournament records for this profile will be updated.',
+      '档案名称已更新。': 'Profile name updated.',
+      '修改名称失败。': 'Failed to update name.',
+      '这个名称已有选手档案使用。': 'This name is already used by another player profile.',
+      '请先登录选手档案。': 'Sign in to a player profile first.',
       '暂无积分规则。联赛纳入比赛时需要选择或创建规则。': 'No points rules. Select or create a rule before adding tournaments to a league.',
       '暂无可计分选手：只有已完赛比赛中绑定了选手档案的参赛者会进入排行榜，游客参赛不会计入积分。': 'No scored players yet. Only finished tournament entrants bound to player profiles enter standings; guest entries do not earn points.',
       '暂无联赛。需要长期积分榜时再创建。': 'No leagues yet. Create one when you need long-term standings.',
@@ -813,9 +873,23 @@
       '计分记录': 'Points Records',
       '保存计分规则失败': 'Failed to save points rule',
       '计分规则已保存': 'Points rule saved',
+      '保存积分规则失败': 'Failed to save points rule',
+      '积分规则已保存': 'Points rule saved',
+      '积分规则已创建': 'Points rule created',
+      '积分规则已删除': 'Points rule deleted',
       '创建选手档案失败': 'Failed to create player profile',
+      '保存选手档案失败': 'Failed to save player profile',
+      '删除选手档案失败': 'Failed to delete player profile',
+      '选手档案已保存': 'Player profile saved',
+      '选手档案已创建': 'Player profile created',
+      '选手档案已删除': 'Player profile deleted',
       '加入比赛失败': 'Failed to add tournament',
       '移除比赛失败': 'Failed to remove tournament',
+      '创建联赛失败': 'Failed to create league',
+      '删除联赛失败': 'Failed to delete league',
+      '联赛已创建': 'League created',
+      '联赛已删除': 'League deleted',
+      '删除积分规则失败': 'Failed to delete points rule',
       '重命名失败': 'Rename failed',
       '倍率': 'Multiplier',
       '本轮': 'This Round',
@@ -931,6 +1005,36 @@
       '暂无可添加比赛': '追加できる大会はありません',
       '暂无历史对局': '対戦履歴はありません',
       '暂无其他': 'その他はありません',
+      '联赛管理': 'リーグ管理',
+      '积分规则管理': 'ポイントルール管理',
+      '选择积分规则': 'ポイントルール選択',
+      '新建档案': 'プロフィール作成',
+      '新建规则': 'ルール作成',
+      '编辑选手档案': 'プレイヤープロフィール編集',
+      '编辑积分规则': 'ポイントルール編集',
+      '？此操作不可恢复。': '？この操作は元に戻せません。',
+      '？删除联赛不会删除源比赛。': '？リーグを削除しても元の大会は削除されません。',
+      '？有参赛记录或积分记录的档案不能删除。': '？大会記録またはポイント記録があるプロフィールは削除できません。',
+      '？正在被联赛使用的规则不会被删除。': '？リーグで使用中のルールは削除されません。',
+      '🎮赛事管理': '🎮 大会管理',
+      '🧩 阶段': '🧩 ステージ',
+      '📋 选手': '📋 プレイヤー',
+      '📋 队伍': '📋 チーム',
+      '🏆 淘汰赛阶段': '🏆 決勝ステージ',
+      '🌐 访问地址': '🌐 アクセスURL',
+      '📺 叠加层': '📺 オーバーレイ',
+      '📱 选手端': '📱 プレイヤーページ',
+      '📱 参赛端': '📱 参加ページ',
+      'OBS 设置': 'OBS 設定',
+      '等待比赛开始': '大会開始待ち',
+      '直播房号': '配信ルームコード',
+      '改名': '名前変更',
+      '修改档案名称': 'プロフィール名を変更',
+      '保存后会同步到已经绑定这个档案的比赛记录。': '保存後、このプロフィールに紐付く大会記録にも同期されます。',
+      '档案名称已更新。': 'プロフィール名を更新しました。',
+      '修改名称失败。': '名前変更に失敗しました。',
+      '这个名称已有选手档案使用。': 'この名前はすでに別のプレイヤープロフィールで使用されています。',
+      '请先登录选手档案。': '先にプレイヤープロフィールへログインしてください。',
       '暂无积分规则。联赛纳入比赛时需要选择或创建规则。': 'ポイントルールはありません。大会をリーグに追加する前にルールを選択または作成してください。',
       '暂无可计分选手：只有已完赛比赛中绑定了选手档案的参赛者会进入排行榜，游客参赛不会计入积分。': '集計できるプレイヤーはまだいません。完了済み大会でプロフィールに紐付いた参加者のみ順位表に入り、ゲスト参加はポイント対象外です。',
       '暂无联赛。需要长期积分榜时再创建。': 'リーグはありません。長期順位表が必要になったら作成してください。',
@@ -948,9 +1052,23 @@
       '计分记录': 'ポイント記録',
       '保存计分规则失败': 'ポイントルールの保存に失敗しました',
       '计分规则已保存': 'ポイントルールを保存しました',
+      '保存积分规则失败': 'ポイントルールの保存に失敗しました',
+      '积分规则已保存': 'ポイントルールを保存しました',
+      '积分规则已创建': 'ポイントルールを作成しました',
+      '积分规则已删除': 'ポイントルールを削除しました',
       '创建选手档案失败': 'プレイヤープロフィール作成に失敗しました',
+      '保存选手档案失败': 'プレイヤープロフィール保存に失敗しました',
+      '删除选手档案失败': 'プレイヤープロフィール削除に失敗しました',
+      '选手档案已保存': 'プレイヤープロフィールを保存しました',
+      '选手档案已创建': 'プレイヤープロフィールを作成しました',
+      '选手档案已删除': 'プレイヤープロフィールを削除しました',
       '加入比赛失败': '大会追加に失敗しました',
       '移除比赛失败': '大会削除に失敗しました',
+      '创建联赛失败': 'リーグ作成に失敗しました',
+      '删除联赛失败': 'リーグ削除に失敗しました',
+      '联赛已创建': 'リーグを作成しました',
+      '联赛已删除': 'リーグを削除しました',
+      '删除积分规则失败': 'ポイントルール削除に失敗しました',
       '重命名失败': '名前変更に失敗しました',
       '倍率': '倍率',
       '本轮': 'このラウンド',
@@ -1093,6 +1211,9 @@
       [/^(.+)\s*名称\.\.\.$/, '$1 name...'],
       [/^(.+)\s*尚未开始$/, '$1 has not started'],
       [/^当前(.+)\s+(.+)，点击下方按钮启动赛事阶段。$/, 'Current $1: $2. Use the button below to start the tournament stage.'],
+      [/^判定「(.+)」获胜$/, 'Set "$1" as winner'],
+      [/^更新小分为\s*(.+)$/, 'Update score to $1'],
+      [/^报名「(.+)」。确认后会进入该比赛的选手页。$/, 'Register for "$1". After confirmation, you will enter that tournament player page.'],
       [/^将以「(.+)」报名「(.+)」。确认后会进入该比赛的选手页。$/, 'Register "$1" for "$2". After confirmation, you will enter that tournament player page.'],
       [/^确认将「(.+)」标记为退赛？$/, 'Mark "$1" as dropped?'],
       [/^确认将「(.+)」标记为退赛？未录入结果则按赛前退赛处理，已录入结果则按赛后退赛处理。$/, 'Mark "$1" as dropped? If no result is entered, this is handled as a pre-match drop; otherwise it is handled as a post-match drop.'],
@@ -1106,6 +1227,7 @@
       [/^确认将「(.+)」标记为退赛？(.+)$/, 'Mark \"$1\" as dropped? $2'],
       [/^后台已有「(.+)」的选手档案。确认这是你本人后进入选手中心。$/, 'A player profile for \"$1\" already exists. Confirm this is you to enter Player Center.'],
       [/^后台还没有「(.+)」的选手档案。确认后会注册新的长期选手档案。$/, 'No player profile for \"$1\" exists yet. Confirm to register a new long-term profile.'],
+      [/^报名「(.+)」。确认后会进入该比赛的选手页。$/, 'Register for \"$1\". After confirmation, you will enter that tournament player page.'],
       [/^将以「(.+)」报名「(.+)」。确认后会进入该比赛的选手页。$/, 'Register \"$1\" for \"$2\". After confirmation, you will enter that tournament player page.'],
       [/^为「(.+)」登记长期选手档案，并绑定当前比赛身份？$/, 'Register a long-term player profile for \"$1\" and bind it to this tournament identity?'],
       [/^后台已有「(.+)」的选手档案。确认绑定到当前比赛身份？$/, 'A player profile for \"$1\" already exists. Bind it to this tournament identity?'],
@@ -1150,6 +1272,9 @@
       [/^(.+)\s*名称\.\.\.$/, '$1 名...'],
       [/^(.+)\s*尚未开始$/, '$1 はまだ開始していません'],
       [/^当前(.+)\s+(.+)，点击下方按钮启动赛事阶段。$/, '現在の $1：$2。下のボタンで大会ステージを開始します。'],
+      [/^判定「(.+)」获胜$/, '「$1」の勝利にします'],
+      [/^更新小分为\s*(.+)$/, 'スコアを $1 に更新'],
+      [/^报名「(.+)」。确认后会进入该比赛的选手页。$/, '「$1」に参加登録します。確認後、その大会のプレイヤーページに入ります。'],
       [/^将以「(.+)」报名「(.+)」。确认后会进入该比赛的选手页。$/, '「$1」として「$2」に参加登録します。確認後、その大会のプレイヤーページに入ります。'],
       [/^确认将「(.+)」标记为退赛？$/, '「$1」をドロップにしますか？'],
       [/^确认将「(.+)」标记为退赛？未录入结果则按赛前退赛处理，已录入结果则按赛后退赛处理。$/, '「$1」をドロップにしますか？結果未入力なら試合前ドロップ、入力済みなら試合後ドロップとして扱います。'],
@@ -1163,6 +1288,7 @@
       [/^确认将「(.+)」标记为退赛？(.+)$/, '「$1」をドロップにしますか？$2'],
       [/^后台已有「(.+)」的选手档案。确认这是你本人后进入选手中心。$/, '「$1」のプレイヤープロフィールが既にあります。本人であることを確認してプレイヤーセンターへ入ります。'],
       [/^后台还没有「(.+)」的选手档案。确认后会注册新的长期选手档案。$/, '「$1」のプレイヤープロフィールはまだありません。確認後、新しい長期プロフィールを登録します。'],
+      [/^报名「(.+)」。确认后会进入该比赛的选手页。$/, '「$1」に参加登録します。確認後、その大会のプレイヤーページに入ります。'],
       [/^将以「(.+)」报名「(.+)」。确认后会进入该比赛的选手页。$/, '「$1」として「$2」に参加登録します。確認後、その大会のプレイヤーページに入ります。'],
       [/^为「(.+)」登记长期选手档案，并绑定当前比赛身份？$/, '「$1」の長期プロフィールを登録し、現在の大会身份に紐付けますか？'],
       [/^后台已有「(.+)」的选手档案。确认绑定到当前比赛身份？$/, '「$1」のプレイヤープロフィールが既にあります。現在の大会身份に紐付けますか？'],
@@ -1183,6 +1309,8 @@
   const RENDERED_TEXT = new WeakMap();
   let currentLanguage = DEFAULT_LANGUAGE;
   let applying = false;
+  let pendingTranslateRoots = new Set();
+  let pendingTranslateTimer = null;
 
   function normalizeLanguage(value) {
     const raw = String(value || '').trim().toLowerCase();
@@ -1335,6 +1463,32 @@
     }
   }
 
+  function dispatchLanguageChange() {
+    if (typeof window.dispatchEvent !== 'function') return;
+    let event = null;
+    if (typeof CustomEvent === 'function') {
+      event = new CustomEvent('pts-languagechange', {
+        detail: { language: currentLanguage },
+      });
+    } else if (document.createEvent) {
+      event = document.createEvent('CustomEvent');
+      event.initCustomEvent('pts-languagechange', false, false, { language: currentLanguage });
+    }
+    if (event) window.dispatchEvent(event);
+  }
+
+  function scheduleTranslateNode(root) {
+    if (!root || applying) return;
+    pendingTranslateRoots.add(root);
+    if (pendingTranslateTimer) return;
+    pendingTranslateTimer = setTimeout(() => {
+      pendingTranslateTimer = null;
+      const roots = [...pendingTranslateRoots];
+      pendingTranslateRoots = new Set();
+      roots.forEach(translateNode);
+    }, 0);
+  }
+
   function syncSelectors() {
     document.querySelectorAll('.pts-language-option').forEach(button => {
       const active = button.dataset.lang === currentLanguage;
@@ -1349,6 +1503,7 @@
     document.documentElement.lang = currentLanguage;
     syncSelectors();
     translateNode(document.documentElement);
+    dispatchLanguageChange();
   }
 
   function createLanguageSwitcher() {
@@ -1392,9 +1547,9 @@
     const observer = new MutationObserver(records => {
       if (applying) return;
       for (const record of records) {
-        record.addedNodes.forEach(translateNode);
-        if (record.type === 'characterData') translateNode(record.target);
-        if (record.type === 'attributes') translateNode(record.target);
+        record.addedNodes.forEach(scheduleTranslateNode);
+        if (record.type === 'characterData') scheduleTranslateNode(record.target);
+        if (record.type === 'attributes') scheduleTranslateNode(record.target);
       }
     });
     observer.observe(document.documentElement, {

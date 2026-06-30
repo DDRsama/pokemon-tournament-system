@@ -305,3 +305,78 @@ test('bulk create profile mode is ignored for team tournaments', () => {
   assert.equal(res.body.profileActions[0].action, 'guest');
   assert.deepEqual(created, []);
 });
+
+test('single entrant creation can create a missing player profile explicitly', () => {
+  const calls = [];
+  const app = makeApp();
+  registerRegistryRoutes(app, {
+    syncTournamentRequest: () => true,
+    buildClientState: () => ({ ok: true }),
+    saveState: () => {},
+    broadcast: () => {},
+    listTournamentEntrants: () => [],
+    createTournamentEntrant: input => ({
+      id: `entry_${input.displayName || input.teamName}`,
+      displayName: input.displayName || input.teamName,
+      profileId: input.profileId || null,
+      entryType: input.profileId ? 'registered' : 'guest',
+      rankedEligible: !!input.profileId,
+    }),
+    updateTournamentEntrant: () => null,
+    bindTournamentEntrantToGlobalProfile: () => null,
+    listPlayerProfiles: () => [],
+    getGlobalPlayerProfileByName: name => (name === 'Existing' ? { id: 'pl_existing', displayName: name } : null),
+    createGlobalPlayerProfile: input => {
+      calls.push(input.displayName);
+      return { id: `pl_${input.displayName}`, displayName: input.displayName };
+    },
+    updateGlobalPlayerProfile: () => null,
+    deleteGlobalPlayerProfile: id => ({ ok: true, player: { id } }),
+    bindTournamentPlayerToGlobalProfile: () => null,
+    listLeagues: () => [],
+    createLeague: () => null,
+    getLeagueById: () => null,
+    updateLeague: () => null,
+    deleteLeague: id => ({ ok: true, league: { id } }),
+    buildLeagueLeaderboard: () => null,
+    includeTournamentInLeague: () => null,
+    removeTournamentFromLeague: () => null,
+    buildLeagueFinalQualification: () => null,
+    listPointsProfiles: () => [],
+    createPointsProfile: () => null,
+    updatePointsProfile: () => null,
+    deletePointsProfile: id => ({ ok: true, pointsProfile: { id } }),
+    calculatePointAwardsForCurrentTournament: () => ({ ok: true, awards: [] }),
+    listPointAwardsForCurrentTournament: () => [],
+  });
+
+  const defaultRes = makeRes();
+  app.routes.post.get('/api/tournaments/:tournamentId/entrants')({
+    params: { tournamentId: 't1' },
+    body: { action: 'create', entrantType: 'player', displayName: 'Fresh' },
+  }, defaultRes);
+  assert.equal(defaultRes.body.ok, true);
+  assert.equal(defaultRes.body.entrant.entryType, 'guest');
+  assert.equal(defaultRes.body.profileAction.action, 'guest');
+  assert.deepEqual(calls, []);
+
+  const createRes = makeRes();
+  app.routes.post.get('/api/tournaments/:tournamentId/entrants')({
+    params: { tournamentId: 't1' },
+    body: { action: 'create', entrantType: 'player', displayName: 'Fresh', createMissingProfiles: true },
+  }, createRes);
+  assert.equal(createRes.body.ok, true);
+  assert.equal(createRes.body.entrant.profileId, 'pl_Fresh');
+  assert.equal(createRes.body.profileAction.action, 'created');
+  assert.deepEqual(calls, ['Fresh']);
+
+  const existingRes = makeRes();
+  app.routes.post.get('/api/tournaments/:tournamentId/entrants')({
+    params: { tournamentId: 't1' },
+    body: { action: 'create', entrantType: 'player', displayName: 'Existing', createMissingProfiles: true },
+  }, existingRes);
+  assert.equal(existingRes.body.ok, true);
+  assert.equal(existingRes.body.entrant.profileId, 'pl_existing');
+  assert.equal(existingRes.body.profileAction.action, 'existing');
+  assert.deepEqual(calls, ['Fresh']);
+});

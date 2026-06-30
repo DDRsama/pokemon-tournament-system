@@ -22,3 +22,18 @@ test('pdf report python source compiles', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('tournament pdf no longer renders legacy settings or duplicated stage-round pages', () => {
+  const source = buildReportPythonSource();
+  [
+    '比赛设置',
+    'Preset',
+    '游戏',
+    '3.0 阶段对局',
+    'if data.get("stageRounds"):',
+  ].forEach(token => {
+    assert.equal(source.includes(token), false, `pdf source should not render legacy report section: ${token}`);
+  });
+  assert.equal(source.includes('赛事阶段'), true);
+  assert.equal(source.includes('淘汰赛'), true);
+});

@@ -113,6 +113,17 @@ Theme: Chinese / English / Japanese frontend support
 
 - Added English and Japanese support.
 
+## Version 3.3.0
+
+Status: released
+
+Theme: fixes from the first real-world tournament usage
+
+### Main Updates
+
+- Fixed issues found during live usage around admin misclick protection, waiting opponents, BO3 / BO5, Top Cut, points awards, reports, and i18n.
+- Updated public font packaging, with PDF reports embedding bundled open-source static Noto Sans SC / JP Medium fonts on the server side.
+
 ## Version 3.x
 
 Theme: theme system and expanded formats

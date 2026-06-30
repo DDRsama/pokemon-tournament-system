@@ -52,18 +52,23 @@ function getPlacementPoints(rank, profile = {}) {
 
 function buildEntrantLookup(entrants = []) {
   const byName = new Map();
+  const byProfileId = new Map();
   for (const entrant of entrants) {
     if (entrant.displayName) byName.set(entrant.displayName, entrant);
+    if (entrant.profileId) byProfileId.set(entrant.profileId, entrant);
   }
-  return byName;
+  return { byName, byProfileId };
 }
 
 function calculateTournamentPoints({ standings = [], entrants = [], profile = createPointsProfile() } = {}) {
   const normalizedProfile = createPointsProfile(profile);
-  const byName = buildEntrantLookup(entrants);
+  const { byName, byProfileId } = buildEntrantLookup(entrants);
   const awards = [];
+  const awardedProfileIds = new Set();
   for (const standing of standings) {
-    const entrant = standing.profileId ? standing : byName.get(standing.player || standing.displayName);
+    const entrant = standing.profileId
+      ? byProfileId.get(standing.profileId) || standing
+      : byName.get(standing.player || standing.displayName);
     const profileId = standing.profileId || entrant?.profileId || null;
     const rankedEligible = typeof entrant?.rankedEligible === 'boolean' ? entrant.rankedEligible : !!profileId;
     if (!profileId || !rankedEligible) continue;
@@ -79,6 +84,24 @@ function calculateTournamentPoints({ standings = [], entrants = [], profile = cr
       multiplier: normalizedProfile.eventTierMultiplier,
       points,
     });
+    awardedProfileIds.add(profileId);
+  }
+  for (const entrant of entrants) {
+    const profileId = entrant?.profileId || null;
+    const rankedEligible = typeof entrant?.rankedEligible === 'boolean' ? entrant.rankedEligible : !!profileId;
+    if (!profileId || !rankedEligible || awardedProfileIds.has(profileId)) continue;
+    const participationOnlyPoints = normalizedProfile.participationPoints * normalizedProfile.eventTierMultiplier;
+    if (participationOnlyPoints === 0) continue;
+    awards.push({
+      profileId,
+      displayName: entrant.displayName || profileId,
+      rank: null,
+      participationPoints: normalizedProfile.participationPoints,
+      placementPoints: 0,
+      multiplier: normalizedProfile.eventTierMultiplier,
+      points: participationOnlyPoints,
+    });
+    awardedProfileIds.add(profileId);
   }
   return awards;
 }

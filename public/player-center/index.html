@@ -13,9 +13,10 @@
 <link rel="icon" type="image/png" sizes="192x192" href="/shared/app-icon-192.png">
 <link rel="apple-touch-icon" href="/shared/apple-touch-icon.png">
 <link rel="manifest" href="/player/manifest.webmanifest">
-  <link rel="stylesheet" href="/shared/theme.css?v=3.2-i18n-1">
-<link rel="stylesheet" href="/player/center.css?v=3.2-i18n-1">
-  <script src="/shared/i18n.js?v=3.2-i18n-1"></script>
+  <link rel="stylesheet" href="/shared/theme.css?v=3.3-release-1">
+  <script src="/shared/font-loader.js?v=3.3-font-loader-1"></script>
+<link rel="stylesheet" href="/player/center.css?v=3.3-entry-name-1">
+  <script src="/shared/i18n.js?v=3.3-i18n-scan-1"></script>
 </head>
 <body>
   <header class="topbar">
@@ -23,7 +24,7 @@
       <img class="brand-mark" src="/shared/favicon.svg" alt="">
       <span class="brand-text">Pokemon Tournament System</span>
     </div>
-    <div class="version">3.2.0</div>
+    <div class="version">3.3.0</div>
   </header>
 
   <main class="app-shell player-center-compact">
@@ -74,7 +75,10 @@
           <div class="section-label">当前档案</div>
           <h2 id="activeProfileName">-</h2>
         </div>
-        <button class="secondary-action" id="changeProfileBtn" type="button">登出</button>
+        <div class="profile-actions">
+          <button class="secondary-action" id="editProfileBtn" type="button">改名</button>
+          <button class="secondary-action" id="changeProfileBtn" type="button">登出</button>
+        </div>
       </div>
       <div class="stats-row">
         <div class="stat">
@@ -131,6 +135,10 @@
         <div class="confirm-title" id="tournamentConfirmTitle">确认报名</div>
         <div class="confirm-message" id="tournamentConfirmMessage"></div>
       </div>
+      <label class="field tournament-entry-field">
+        <span data-i18n="本场参赛名">本场参赛名</span>
+        <input id="tournamentEntryNameInput" type="text" autocomplete="nickname">
+      </label>
       <div class="confirm-actions">
         <button class="secondary-action" id="tournamentConfirmCancelBtn" type="button">取消</button>
         <button class="primary-action" id="tournamentConfirmOkBtn" type="button">确认报名</button>
@@ -138,7 +146,24 @@
     </div>
   </div>
 
+  <div class="modal-overlay hidden" id="profileEditBox" role="dialog" aria-modal="true" aria-labelledby="profileEditTitle">
+    <div class="modal-dialog profile-edit-dialog">
+      <div>
+        <div class="confirm-title" id="profileEditTitle">修改档案名称</div>
+        <div class="confirm-message">保存后会同步到已经绑定这个档案的比赛记录。</div>
+      </div>
+      <label class="field profile-edit-field">
+        <span>选手名称</span>
+        <input id="profileEditNameInput" autocomplete="nickname">
+      </label>
+      <div class="confirm-actions">
+        <button class="secondary-action" id="profileEditCancelBtn" type="button">取消</button>
+        <button class="primary-action" id="profileEditSaveBtn" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast hidden" id="toast"></div>
-  <script src="/player/center.js?v=3.1-pwa-install"></script>
+  <script src="/player/center.js?v=3.3-entry-name-1"></script>
 </body>
 </html>

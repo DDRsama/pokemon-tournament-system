@@ -19,7 +19,7 @@ const doubleEliminationCore = require('./core/doubleElimination');
 const { createBroadcaster } = require('./realtime/broadcaster');
 const { attachTournamentWebSocket } = require('./realtime/websocket');
 const { buildPlayerView: buildPlayerViewCore } = require('./core/playerView');
-const { PORT, DATA_DIR, PLAYERS_DIR, LEAGUES_DIR, POINTS_DIR, PUBLIC_DIR, PUBLIC_BASE_URL, REPORTS_DIR, PYTHON_BIN } = require('./config');
+const { PORT, DATA_DIR, PLAYERS_DIR, LEAGUES_DIR, POINTS_DIR, FONTS_DIR, PUBLIC_DIR, PUBLIC_BASE_URL, REPORTS_DIR, PYTHON_BIN, ROOT_DIR } = require('./config');
 const stateCore = require('./core/state');
 const recordsCore = require('./core/records');
 const standingsCore = require('./core/standings');
@@ -27,11 +27,13 @@ const stagesCore = require('./core/stages');
 const matchesCore = require('./core/matches');
 const rulesCore = require('./core/rules');
 const presetsCore = require('./core/presets');
+const fontsCore = require('./core/fonts');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(PLAYERS_DIR, { recursive: true });
 fs.mkdirSync(LEAGUES_DIR, { recursive: true });
 fs.mkdirSync(POINTS_DIR, { recursive: true });
+fs.mkdirSync(FONTS_DIR, { recursive: true });
 fs.mkdirSync(REPORTS_DIR, { recursive: true });
 const tournamentStore = createJsonStore({ dataDir: DATA_DIR, displayPhaseForTournament });
 const playerStore = createJsonStore({
@@ -164,6 +166,14 @@ async function validatePublicBaseUrlAccess(baseUrl, tournamentId) {
   return { ok: true, checkedUrl: stateUrl };
 }
 
+function getActiveFontConfig() {
+  return fontsCore.getActiveFontConfig({ fontsDir: FONTS_DIR, rootDir: ROOT_DIR });
+}
+
+function getPdfFontCandidates() {
+  return fontsCore.getPdfFontCandidates({ fontsDir: FONTS_DIR, rootDir: ROOT_DIR });
+}
+
 function normalizeTop8MatchTables(state = currentState) {
   stateCore.normalizeTop8MatchTables(state);
 }
@@ -251,6 +261,7 @@ function listPlayerProfiles(options = {}) {
 }
 
 function createGlobalPlayerProfile(input = {}) {
+  assertGlobalPlayerDisplayNameAvailable(input.displayName || input.name);
   return savePlayerProfile(playersCore.createPlayerProfile(input));
 }
 
@@ -266,6 +277,381 @@ function getGlobalPlayerProfileByName(name) {
     if (Array.isArray(profile.aliases) && profile.aliases.includes(target)) return profile;
   }
   return null;
+}
+
+function assertGlobalPlayerDisplayNameAvailable(displayName, exceptPlayerId = null) {
+  const target = String(displayName || '').trim();
+  if (!target) throw new Error('missing player displayName');
+  const exceptId = String(exceptPlayerId || '').trim();
+  for (const profile of playerRegistry.values()) {
+    if (exceptId && profile.id === exceptId) continue;
+    if (profile.displayName === target || (Array.isArray(profile.aliases) && profile.aliases.includes(target))) {
+      throw new Error('player displayName already exists');
+    }
+  }
+}
+
+function replaceExactStringsDeep(value, oldName, newName, seen = new WeakSet()) {
+  if (typeof value === 'string') {
+    return { value: value === oldName ? newName : value, changed: value === oldName };
+  }
+  if (!value || typeof value !== 'object') return { value, changed: false };
+  if (seen.has(value)) return { value, changed: false };
+  seen.add(value);
+
+  let changed = false;
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const next = replaceExactStringsDeep(value[index], oldName, newName, seen);
+      if (next.changed) {
+        value[index] = next.value;
+        changed = true;
+      }
+    }
+    return { value, changed };
+  }
+
+  for (const key of Object.keys(value)) {
+    const next = replaceExactStringsDeep(value[key], oldName, newName, seen);
+    const nextKey = key === oldName ? newName : key;
+    if (nextKey !== key) {
+      delete value[key];
+      if (Object.prototype.hasOwnProperty.call(value, nextKey)
+        && value[nextKey]
+        && typeof value[nextKey] === 'object'
+        && next.value
+        && typeof next.value === 'object'
+        && !Array.isArray(value[nextKey])
+        && !Array.isArray(next.value)) {
+        value[nextKey] = { ...next.value, ...value[nextKey] };
+      } else {
+        value[nextKey] = next.value;
+      }
+      changed = true;
+    } else if (next.changed) {
+      value[key] = next.value;
+      changed = true;
+    }
+  }
+  return { value, changed };
+}
+
+function collectProfileBoundNamesInState(state = {}, playerId, fallbackNames = []) {
+  const id = String(playerId || '').trim();
+  const names = new Set(
+    (Array.isArray(fallbackNames) ? fallbackNames : [])
+      .map(value => String(value || '').trim())
+      .filter(Boolean),
+  );
+  if (!id) return names;
+
+  for (const entrant of entrantsCore.migrateLegacyEntrants(state)) {
+    if (entrant.profileId === id && entrant.displayName) names.add(entrant.displayName);
+  }
+  for (const [name, entry] of Object.entries(state.playerProfiles || {})) {
+    if (entry && entry.globalProfileId === id) {
+      if (name) names.add(name);
+      if (entry.name) names.add(entry.name);
+    }
+  }
+  for (const award of Array.isArray(state.pointAwards) ? state.pointAwards : []) {
+    if (award && award.profileId === id && award.displayName) names.add(award.displayName);
+  }
+  return names;
+}
+
+function getProfileBoundEntrantsInState(state = {}, playerId) {
+  const id = String(playerId || '').trim();
+  if (!id) return [];
+  return entrantsCore.migrateLegacyEntrants(state).filter(entrant => entrant.profileId === id);
+}
+
+function normalizeDisplayNameSourceValue(value, fallback = 'profile') {
+  const source = String(value || '').trim();
+  return ['profile', 'custom', 'manual'].includes(source) ? source : fallback;
+}
+
+function profileEntryUsesProfileName(entry = {}) {
+  return normalizeDisplayNameSourceValue(entry.displayNameSource, 'profile') === 'profile';
+}
+
+function entrantUsesProfileName(entrant = {}) {
+  return normalizeDisplayNameSourceValue(entrant.displayNameSource, entrant.profileId ? 'profile' : 'manual') === 'profile';
+}
+
+function collectProfileControlledNamesInState(state = {}, playerId, fallbackNames = []) {
+  const id = String(playerId || '').trim();
+  const fallbackNameSet = new Set(
+    (Array.isArray(fallbackNames) ? fallbackNames : [])
+      .map(value => String(value || '').trim())
+      .filter(Boolean),
+  );
+  const names = new Set();
+  if (!id) return names;
+
+  for (const entrant of entrantsCore.migrateLegacyEntrants(state)) {
+    if (entrant.profileId === id && entrant.displayName && entrantUsesProfileName(entrant)) {
+      names.add(entrant.displayName);
+    }
+  }
+  for (const [name, entry] of Object.entries(state.playerProfiles || {})) {
+    if (entry && entry.globalProfileId === id && profileEntryUsesProfileName(entry)) {
+      if (name) names.add(name);
+      if (entry.name) names.add(entry.name);
+    }
+  }
+  for (const award of Array.isArray(state.pointAwards) ? state.pointAwards : []) {
+    if (award && award.profileId === id && fallbackNameSet.has(award.displayName)) {
+      names.add(award.displayName);
+    }
+  }
+  return names;
+}
+
+function assertTournamentDisplayNameAvailableForProfile(state = {}, playerId, nextDisplayName) {
+  const id = String(playerId || '').trim();
+  const nextName = String(nextDisplayName || '').trim();
+  if (!id || !nextName) return;
+  const hasProfileControlledEntry = getProfileBoundEntrantsInState(state, id).some(entrantUsesProfileName)
+    || Object.values(state.playerProfiles || {}).some(entry => entry?.globalProfileId === id && profileEntryUsesProfileName(entry));
+  if (!hasProfileControlledEntry) return;
+  const collision = entrantsCore.migrateLegacyEntrants(state).find(entrant =>
+    entrant.displayName === nextName && entrant.profileId !== id
+  );
+  if (collision) throw new Error(`player displayName already used in tournament: ${nextName}`);
+}
+
+function assertProfileRenameCanSyncAcrossTournaments(playerId, nextDisplayName) {
+  if (currentState && currentState._id) {
+    assertTournamentDisplayNameAvailableForProfile(currentState, playerId, nextDisplayName);
+  }
+  for (const item of tournamentStore.list()) {
+    if (currentState && currentState._id === item.id) continue;
+    const raw = tournamentStore.load(item.id);
+    if (!raw) continue;
+    const restored = restoreState({ ...raw, _id: raw._id || item.id });
+    assertTournamentDisplayNameAvailableForProfile(restored, playerId, nextDisplayName);
+  }
+}
+
+function replacePlayerNameInState(state = {}, oldName, newName) {
+  const from = String(oldName || '').trim();
+  const to = String(newName || '').trim();
+  if (!state || !from || !to || from === to) return false;
+  let changed = false;
+
+  const stringArrayKeys = ['players', 'top8', 'pendingTop8', '_dropped', '_featuredSwissPlayers'];
+  for (const key of stringArrayKeys) {
+    if (!Array.isArray(state[key])) continue;
+    const next = [];
+    let localChanged = false;
+    for (const value of state[key]) {
+      const renamed = value === from ? to : value;
+      if (renamed !== value) localChanged = true;
+      if (!next.includes(renamed)) next.push(renamed);
+    }
+    if (localChanged || next.length !== state[key].length) {
+      state[key] = next;
+      changed = true;
+    }
+  }
+
+  const deepKeys = [
+    'matches',
+    'swissMatchHistory',
+    'swissMatchesArchive',
+    'groupMatchHistory',
+    'swissRanking',
+    'swissRankingArchive',
+    'stageResults',
+    'groupAssignments',
+    'doubleElimination',
+    'pointAwards',
+    'playerReports',
+    'currentLiveMatch',
+    'pendingLiveMatch',
+    'lastLiveMatch',
+    'lastResult',
+    'swissRollbackSnapshots',
+  ];
+  for (const key of deepKeys) {
+    if (state[key] == null) continue;
+    const next = replaceExactStringsDeep(state[key], from, to);
+    if (next.changed) {
+      state[key] = next.value;
+      changed = true;
+    }
+  }
+
+  if (state._dropAfterRound && typeof state._dropAfterRound === 'object') {
+    const next = replaceExactStringsDeep(state._dropAfterRound, from, to);
+    if (next.changed) {
+      state._dropAfterRound = next.value;
+      changed = true;
+    }
+  }
+
+  if (Array.isArray(state.entrants)) {
+    state.entrants = state.entrants.map(entrant => {
+      if (!entrant || entrant.displayName !== from) return entrant;
+      changed = true;
+      return entrantsCore.normalizeEntrant({ ...entrant, displayName: to, updatedAt: Date.now() });
+    });
+  }
+
+  return changed;
+}
+
+function syncPlayerProfileRecordInState(state = {}, playerId, displayName, options = {}) {
+  const id = String(playerId || '').trim();
+  const name = String(displayName || '').trim();
+  if (!id || !name) return false;
+  if (!state.playerProfiles || typeof state.playerProfiles !== 'object') state.playerProfiles = {};
+  const profiles = state.playerProfiles;
+  const removeOtherNames = options.removeOtherNames !== false;
+  const displayNameSource = normalizeDisplayNameSourceValue(options.displayNameSource, 'profile');
+  const existingTarget = profiles[name] || {};
+  if (existingTarget.globalProfileId && existingTarget.globalProfileId !== id) {
+    throw new Error(`player displayName already used in tournament: ${name}`);
+  }
+
+  const matchingEntries = [];
+  if (removeOtherNames) {
+    for (const [key, entry] of Object.entries(profiles)) {
+      if (key === name) continue;
+      if (entry && entry.globalProfileId === id) {
+        matchingEntries.push({ key, entry });
+        delete profiles[key];
+      }
+    }
+  }
+
+  const localPlayerId = existingTarget.playerId
+    || matchingEntries.find(item => item.entry?.playerId)?.entry.playerId
+    || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  profiles[name] = {
+    ...matchingEntries.reduce((acc, item) => ({ ...acc, ...(item.entry || {}) }), {}),
+    ...existingTarget,
+    playerId: localPlayerId,
+    name,
+    globalProfileId: id,
+    rankedEligible: true,
+    displayNameSource,
+  };
+  return matchingEntries.length > 0
+    || existingTarget.name !== name
+    || existingTarget.globalProfileId !== id
+    || existingTarget.displayNameSource !== displayNameSource;
+}
+
+function syncPlayerProfileDisplayNameInState(state = {}, playerId, nextDisplayName, fallbackNames = []) {
+  const id = String(playerId || '').trim();
+  const nextName = String(nextDisplayName || '').trim();
+  if (!state || !id || !nextName) return false;
+  assertTournamentDisplayNameAvailableForProfile(state, id, nextName);
+
+  const names = collectProfileControlledNamesInState(state, id, fallbackNames);
+  let changed = false;
+  for (const oldName of names) {
+    if (oldName !== nextName) changed = replacePlayerNameInState(state, oldName, nextName) || changed;
+  }
+
+  let profileRecordSeed = null;
+  if (state.playerProfiles && typeof state.playerProfiles === 'object') {
+    for (const oldName of names) {
+      if (oldName === nextName) continue;
+      const entry = state.playerProfiles[oldName];
+      if (entry && entry.globalProfileId === id && profileEntryUsesProfileName(entry)) {
+        profileRecordSeed = profileRecordSeed || entry;
+        delete state.playerProfiles[oldName];
+        changed = true;
+      }
+    }
+    if (profileRecordSeed && !state.playerProfiles[nextName]) {
+      state.playerProfiles[nextName] = {
+        ...profileRecordSeed,
+        name: nextName,
+      };
+      changed = true;
+    }
+  }
+
+  const entrants = entrantsCore.migrateLegacyEntrants(state);
+  const boundEntrants = entrants.filter(entrant => entrant.profileId === id);
+  const hasProfileControlledEntrant = boundEntrants.some(entrantUsesProfileName);
+  if (boundEntrants.length > 0) {
+    state.entrants = entrants.map(entrant => {
+      if (entrant.profileId !== id) return entrant;
+      const shouldFollowProfileName = entrantUsesProfileName(entrant);
+      const displayName = shouldFollowProfileName ? nextName : entrant.displayName;
+      const displayNameSource = shouldFollowProfileName ? 'profile' : 'custom';
+      if (
+        entrant.displayName === displayName
+        && entrant.displayNameSource === displayNameSource
+        && entrant.entryType === 'registered'
+        && entrant.rankedEligible
+      ) return entrant;
+      changed = true;
+      return entrantsCore.normalizeEntrant({
+        ...entrant,
+        displayName,
+        displayNameSource,
+        entryType: 'registered',
+        rankedEligible: true,
+        updatedAt: Date.now(),
+      });
+    });
+    if (!Array.isArray(state.players)) state.players = [];
+    if (hasProfileControlledEntrant && !state.players.includes(nextName)) {
+      state.players.push(nextName);
+      changed = true;
+    }
+  }
+
+  if (hasProfileControlledEntrant || names.size > 0) {
+    changed = syncPlayerProfileRecordInState(state, id, nextName, {
+      removeOtherNames: false,
+      displayNameSource: 'profile',
+    }) || changed;
+  }
+  for (const entrant of boundEntrants) {
+    if (entrantUsesProfileName(entrant)) continue;
+    changed = syncPlayerProfileRecordInState(state, id, entrant.displayName, {
+      removeOtherNames: false,
+      displayNameSource: 'custom',
+    }) || changed;
+  }
+
+  return changed;
+}
+
+function syncPlayerProfileDisplayNameAcrossTournaments(playerId, nextDisplayName, fallbackNames = []) {
+  const id = String(playerId || '').trim();
+  const nextName = String(nextDisplayName || '').trim();
+  if (!id || !nextName) return { changed: false, tournaments: [] };
+  const changedTournamentIds = [];
+
+  if (currentState && currentState._id && syncPlayerProfileDisplayNameInState(currentState, id, nextName, fallbackNames)) {
+    _dropped = new Set(currentState._dropped || []);
+    saveState();
+    saveCurrentAsCache();
+    changedTournamentIds.push(currentState._id);
+  }
+
+  for (const item of tournamentStore.list()) {
+    if (currentState && currentState._id === item.id) continue;
+    const raw = tournamentStore.load(item.id);
+    if (!raw) continue;
+    const restored = restoreState({ ...raw, _id: raw._id || item.id });
+    if (!syncPlayerProfileDisplayNameInState(restored, id, nextName, fallbackNames)) continue;
+    const serialized = stateCore.serializeState(restored);
+    tournamentStore.save(item.id, serialized);
+    tournaments.set(item.id, serialized);
+    changedTournamentIds.push(item.id);
+  }
+
+  if (changedTournamentIds.length > 0) invalidateDerivedCaches();
+  return { changed: changedTournamentIds.length > 0, tournaments: changedTournamentIds };
 }
 
 function getGlobalPlayerProfileReferences(playerId) {
@@ -310,6 +696,10 @@ function updateGlobalPlayerProfile(playerId, patch = {}) {
   if (!current) return null;
   const nextDisplayName = String(patch.displayName || patch.name || current.displayName || '').trim();
   if (!nextDisplayName) throw new Error('missing player displayName');
+  assertGlobalPlayerDisplayNameAvailable(nextDisplayName, current.id);
+  if (current.displayName !== nextDisplayName) {
+    assertProfileRenameCanSyncAcrossTournaments(current.id, nextDisplayName);
+  }
   const sourceAliases = Array.isArray(patch.aliases) ? patch.aliases : current.aliases;
   const aliases = new Set((Array.isArray(sourceAliases) ? sourceAliases : [])
     .map(value => String(value || '').trim())
@@ -326,7 +716,14 @@ function updateGlobalPlayerProfile(playerId, patch = {}) {
     stats: current.stats || {},
   });
   updated.createdAt = current.createdAt || updated.createdAt;
-  return savePlayerProfile(updated);
+  const saved = savePlayerProfile(updated);
+  if (current.displayName !== nextDisplayName) {
+    syncPlayerProfileDisplayNameAcrossTournaments(current.id, nextDisplayName, [
+      current.displayName,
+      ...(Array.isArray(current.aliases) ? current.aliases : []),
+    ]);
+  }
+  return saved;
 }
 
 function deleteGlobalPlayerProfile(playerId) {
@@ -710,6 +1107,7 @@ function pushSwissRollbackSnapshot(reason) {
 function clearSwissRoundTransientState() {
   clearResultTimer();
   currentState.currentLiveMatch = null;
+  currentState.pendingLiveMatch = null;
   currentState.lastLiveMatch = null;
   currentState.lastResult = null;
   currentState.overlayState = 'overview';
@@ -1423,6 +1821,7 @@ function exportTournamentReportFile(state = currentState) {
     sanitizeFilePart,
     buildTournamentReportData,
     pythonBin: PYTHON_BIN,
+    fontCandidates: getPdfFontCandidates(),
   });
 }
 
@@ -1434,6 +1833,7 @@ function exportPlayerReportFile(playerName, state = currentState) {
     sanitizeFilePart,
     buildPlayerReportData,
     pythonBin: PYTHON_BIN,
+    fontCandidates: getPdfFontCandidates(),
   });
 }
 
@@ -1475,6 +1875,7 @@ function buildClientState(state = currentState) {
     swissRanking: state.swissRanking,
     swissRounds: state.swissRounds,
     currentLiveMatch: state.currentLiveMatch,
+    pendingLiveMatch: state.pendingLiveMatch || null,
     lastLiveMatch: state.lastLiveMatch || null,
     lastResult: state.lastResult || null,
     overlayState: state.overlayState,
@@ -1569,21 +1970,29 @@ function getPlayerProfileByName(playerName) {
   return currentState.playerProfiles ? currentState.playerProfiles[playerName] || null : null;
 }
 
-function bindTournamentPlayerToGlobalProfile(playerName, globalProfileId) {
+function bindTournamentPlayerToGlobalProfile(playerName, globalProfileId, options = {}) {
   const name = String(playerName || '').trim();
   const profile = getGlobalPlayerProfileById(globalProfileId);
   if (!name || !profile || !currentState.players.includes(name)) return null;
   if (!currentState.playerProfiles) currentState.playerProfiles = {};
   const existing = currentState.playerProfiles[name] || {};
+  const displayNameSource = normalizeDisplayNameSourceValue(
+    options.displayNameSource || existing.displayNameSource,
+    name === profile.displayName ? 'profile' : 'custom',
+  );
   currentState.playerProfiles[name] = {
     ...existing,
     playerId: existing.playerId || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     name,
     globalProfileId: profile.id,
     rankedEligible: true,
+    displayNameSource,
   };
   const existingEntrant = getEntrantByName(name) || createGuestTournamentEntrant(name, 'manual_binding');
-  upsertTournamentEntrant(entrantsCore.bindEntrantToProfile(existingEntrant, profile));
+  upsertTournamentEntrant(entrantsCore.bindEntrantToProfile({
+    ...existingEntrant,
+    displayNameSource,
+  }, profile));
   return currentState.playerProfiles[name];
 }
 
@@ -1606,12 +2015,18 @@ function createTournamentEntrant(input = {}) {
     : null;
   const profileId = explicitProfileId || matchedProfile?.id || (!hasProfileIdInput ? existingProfile.globalProfileId : null) || null;
   const entrySource = matchedProfile ? `${source}_bound_profile` : source;
+  const profile = profileId ? getGlobalPlayerProfileById(profileId) : null;
+  const displayNameSource = normalizeDisplayNameSourceValue(
+    input.displayNameSource || existingProfile.displayNameSource,
+    profile && name === profile.displayName ? 'profile' : (profile ? 'custom' : 'manual'),
+  );
   currentState.playerProfiles[name] = {
     ...existingProfile,
     playerId: existingProfile.playerId || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     name,
     globalProfileId: profileId,
     rankedEligible: !!profileId || existingProfile.rankedEligible === true,
+    displayNameSource,
   };
   const entrant = entrantType === 'team'
     ? entrantsCore.createTeamEntrant({
@@ -1621,6 +2036,7 @@ function createTournamentEntrant(input = {}) {
         profileId,
         rankedEligible: !!profileId,
         source: entrySource,
+        displayNameSource,
       })
     : entrantsCore.createGuestEntrant({
         tournamentId: currentState._id,
@@ -1630,6 +2046,7 @@ function createTournamentEntrant(input = {}) {
   return upsertTournamentEntrant({
     ...entrant,
     profileId: profileId || entrant.profileId,
+    displayNameSource,
     entryType: profileId ? 'registered' : entrant.entryType,
     rankedEligible: !!profileId || entrant.rankedEligible,
   });
@@ -1667,6 +2084,7 @@ function updateTournamentEntrant(entrantId, patch = {}) {
       name: newName,
       globalProfileId: updated.profileId,
       rankedEligible: updated.rankedEligible,
+      displayNameSource: updated.displayNameSource || 'custom',
     };
   }
   return updated;
@@ -1676,7 +2094,14 @@ function bindTournamentEntrantToGlobalProfile(entrantId, globalProfileId) {
   const profile = getGlobalPlayerProfileById(globalProfileId);
   const entrant = entrantsCore.findEntrantById(ensureEntrantsList(), entrantId);
   if (!profile || !entrant) return null;
-  const boundEntrant = upsertTournamentEntrant(entrantsCore.bindEntrantToProfile(entrant, profile));
+  const displayNameSource = normalizeDisplayNameSourceValue(
+    entrant.displayNameSource,
+    entrant.displayName === profile.displayName ? 'profile' : 'custom',
+  );
+  const boundEntrant = upsertTournamentEntrant(entrantsCore.bindEntrantToProfile({
+    ...entrant,
+    displayNameSource,
+  }, profile));
   const name = boundEntrant.displayName;
   if (!currentState.players.includes(name)) currentState.players.push(name);
   if (!currentState.playerProfiles) currentState.playerProfiles = {};
@@ -1687,6 +2112,7 @@ function bindTournamentEntrantToGlobalProfile(entrantId, globalProfileId) {
     name,
     globalProfileId: profile.id,
     rankedEligible: true,
+    displayNameSource,
   };
   return boundEntrant;
 }
@@ -2187,6 +2613,9 @@ registerRoutes(app, {
   express,
   path,
   PUBLIC_DIR,
+  FONTS_DIR,
+  getActiveFontConfig,
+  getPdfFontCandidates,
   sendTournamentPage,
   syncTournamentRequest,
   buildClientState,
@@ -2276,7 +2705,7 @@ function startServer({ port = PORT, host = '0.0.0.0' } = {}) {
     buildClientState,
   });
   server.listen(port, host, () => {
-    console.log(`3.2.0 server running on ${getPublicBaseUrl()}`);
+    console.log(`3.3.0 server running on ${getPublicBaseUrl()}`);
   });
   return server;
 }
