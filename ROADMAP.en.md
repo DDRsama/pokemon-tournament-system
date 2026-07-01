@@ -124,6 +124,29 @@ Theme: fixes from the first real-world tournament usage
 - Fixed issues found during live usage around admin misclick protection, waiting opponents, BO3 / BO5, Top Cut, points awards, reports, and i18n.
 - Updated public font packaging, with PDF reports embedding bundled open-source static Noto Sans SC / JP Medium fonts on the server side.
 
+## Version 3.3.2
+
+Status: released
+
+Theme: multilingual text, fonts, and final placement fixes
+
+### Main Updates
+
+- Fixed dynamic UI text that could remain in Chinese after switching languages.
+- PDF reports now use the selected report language and matching language font folders.
+- Fixed final placement labels for Swiss + Top Cut, group stages, and pure elimination events.
+
+## Version 3.3.3
+
+Status: released
+
+Theme: PDF report multilingual font fallback fix
+
+### Main Updates
+
+- Fixed missing Chinese glyphs in PDF reports when a Japanese font is preferred.
+- Fixed leftover Chinese stage suffixes in English and Japanese PDF reports.
+
 ## Version 3.x
 
 Theme: theme system and expanded formats

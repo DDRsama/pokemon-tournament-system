@@ -49,7 +49,7 @@ test('buildTournamentReportData localizes English and Japanese report text', () 
     ],
     stages: [
       { id: 'stage_swiss_1', name: '瑞士轮阶段', type: 'swiss', matchRules: { bestOf: 1, scoreMode: 'match', allowDraw: true } },
-      { id: 'stage_top_cut_1', name: '淘汰赛：单败淘汰', type: 'single_elimination', matchRules: { bestOf: 3, scoreMode: 'games', allowDraw: false }, elimination: { bracketSize: 4, bronzeMatch: false } },
+      { id: 'stage_top_cut_1', name: '淘汰赛阶段', type: 'single_elimination', matchRules: { bestOf: 3, scoreMode: 'games', allowDraw: false }, elimination: { bracketSize: 4, bronzeMatch: false } },
     ],
     stageResults: {
       stage_top_cut_1: { standings: [{ rank: 1, player: 'A' }, { rank: 2, player: 'B' }] },
@@ -64,6 +64,7 @@ test('buildTournamentReportData localizes English and Japanese report text', () 
   const en = buildTournamentReportData(state, { language: 'en' });
   assert.equal(en.labels.stagesTitle, 'Tournament Stages');
   assert.equal(en.stages[0].name, 'Swiss Stage');
+  assert.equal(en.stages[1].name, 'Playoffs Stage');
   assert.equal(en.stages[1].type, 'Single Elimination');
   assert.equal(en.top8Rounds[0].label, 'Semifinals');
   assert.equal(en.top8Rounds[0].matches[0].tableLabel, '1 (TV)');
@@ -73,6 +74,7 @@ test('buildTournamentReportData localizes English and Japanese report text', () 
   const ja = buildTournamentReportData(state, { language: 'ja' });
   assert.equal(ja.labels.stagesTitle, '大会ステージ');
   assert.equal(ja.stages[0].name, 'スイスステージ');
+  assert.equal(ja.stages[1].name, '決勝ステージ');
   assert.equal(ja.top8Rounds[0].label, '準決勝');
   assert.equal(ja.top8Rounds[0].matches[0].tableLabel, '1（配信卓）');
 });

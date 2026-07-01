@@ -2722,7 +2722,7 @@ function startServer({ port = PORT, host = '0.0.0.0' } = {}) {
     buildClientState,
   });
   server.listen(port, host, () => {
-    console.log(`3.3.2 server running on ${getPublicBaseUrl()}`);
+    console.log(`3.3.3 server running on ${getPublicBaseUrl()}`);
   });
   return server;
 }

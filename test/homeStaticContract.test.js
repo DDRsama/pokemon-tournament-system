@@ -105,7 +105,7 @@ test('player-facing chrome shows the 3.3 release version label', () => {
     'public/player-center/index.html',
   ].forEach(relativePath => {
     const html = readUtf8(relativePath);
-    assert.equal(html.includes('<div class="version">3.3.2</div>'), true, `${relativePath} should expose current release label`);
+    assert.equal(html.includes('<div class="version">3.3.3</div>'), true, `${relativePath} should expose current release label`);
     assert.equal(html.includes('<div class="version">3.1-beta</div>'), false, `${relativePath} should not expose stale beta label`);
     assert.equal(html.includes('<div class="version">3.0-beta</div>'), false, `${relativePath} should not expose stale beta label`);
   });
