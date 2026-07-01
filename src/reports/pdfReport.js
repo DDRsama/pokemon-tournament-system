@@ -22,6 +22,10 @@ report_type = payload.get("type")
 target_path = payload["targetPath"]
 data = payload["data"]
 font_candidates = payload.get("fontCandidates", [])
+labels = data.get("labels", {})
+
+def label(key, fallback):
+    return labels.get(key, fallback)
 
 def normalize_font_name(font_path):
     base = os.path.splitext(os.path.basename(font_path))[0]
@@ -72,22 +76,30 @@ story = []
 
 if report_type == "tournament":
     story.append(Paragraph(data["tournamentName"], styles["TitleCN"]))
-    story.append(Paragraph("导出时间：{}".format(data["generatedAt"]), styles["MetaCN"]))
+    story.append(Paragraph("{}{}".format(label("exportedAt", "导出时间："), data["generatedAt"]), styles["MetaCN"]))
     story.append(Spacer(1, 6))
 
     stages = data.get("stages", [])
     if stages:
         story.append(Spacer(1, 8))
-        story.append(Paragraph("赛事阶段", styles["HeadingCN"]))
-        stage_rows = [["顺序", "阶段", "类型", "规则", "状态"]]
+        story.append(Paragraph(label("stagesTitle", "赛事阶段"), styles["HeadingCN"]))
+        stage_rows = [[label("order", "顺序"), label("stage", "阶段"), label("type", "类型"), label("rules", "规则"), label("status", "状态")]]
         for stage in stages:
             stage_rows.append([stage.get("order", ""), stage.get("name", ""), stage.get("type", ""), stage.get("rules", ""), stage.get("status", "")])
         story.append(make_table(stage_rows, [14*mm, 42*mm, 28*mm, 58*mm, 24*mm]))
 
+    if data.get("finalPlacements"):
+        story.append(Spacer(1, 8))
+        story.append(Paragraph(label("finalResultsTitle", "最终成绩"), styles["HeadingCN"]))
+        final_rows = [[label("rank", "名次"), label("player", "选手"), label("result", "结果")]]
+        for row in data.get("finalPlacements", []):
+            final_rows.append([row.get("rankLabel") or row.get("rank", ""), row.get("player", ""), row.get("result", "")])
+        story.append(make_table(final_rows, [28*mm, 72*mm, 72*mm]))
+
     if data.get("ranking"):
         story.append(Spacer(1, 8))
-        story.append(Paragraph("瑞士轮总排名", styles["HeadingCN"]))
-        ranking_rows = [["名次", "选手", "战绩", "积分", "对手胜率", "对手的对手胜率", "备注"]]
+        story.append(Paragraph(label("swissRankingTitle", "瑞士轮总排名"), styles["HeadingCN"]))
+        ranking_rows = [[label("rank", "名次"), label("player", "选手"), label("record", "战绩"), label("points", "积分"), label("omw", "对手胜率"), label("oow", "对手的对手胜率"), label("note", "备注")]]
         for row in data.get("ranking", []):
             ranking_rows.append([row["rank"], row["player"], row["record"], row["points"], row["omw"], row["oow"], row["note"]])
         story.append(make_table(ranking_rows, [16*mm, 46*mm, 22*mm, 16*mm, 24*mm, 28*mm, 24*mm]))
@@ -95,17 +107,17 @@ if report_type == "tournament":
     for page in data.get("swissRounds", []):
         story.append(PageBreak())
         story.append(Paragraph(page["label"], styles["HeadingCN"]))
-        rows = [["桌号", "选手A", "选手B", "结果"]]
+        rows = [[label("table", "桌号"), label("playerA", "选手A"), label("playerB", "选手B"), label("result", "结果")]]
         for match in page.get("matches", []):
             rows.append([match["tableLabel"], match["p1"], match["p2"], match["result"]])
         story.append(make_table(rows, [20*mm, 60*mm, 60*mm, 34*mm]))
 
     if data.get("top8Rounds"):
         story.append(PageBreak())
-        story.append(Paragraph("淘汰赛", styles["HeadingCN"]))
+        story.append(Paragraph(label("eliminationTitle", "淘汰赛"), styles["HeadingCN"]))
         for group in data.get("top8Rounds", []):
             story.append(Paragraph(group["label"], styles["BodyCN"]))
-            rows = [["桌号", "选手A", "选手B", "结果"]]
+            rows = [[label("table", "桌号"), label("playerA", "选手A"), label("playerB", "选手B"), label("result", "结果")]]
             for match in group.get("matches", []):
                 rows.append([match["tableLabel"], match["p1"], match["p2"], match["result"]])
             story.append(make_table(rows, [20*mm, 60*mm, 60*mm, 34*mm]))
@@ -113,26 +125,26 @@ if report_type == "tournament":
 
     if data.get("pointAwards"):
         story.append(PageBreak())
-        story.append(Paragraph("积分发放", styles["HeadingCN"]))
-        rows = [["名次", "选手", "参赛分", "名次分", "倍率", "总分"]]
+        story.append(Paragraph(label("pointAwardsTitle", "积分发放"), styles["HeadingCN"]))
+        rows = [[label("rank", "名次"), label("player", "选手"), label("participationPoints", "参赛分"), label("placementPoints", "名次分"), label("multiplier", "倍率"), label("totalPoints", "总分")]]
         for award in data.get("pointAwards", []):
             rows.append([award.get("rank", ""), award.get("displayName", ""), award.get("participationPoints", 0), award.get("placementPoints", 0), award.get("multiplier", 1), award.get("points", 0)])
         story.append(make_table(rows, [16*mm, 52*mm, 22*mm, 22*mm, 20*mm, 22*mm]))
 
 elif report_type == "player":
-    story.append(Paragraph("{} - 个人战报".format(data["tournamentName"]), styles["TitleCN"]))
-    story.append(Paragraph("导出时间：{}".format(data["generatedAt"]), styles["MetaCN"]))
+    story.append(Paragraph(data.get("reportTitle") or "{} - 个人战报".format(data["tournamentName"]), styles["TitleCN"]))
+    story.append(Paragraph("{}{}".format(label("exportedAt", "导出时间："), data["generatedAt"]), styles["MetaCN"]))
     story.append(Spacer(1, 6))
     meta_rows = [
-        ["选手", data["playerName"], "最终结果", data["finalStatus"]],
-        ["战绩", data["record"], "积分", data["points"]],
-        ["瑞士轮排名", data["swissRank"] if data["swissRank"] is not None else "-", "对手胜率", data["omw"] if data["omw"] is not None else "-"],
-        ["对手的对手胜率", data["oow"] if data["oow"] is not None else "-", "", ""],
+        [label("player", "选手"), data["playerName"], label("finalResult", "最终结果"), data["finalStatus"]],
+        [label("record", "战绩"), data["record"], label("points", "积分"), data["points"]],
+        [label("swissRank", "瑞士轮排名"), data["swissRank"] if data["swissRank"] is not None else "-", label("omw", "对手胜率"), data["omw"] if data["omw"] is not None else "-"],
+        [label("oow", "对手的对手胜率"), data["oow"] if data["oow"] is not None else "-", "", ""],
     ]
-    story.append(make_table([["项目", "内容", "项目", "内容"], *meta_rows], [24*mm, 62*mm, 24*mm, 62*mm]))
+    story.append(make_table([[label("item", "项目"), label("content", "内容"), label("item", "项目"), label("content", "内容")], *meta_rows], [24*mm, 62*mm, 24*mm, 62*mm]))
     story.append(Spacer(1, 10))
-    story.append(Paragraph("个人对局记录", styles["HeadingCN"]))
-    history_rows = [["阶段", "桌号", "对手", "本轮前战绩", "结果", "详情"]]
+    story.append(Paragraph(label("personalHistoryTitle", "个人对局记录"), styles["HeadingCN"]))
+    history_rows = [[label("stage", "阶段"), label("table", "桌号"), label("opponent", "对手"), label("beforeRecord", "本轮前战绩"), label("result", "结果"), label("detail", "详情")]]
     for item in data.get("history", []):
         history_rows.append([
             item["stage"],

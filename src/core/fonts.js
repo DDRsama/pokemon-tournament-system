@@ -31,6 +31,7 @@ const DEFAULT_WEB_FONTS = {
 };
 
 const DEFAULT_PDF_FONTS = {
+  en: path.join('public', 'shared', 'fonts', 'InterVariable.woff2'),
   zh: path.join('public', 'shared', 'fonts', 'NotoSansSC-Medium.ttf'),
   ja: path.join('public', 'shared', 'fonts', 'NotoSansJP-Medium.ttf'),
   zhFallback: DEFAULT_WEB_FONTS.zh.pdfPath,
@@ -172,7 +173,7 @@ function withDefaultPath(font, rootDir) {
   if (!font) return font;
   if (font.path) return font;
   const role = normalizeLanguageRole(font === DEFAULT_WEB_FONTS.en ? 'en' : font === DEFAULT_WEB_FONTS.ja ? 'ja' : 'zh');
-  const pdfPath = role === 'ja' ? DEFAULT_PDF_FONTS.ja : (role === 'zh' ? DEFAULT_PDF_FONTS.zh : '');
+  const pdfPath = role === 'ja' ? DEFAULT_PDF_FONTS.ja : (role === 'zh' ? DEFAULT_PDF_FONTS.zh : DEFAULT_PDF_FONTS.en);
   return pdfPath ? { ...font, path: path.join(rootDir, pdfPath) } : font;
 }
 
@@ -195,6 +196,7 @@ function getActiveFontConfig({ fontsDir = '', rootDir = process.cwd() } = {}) {
     ja: languageFonts.ja || (!hasLanguageDirs ? legacyFonts.ja : null) || withDefaultPath(DEFAULT_WEB_FONTS.ja, rootDir),
   };
   const defaultPdfFonts = {
+    en: path.join(rootDir, DEFAULT_PDF_FONTS.en),
     zh: path.join(rootDir, DEFAULT_PDF_FONTS.zh),
     ja: path.join(rootDir, DEFAULT_PDF_FONTS.ja),
     zhFallback: path.join(rootDir, DEFAULT_PDF_FONTS.zhFallback),
@@ -215,10 +217,15 @@ function fontCandidatesForRole(config, role) {
   const order = normalizedRole === 'ja'
     ? ['ja', 'en', 'zh']
     : (normalizedRole === 'en' ? ['en', 'zh', 'ja'] : ['zh', 'en', 'ja']);
-  return order
+  const configured = order
     .map(item => config.fonts[item])
     .filter(font => font?.path && PDF_FONT_EXTENSIONS.test(font.path))
     .map(font => font.path);
+  const defaultPdf = config.defaultPdfFonts || {};
+  if (normalizedRole === 'en') configured.push(defaultPdf.en);
+  if (normalizedRole === 'ja') configured.push(defaultPdf.ja, defaultPdf.jaFallback);
+  if (normalizedRole === 'zh') configured.push(defaultPdf.zh, defaultPdf.zhFallback);
+  return configured;
 }
 
 function getPdfFontCandidates({ fontsDir = '', rootDir = process.cwd(), language = 'zh' } = {}) {

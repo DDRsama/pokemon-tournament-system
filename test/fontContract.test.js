@@ -72,6 +72,10 @@ test('font discovery prefers language folders and feeds language-aware PDF candi
   assert.equal(jaCandidates[0], path.join(dir, 'ja', 'UD-Kaku-Go-JP.ttf'));
   assert.equal(jaCandidates.indexOf(path.join(dir, 'ja', 'UD-Kaku-Go-JP.ttf')) < jaCandidates.indexOf(path.join(dir, 'zh', 'UD-Shin-Go-SC-R.ttf')), true);
 
+  const enCandidates = getPdfFontCandidates({ fontsDir: dir, rootDir: root, language: 'en' });
+  assert.equal(enCandidates[0], path.join(dir, 'en', 'Inter-Custom.ttf'));
+  assert.equal(enCandidates.includes(path.join(root, 'public/shared/fonts/InterVariable.woff2')), true);
+
   fs.rmSync(dir, { recursive: true, force: true });
 });
 

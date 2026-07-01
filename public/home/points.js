@@ -207,6 +207,7 @@ function openPointsDetail(id) {
     ['参赛分', `+${Number(profile.participationPoints || 0)} pt`],
     ['倍率', `x${Number(profile.eventTierMultiplier || 1)}`],
   ]) + placementRows;
+  translateHomeDynamic(els.detailBody);
   openModal(els.detailModal);
 }
 

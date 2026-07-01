@@ -207,6 +207,14 @@ function standingsForStage(s, stage) {
 }
 function finalStandingsForSidebar(s) {
   if (!isTournamentFinished(s)) return [];
+  if (Array.isArray(s.finalPlacements) && s.finalPlacements.length > 0) {
+    return s.finalPlacements
+      .filter(entry => entry && entry.player)
+      .map(entry => ({
+        ...entry,
+        rank: entry.rank !== null && entry.rank !== undefined && entry.rank !== '' && Number.isFinite(Number(entry.rank)) ? Number(entry.rank) : null,
+      }));
+  }
   return standingsForStage(s, finalResultStage(s))
     .filter(entry => entry && entry.player && Number.isFinite(Number(entry.rank)));
 }
@@ -437,6 +445,7 @@ function render(s) {
   renderStages(s);
   renderOverlay(s);
   removeLegacySwissControls();
+  window.PTSI18n?.translateNode?.(document.documentElement);
 }
 
 function removeLegacySwissControls() {

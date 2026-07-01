@@ -219,6 +219,7 @@ async function openProfileDetail(id) {
     ['别名', escHtml(Array.isArray(profile.aliases) && profile.aliases.length ? profile.aliases.join('、') : '-')],
     ['绑定', escHtml(Array.isArray(profile.bindings) ? profile.bindings.length : 0)],
   ]) + '<div class="detail-block">历史记录读取中</div>';
+  translateHomeDynamic(els.detailBody);
   openModal(els.detailModal);
   const summaryRes = await fetch(`/api/player-profiles/${encodeURIComponent(id)}/summary`).then(r => r.json()).catch(() => null);
   const summary = summaryRes && summaryRes.ok ? summaryRes.summary : null;
@@ -226,7 +227,7 @@ async function openProfileDetail(id) {
   const history = tournaments.length === 0
     ? '<div class="detail-block profile-history-block"><div class="detail-section-title">比赛历史</div>暂无比赛记录</div>'
     : `<div class="detail-block profile-history-block"><div class="detail-section-title">比赛历史</div>${tournaments.slice(0, 8).map(item => {
-      const rankLabel = item.rank ? `#${item.rank}` : '未排名';
+      const rankLabel = item.rankLabel || item.resultLabel || (item.rank ? `#${item.rank}` : '未排名');
       const metaParts = [
         item.leagueName || '未关联联赛',
         item.pointsProfileName || '未设置积分规则',
@@ -250,6 +251,7 @@ async function openProfileDetail(id) {
     ['计分记录', escHtml(summary ? summary.rankedEvents : 0)],
     ['别名', escHtml(Array.isArray(profile.aliases) && profile.aliases.length ? profile.aliases.join('、') : '-')],
   ]) + history;
+  translateHomeDynamic(els.detailBody);
 }
 
 Object.assign(window.PTSHome, { renderPlayers, setProfilePage, resetProfilePage, createPlayerProfile, openProfileEditor, submitProfileEdit, openProfileDelete, submitProfileDelete, openProfileDetail });

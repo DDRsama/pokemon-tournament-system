@@ -28,6 +28,7 @@ const matchesCore = require('./core/matches');
 const rulesCore = require('./core/rules');
 const presetsCore = require('./core/presets');
 const fontsCore = require('./core/fonts');
+const finalPlacementsCore = require('./core/finalPlacements');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 fs.mkdirSync(PLAYERS_DIR, { recursive: true });
@@ -1699,6 +1700,7 @@ function getTop8AwardForPlayer(playerName, state = currentState) {
 }
 
 function getPlayerCompletionStatus(playerName, state = currentState) {
+  const finalPlacement = finalPlacementsCore.finalPlacementForPlayer(state, playerName);
   const standings = (state.swissRankingArchive && state.swissRankingArchive.length > 0)
     ? state.swissRankingArchive
     : (state.swissRanking || []);
@@ -1717,29 +1719,32 @@ function getPlayerCompletionStatus(playerName, state = currentState) {
   const isGroupAdvancer = !!groupStageResult?.advancers?.includes(playerName);
 
   if (dropped) {
-    return { finished: true, reason: '退赛', award: top8Award || null, standing };
+    return { finished: true, reason: '退赛', award: top8Award || null, standing, finalPlacement };
   }
   if (top8Award) {
-    return { finished: true, reason: top8Award, award: top8Award, standing };
+    return { finished: true, reason: top8Award, award: top8Award, standing, finalPlacement };
   }
   if (state.phase === 'groups-ended' && groupStageResult) {
     return isGroupAdvancer
-      ? { finished: false, reason: null, award: null, standing }
-      : { finished: true, reason: '止步小组赛', award: null, standing };
+      ? { finished: false, reason: null, award: null, standing, finalPlacement }
+      : { finished: true, reason: finalPlacement?.resultLabel || '止步小组赛', award: null, standing, finalPlacement };
   }
   if (state.phase === 'top8' && !isTop8Player && !!standing) {
-    return { finished: true, reason: '止步瑞士轮', award: null, standing };
+    return { finished: true, reason: finalPlacement?.resultLabel || '止步瑞士轮', award: null, standing, finalPlacement };
   }
   if (state.phase === 'done' && !!standing) {
-    return { finished: true, reason: top8Award || (isTop8Player ? '淘汰赛结束' : '止步瑞士轮'), award: top8Award || null, standing };
+    return { finished: true, reason: top8Award || finalPlacement?.resultLabel || (isTop8Player ? '淘汰赛结束' : '止步瑞士轮'), award: top8Award || null, standing, finalPlacement };
   }
   if (reachedSwissSummary && !state.pendingTop8?.includes(playerName)) {
-    return { finished: true, reason: '止步瑞士轮', award: null, standing };
+    return { finished: true, reason: finalPlacement?.resultLabel || '止步瑞士轮', award: null, standing, finalPlacement };
   }
   if (isTop8Player && !hasPendingTop8Match && top8Matches.length > 0 && top8Matches.every(m => m.done)) {
-    return { finished: true, reason: top8Award || '淘汰赛结束', award: top8Award || null, standing };
+    return { finished: true, reason: top8Award || finalPlacement?.resultLabel || '淘汰赛结束', award: top8Award || null, standing, finalPlacement };
   }
-  return { finished: false, reason: null, award: null, standing };
+  if (state.phase === 'done' && finalPlacement) {
+    return { finished: true, reason: finalPlacement.resultLabel || '比赛结束', award: top8Award || null, standing, finalPlacement };
+  }
+  return { finished: false, reason: null, award: null, standing, finalPlacement };
 }
 
 function getSwissHistoryForReport(state = currentState) {
@@ -1802,15 +1807,15 @@ function mapHistoryItemForReport(match, playerName) {
   };
 }
 
-function buildTournamentReportData(state = currentState) {
-  return reportsData.buildTournamentReportData(state);
+function buildTournamentReportData(state = currentState, options = {}) {
+  return reportsData.buildTournamentReportData(state, options);
 }
 
-function buildPlayerReportData(playerName, state = currentState) {
+function buildPlayerReportData(playerName, state = currentState, options = {}) {
   return reportsData.buildPlayerReportData(playerName, state, {
     buildPlayerView,
     getPlayerCompletionStatus,
-  });
+  }, undefined, options);
 }
 
 function exportTournamentReportFile(state = currentState, options = {}) {
@@ -1819,9 +1824,10 @@ function exportTournamentReportFile(state = currentState, options = {}) {
     reportsDir: REPORTS_DIR,
     isTournamentFinished,
     sanitizeFilePart,
-    buildTournamentReportData,
+    buildTournamentReportData: targetState => buildTournamentReportData(targetState, options),
     pythonBin: PYTHON_BIN,
     fontCandidates: getPdfFontCandidates(options.language),
+    language: options.language,
   });
 }
 
@@ -1831,9 +1837,10 @@ function exportPlayerReportFile(playerName, state = currentState, options = {}) 
     state,
     reportsDir: REPORTS_DIR,
     sanitizeFilePart,
-    buildPlayerReportData,
+    buildPlayerReportData: (targetPlayer, targetState) => buildPlayerReportData(targetPlayer, targetState, options),
     pythonBin: PYTHON_BIN,
     fontCandidates: getPdfFontCandidates(options.language),
+    language: options.language,
   });
 }
 
@@ -1843,6 +1850,7 @@ function buildClientState(state = currentState) {
   const standings = getSortedStandings(true).map((entry, index) => ({ ...entry, rank: index + 1 }));
   const stageViewModels = stagesCore.getStages(state).map(stage => stagesCore.buildStageViewModel(state, stage.id));
   const activeStage = stagesCore.buildStageViewModel(state);
+  const finalPlacements = finalPlacementsCore.buildFinalPlacements(state);
   return {
     publicBaseUrl: getPublicBaseUrl(),
     tournamentId: state._id,
@@ -1881,6 +1889,7 @@ function buildClientState(state = currentState) {
     overlayState: state.overlayState,
     featuredSwissPlayers: state._featuredSwissPlayers || [],
     playerStandings: standings,
+    finalPlacements,
     droppedPlayers: [..._dropped],
     playerReports: state.playerReports || {},
   };
@@ -2173,15 +2182,16 @@ function getTournamentPointStageResult(state = currentState) {
 }
 
 function buildTournamentPointStandings(state = currentState) {
-  const finalResult = getTournamentPointStageResult(state);
-  if (finalResult) {
-    return finalResult.standings
-      .filter(entry => entry.player || entry.displayName)
-      .map((entry, index) => ({
-        rank: Number.isInteger(entry.rank) ? entry.rank : index + 1,
-        player: entry.player || entry.displayName,
-        displayName: entry.displayName || entry.player,
-      }));
+  const finalPlacements = finalPlacementsCore.buildFinalPlacements(state)
+    .filter(entry => entry.player || entry.displayName);
+  if (finalPlacements.length > 0) {
+    return finalPlacements.map(entry => ({
+      rank: entry.rank !== null && entry.rank !== undefined && entry.rank !== '' && Number.isFinite(Number(entry.rank)) ? Number(entry.rank) : null,
+      player: entry.player || entry.displayName,
+      displayName: entry.displayName || entry.player,
+      rankLabel: entry.rankLabel || '',
+      resultLabel: entry.resultLabel || '',
+    }));
   }
   if (stagesCore.getStages(state).length > 0) return [];
   const swissRanking = (state.swissRankingArchive && state.swissRankingArchive.length > 0)
@@ -2247,6 +2257,7 @@ function listAllTournamentPointAwards() {
 
 function buildTournamentPointAwardsForState(state, profile) {
   if (!state || !profile) return [];
+  if (!stateCore.isTournamentFinished(state)) return [];
   const standings = buildTournamentPointStandings(state);
   if (!standings.length) return [];
   const entrants = entrantsCore.migrateLegacyEntrants(state);
@@ -2352,8 +2363,9 @@ function buildGlobalPlayerSummary(playerId, options = {}) {
     const entrant = entrants.find(entry => entry.profileId === playerId);
     const awards = playerAwards.filter(award => award.tournamentId === item.id);
     if (!entrant && awards.length === 0) continue;
-    const finalResult = getFinalStageResult(raw);
-    const finalStanding = finalResult?.standings?.find(entry => entry.player === entrant?.displayName || entry.displayName === entrant?.displayName) || null;
+    const finalStanding = entrant
+      ? finalPlacementsCore.finalPlacementForPlayer(raw, entrant.displayName)
+      : null;
     const leagueNames = [...new Set(awards.map(award => award.leagueName).filter(Boolean))];
     const pointsProfileNames = [...new Set(awards.map(award => award.pointsProfileName).filter(Boolean))];
     tournaments.push({
@@ -2362,6 +2374,8 @@ function buildGlobalPlayerSummary(playerId, options = {}) {
       phase: raw.phase,
       entrantName: entrant?.displayName || awards[0]?.displayName || profile.displayName,
       rank: finalStanding?.rank || awards[0]?.rank || null,
+      rankLabel: finalStanding?.rankLabel || finalStanding?.resultLabel || '',
+      resultLabel: finalStanding?.resultLabel || '',
       points: awards.reduce((sum, award) => sum + Number(award.points || 0), 0),
       leagueName: leagueNames.join(' / '),
       pointsProfileName: pointsProfileNames.join(' / '),
@@ -2375,8 +2389,9 @@ function buildGlobalPlayerSummary(playerId, options = {}) {
     if (entrant || awards.length > 0) {
       const already = tournaments.some(item => item.tournamentId === currentState._id);
       if (!already) {
-        const finalResult = getFinalStageResult(currentState);
-        const finalStanding = finalResult?.standings?.find(entry => entry.player === entrant?.displayName || entry.displayName === entrant?.displayName) || null;
+        const finalStanding = entrant
+          ? finalPlacementsCore.finalPlacementForPlayer(currentState, entrant.displayName)
+          : null;
         const leagueNames = [...new Set(awards.map(award => award.leagueName).filter(Boolean))];
         const pointsProfileNames = [...new Set(awards.map(award => award.pointsProfileName).filter(Boolean))];
         tournaments.push({
@@ -2385,6 +2400,8 @@ function buildGlobalPlayerSummary(playerId, options = {}) {
           phase: currentState.phase,
           entrantName: entrant?.displayName || awards[0]?.displayName || profile.displayName,
           rank: finalStanding?.rank || awards[0]?.rank || null,
+          rankLabel: finalStanding?.rankLabel || finalStanding?.resultLabel || '',
+          resultLabel: finalStanding?.resultLabel || '',
           points: awards.reduce((sum, award) => sum + Number(award.points || 0), 0),
           leagueName: leagueNames.join(' / '),
           pointsProfileName: pointsProfileNames.join(' / '),
@@ -2705,7 +2722,7 @@ function startServer({ port = PORT, host = '0.0.0.0' } = {}) {
     buildClientState,
   });
   server.listen(port, host, () => {
-    console.log(`3.3.1 server running on ${getPublicBaseUrl()}`);
+    console.log(`3.3.2 server running on ${getPublicBaseUrl()}`);
   });
   return server;
 }

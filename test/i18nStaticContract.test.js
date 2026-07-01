@@ -246,6 +246,11 @@ test('core visible strings translate in English and Japanese', () => {
     ['12 人', '12 players', '12 人'],
     ['判定「皮卡丘」获胜', 'Set "皮卡丘" as winner', '「皮卡丘」の勝利にします'],
     ['更新小分为 2-1', 'Update score to 2-1', 'スコアを 2-1 に更新'],
+    ['瑞士轮 → 单败淘汰', 'Swiss → Single Elimination', 'スイスドロー → シングルエリミネーション'],
+    ['胜者组第 2 轮', 'Winners Round 2', '勝者側 第2ラウンド'],
+    ['联赛包含的比赛', 'Included Tournaments', 'リーグ内の大会'],
+    ['可加入比赛', 'Available Tournaments', '追加可能な大会'],
+    ['排行榜', 'Standings', '順位表'],
   ];
 
   cases.forEach(([source, en, ja]) => {
@@ -259,17 +264,17 @@ test('home management panels and toasts translate in English and Japanese', () =
   const cases = [
     ['联赛管理', 'League Management', 'リーグ管理'],
     ['新建档案', 'New Profile', 'プロフィール作成'],
-    ['积分规则管理', 'Points Rule Management', 'ポイントルール管理'],
+    ['积分规则管理', 'Scoring Rule Management', 'ポイント設定管理'],
     ['新建规则', 'New Rule', 'ルール作成'],
     ['编辑选手档案', 'Edit Player Profile', 'プレイヤープロフィール編集'],
-    ['编辑积分规则', 'Edit Points Rule', 'ポイントルール編集'],
+    ['编辑积分规则', 'Edit Scoring Rule', 'ポイント設定編集'],
     ['保存选手档案失败', 'Failed to save player profile', 'プレイヤープロフィール保存に失敗しました'],
-    ['保存积分规则失败', 'Failed to save points rule', 'ポイントルールの保存に失敗しました'],
+    ['保存积分规则失败', 'Failed to save scoring rule', 'ポイント設定の保存に失敗しました'],
     ['创建联赛失败', 'Failed to create league', 'リーグ作成に失敗しました'],
     ['联赛已创建', 'League created', 'リーグを作成しました'],
-    ['积分规则已创建', 'Points rule created', 'ポイントルールを作成しました'],
+    ['积分规则已创建', 'Scoring rule created', 'ポイント設定を作成しました'],
     ['选手档案已删除', 'Player profile deleted', 'プレイヤープロフィールを削除しました'],
-    ['选择积分规则', 'Select Points Rule', 'ポイントルール選択'],
+    ['选择积分规则', 'Select Scoring Rule', 'ポイント設定を選択'],
     ['？删除联赛不会删除源比赛。', '? Deleting the league will not delete source tournaments.', '？リーグを削除しても元の大会は削除されません。'],
   ];
 
@@ -285,7 +290,7 @@ test('admin and player static chrome labels translate with icons and short actio
     ['🎮赛事管理', '🎮 Tournament Admin', '🎮 大会管理'],
     ['🧩 阶段', '🧩 Stages', '🧩 ステージ'],
     ['📋 选手', '📋 Players', '📋 プレイヤー'],
-    ['📱 参赛端', '📱 Entrant Page', '📱 参加ページ'],
+    ['📱 参赛端', '📱 Registration Page', '📱 参加登録ページ'],
     ['OBS 设置', 'OBS Settings', 'OBS 設定'],
     ['等待比赛开始', 'Waiting for tournament start', '大会開始待ち'],
     ['直播房号', 'Live Room Code', '配信ルームコード'],
@@ -300,6 +305,26 @@ test('admin and player static chrome labels translate with icons and short actio
   });
 });
 
+test('player profile and entry wording avoids machine-translation artifacts', () => {
+  const runtime = loadRuntime('en');
+  const cases = [
+    ['返回主页', 'Home', 'ホーム'],
+    ['参赛身份', 'Tournament Entry', '大会エントリー'],
+    ['本机选手身份', 'Saved Player', 'この端末のプレイヤー情報'],
+    ['复制参赛入口', 'Copy Registration Link', '参加登録リンクをコピー'],
+    ['复制选手入口', 'Copy Player Portal Link', 'プレイヤーポータルリンクをコピー'],
+    ['已复制参赛入口链接', 'Registration link copied', '参加登録リンクをコピーしました'],
+    ['报名「月赛」。确认后会进入该比赛的选手页。', 'Register for "月赛". The tournament player page will open after confirmation.', '「月赛」に参加登録します。確認後、その大会のプレイヤーページが開きます。'],
+    ['为「皮卡丘」登记长期选手档案，并绑定当前比赛身份？', 'Create a long-term player profile for "皮卡丘" and link it to this tournament entry?', '「皮卡丘」の長期プロフィールを登録し、現在の大会エントリーに紐付けますか？'],
+  ];
+
+  cases.forEach(([source, en, ja]) => {
+    assert.equal(runtime.t(source, 'en'), en, source);
+    assert.equal(runtime.t(source, 'ja'), ja, source);
+    assert.equal(runtime.t(source, 'ja').includes('身份'), false, source);
+  });
+});
+
 test('dynamic translation preserves player names while translating UI shell text', () => {
   const runtime = loadRuntime('en');
   assert.equal(runtime.t('联调选手01', 'en'), '联调选手01');
@@ -307,6 +332,47 @@ test('dynamic translation preserves player names while translating UI shell text
     runtime.t('确认将「联调选手01」标记为退赛？', 'en'),
     'Mark "联调选手01" as dropped?',
   );
+});
+
+test('dynamic templates translate captured UI terms without touching player names', () => {
+  const runtime = loadRuntime('en');
+  const cases = [
+    [
+      '当前瑞士轮 5，点击下方按钮启动赛事阶段。',
+      'Current Swiss: 5. Use the button below to start the tournament stage.',
+      '現在のスイスドロー：5。下のボタンで大会ステージを開始します。',
+    ],
+    [
+      '瑞士轮尚未开始',
+      'Swiss has not started',
+      'スイスドローはまだ開始していません',
+    ],
+    [
+      '瑞士轮 · 第 2 轮 · 已完成',
+      'Swiss · Round 2 · Completed',
+      'スイスドロー · 第 2 ラウンド · 完了',
+    ],
+    [
+      '当前瑞士轮 · 第 2 轮 · 已完成',
+      'Current Swiss · Round 2 · Completed',
+      '現在のスイスドロー · 第 2 ラウンド · 完了',
+    ],
+    [
+      '恭喜获得本场比赛冠军',
+      'Congratulations: Champion',
+      'この大会の成績：優勝',
+    ],
+    [
+      '左侧联调选手01退赛',
+      'Left side 联调选手01 drop',
+      '左側 联调选手01 ドロップ',
+    ],
+  ];
+
+  cases.forEach(([source, en, ja]) => {
+    assert.equal(runtime.t(source, 'en'), en, source);
+    assert.equal(runtime.t(source, 'ja'), ja, source);
+  });
 });
 
 test('language switching reuses original text and tracks later dynamic text updates', () => {
@@ -332,11 +398,11 @@ test('language switching reuses original text and tracks later dynamic text upda
   runtime.translateNode(textNode);
   runtime.translateNode(input);
   assert.equal(textNode.nodeValue, 'Refresh');
-  assert.equal(input.getAttribute('placeholder'), 'Points rule name');
+  assert.equal(input.getAttribute('placeholder'), 'Scoring rule name');
 
   runtime.setLanguage('ja');
   assert.equal(textNode.nodeValue, '更新');
-  assert.equal(input.getAttribute('placeholder'), 'ポイントルール名');
+  assert.equal(input.getAttribute('placeholder'), 'ポイント設定名');
 
   runtime.setLanguage('zh-CN');
   assert.equal(textNode.nodeValue, '刷新');

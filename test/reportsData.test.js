@@ -38,6 +38,45 @@ test('buildTournamentReportData includes ranking and live table mark', () => {
   assert.equal(data.swissRounds[0].matches[0].tableLabel, '1（直播桌）');
 });
 
+test('buildTournamentReportData localizes English and Japanese report text', () => {
+  const state = {
+    tournamentName: 'Demo',
+    phase: 'done',
+    top8: ['A', 'B', 'C', 'D'],
+    swissRankingArchive: [
+      { rank: 1, player: 'A', wins: 2, draws: 0, losses: 0, points: 6, omw: 0.5, oow: 0.25 },
+      { rank: 5, player: 'E', wins: 1, draws: 0, losses: 1, points: 3, omw: 0.5, oow: 0.25 },
+    ],
+    stages: [
+      { id: 'stage_swiss_1', name: '瑞士轮阶段', type: 'swiss', matchRules: { bestOf: 1, scoreMode: 'match', allowDraw: true } },
+      { id: 'stage_top_cut_1', name: '淘汰赛：单败淘汰', type: 'single_elimination', matchRules: { bestOf: 3, scoreMode: 'games', allowDraw: false }, elimination: { bracketSize: 4, bronzeMatch: false } },
+    ],
+    stageResults: {
+      stage_top_cut_1: { standings: [{ rank: 1, player: 'A' }, { rank: 2, player: 'B' }] },
+    },
+    matches: [
+      { id: 'sf1', stageId: 'stage_top_cut_1', phase: 'Semi Finals', table: 1, p1: 'A', p2: 'C', winner: 'A', done: true, p1Wins: 2, p2Wins: 0, wasLive: true },
+      { id: 'sf2', stageId: 'stage_top_cut_1', phase: 'Semi Finals', table: 2, p1: 'B', p2: 'D', winner: 'B', done: true, p1Wins: 2, p2Wins: 1 },
+      { id: 'final', stageId: 'stage_top_cut_1', phase: 'Finals', table: 1, p1: 'A', p2: 'B', winner: 'A', done: true, p1Wins: 2, p2Wins: 1 },
+    ],
+  };
+
+  const en = buildTournamentReportData(state, { language: 'en' });
+  assert.equal(en.labels.stagesTitle, 'Tournament Stages');
+  assert.equal(en.stages[0].name, 'Swiss Stage');
+  assert.equal(en.stages[1].type, 'Single Elimination');
+  assert.equal(en.top8Rounds[0].label, 'Semifinals');
+  assert.equal(en.top8Rounds[0].matches[0].tableLabel, '1 (TV)');
+  assert.equal(en.top8Rounds[0].matches[0].result, 'A won, 2-0');
+  assert.equal(en.finalPlacements.find(entry => entry.player === 'E').result, 'Swiss Rank #5');
+
+  const ja = buildTournamentReportData(state, { language: 'ja' });
+  assert.equal(ja.labels.stagesTitle, '大会ステージ');
+  assert.equal(ja.stages[0].name, 'スイスステージ');
+  assert.equal(ja.top8Rounds[0].label, '準決勝');
+  assert.equal(ja.top8Rounds[0].matches[0].tableLabel, '1（配信卓）');
+});
+
 test('buildTournamentReportData includes generic elimination rounds', () => {
   const state = {
     tournamentName: 'Demo',

@@ -124,7 +124,7 @@ test('player-facing pages include the shared PTS header', () => {
     '<div class="brand">',
     '<img class="brand-mark" src="/shared/favicon.svg" alt="">',
     '<span class="brand-text">Pokemon Tournament System</span>',
-    '<div class="version">3.3.1</div>',
+    '<div class="version">3.3.2</div>',
   ];
 
   for (const token of headerTokens) {

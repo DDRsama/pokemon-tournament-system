@@ -260,6 +260,7 @@ async function openLeagueDetail(id) {
     ['包含比赛', escHtml(bindings.length)],
     ['最佳计分场次', escHtml(league.bestFinishLimit || '不限')],
   ]) + '<div class="detail-block">排行榜读取中</div>';
+  translateHomeDynamic(els.detailBody);
   openModal(els.detailModal);
   const leaderboardRes = await fetch(`/api/leagues/${encodeURIComponent(id)}/leaderboard`).then(r => r.json()).catch(() => null);
   const leaderboard = leaderboardRes && Array.isArray(leaderboardRes.leaderboard) ? leaderboardRes.leaderboard : [];
@@ -291,6 +292,7 @@ async function openLeagueDetail(id) {
       ${leaderboardRows}
     </div>
   `;
+  translateHomeDynamic(els.detailBody);
 }
 
 Object.assign(window.PTSHome, {

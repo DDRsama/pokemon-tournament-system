@@ -111,6 +111,10 @@ function escHtml(value) {
 }
 const escAttr = escHtml;
 
+function translateHomeDynamic(root = document.documentElement) {
+  window.PTSI18n?.translateNode?.(root);
+}
+
 function phaseLabel(phase) {
   return {
     setup: '准备中',
