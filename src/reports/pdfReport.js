@@ -25,14 +25,64 @@ target_path = payload["targetPath"]
 data = payload["data"]
 font_candidates = payload.get("fontCandidates", [])
 labels = data.get("labels", {})
+report_language = data.get("language") or payload.get("language") or ""
 
 def label(key, fallback):
     return labels.get(key, fallback)
+
+def normalize_language(value):
+    normalized = str(value or "").strip().lower()
+    if normalized in ("ja", "jp", "japanese") or normalized.startswith("ja-"):
+        return "ja"
+    if normalized in ("en", "english", "latin") or normalized.startswith("en-"):
+        return "en"
+    if normalized in ("zh", "zh-cn", "cn", "sc", "chinese", "hans") or normalized.startswith("zh-"):
+        return "zh"
+    return ""
+
+def infer_content_language():
+    explicit = normalize_language(report_language)
+    if explicit:
+        return explicit
+    probe_values = [
+        data.get("reportTitle", ""),
+        data.get("tournamentName", ""),
+        " ".join(str(value) for value in labels.values()),
+    ]
+    probe = " ".join(probe_values)
+    if re.search(r'[\\u3040-\\u30ff]', probe):
+        return "ja"
+    if re.search(r'[\\u4e00-\\u9fff]', probe):
+        return "zh"
+    return "en"
 
 def normalize_font_name(font_path):
     base = os.path.splitext(os.path.basename(font_path))[0]
     safe = re.sub(r'[^A-Za-z0-9_-]+', '-', base).strip('-')
     return safe or 'ReportFont'
+
+def infer_font_role(font_path):
+    lower = str(font_path or "").replace("\\\\", "/").lower()
+    basename = os.path.basename(lower)
+    parts = set(re.split(r'[/_.\\-\\s]+', lower))
+    if (
+        parts.intersection(("zh", "zh-cn", "cn", "sc", "chinese", "hans"))
+        or any(token in basename for token in ("sc", "zh", "cn", "chinese", "hans", "msyh", "simsun", "songti", "heiti"))
+    ):
+        return "zh"
+    if (
+        parts.intersection(("ja", "jp", "japanese", "japan"))
+        or any(token in basename for token in ("jp", "ja", "japanese", "japan", "kaku", "yugoth", "meiryo"))
+    ):
+        return "ja"
+    if (
+        parts.intersection(("en", "latin", "english"))
+        or any(token in basename for token in ("inter", "latin", "english"))
+    ):
+        return "en"
+    return ""
+
+content_language = infer_content_language()
 
 registered_fonts = []
 seen_font_paths = set()
@@ -54,12 +104,25 @@ for font_path in font_candidates:
         seen_font_names.add(candidate_name)
         registered_fonts.append({
             "name": candidate_name,
+            "role": infer_font_role(normalized_path),
             "coverage": set(font.face.charToGlyph.keys()),
         })
     except Exception:
         pass
 
-base_font_name = registered_fonts[0]["name"] if registered_fonts else "Helvetica"
+def choose_base_font():
+    role_order = {
+        "zh": ("zh", "en", "ja", ""),
+        "ja": ("ja", "en", "zh", ""),
+        "en": ("en", "zh", "ja", ""),
+    }.get(content_language, ("zh", "en", "ja", ""))
+    for role in role_order:
+        for font in registered_fonts:
+            if font["role"] == role:
+                return font["name"]
+    return registered_fonts[0]["name"] if registered_fonts else "Helvetica"
+
+base_font_name = choose_base_font()
 if not registered_fonts:
     try:
         pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
@@ -67,12 +130,47 @@ if not registered_fonts:
     except Exception:
         pass
 
-def font_for_char(char):
-    codepoint = ord(char)
+def is_han(codepoint):
+    return (
+        0x3400 <= codepoint <= 0x4DBF
+        or 0x4E00 <= codepoint <= 0x9FFF
+        or 0xF900 <= codepoint <= 0xFAFF
+        or 0x20000 <= codepoint <= 0x2A6DF
+        or 0x2A700 <= codepoint <= 0x2B73F
+        or 0x2B740 <= codepoint <= 0x2B81F
+        or 0x2B820 <= codepoint <= 0x2CEAF
+        or 0x2CEB0 <= codepoint <= 0x2EBEF
+    )
+
+def is_kana(codepoint):
+    return (
+        0x3040 <= codepoint <= 0x309F
+        or 0x30A0 <= codepoint <= 0x30FF
+        or 0x31F0 <= codepoint <= 0x31FF
+    )
+
+def find_font_for_char(codepoint, role_order):
+    for role in role_order:
+        for font in registered_fonts:
+            if font["role"] == role and codepoint in font["coverage"]:
+                return font["name"]
+    for font in registered_fonts:
+        if font["name"] == base_font_name and codepoint in font["coverage"]:
+            return font["name"]
     for font in registered_fonts:
         if codepoint in font["coverage"]:
             return font["name"]
     return base_font_name
+
+def font_for_char(char):
+    codepoint = ord(char)
+    if is_kana(codepoint):
+        return find_font_for_char(codepoint, ("ja", "zh", "en", ""))
+    if is_han(codepoint):
+        if content_language == "ja":
+            return find_font_for_char(codepoint, ("ja", "zh", "en", ""))
+        return find_font_for_char(codepoint, ("zh", "ja", "en", ""))
+    return find_font_for_char(codepoint, (content_language, "en", "zh", "ja", ""))
 
 def rich_text(value):
     text = "" if value is None else str(value)
@@ -216,11 +314,11 @@ print(target_path)
 `;
 }
 
-function runPythonReport({ pythonBin, reportsDir, reportType, data, targetPath, fontCandidates = [] }) {
+function runPythonReport({ pythonBin, reportsDir, reportType, data, targetPath, fontCandidates = [], language = '' }) {
   fs.mkdirSync(reportsDir, { recursive: true });
   const scriptPath = path.join(reportsDir, '_render_report.py');
   fs.writeFileSync(scriptPath, buildReportPythonSource(), 'utf8');
-  const payload = JSON.stringify({ type: reportType, data, targetPath, fontCandidates });
+  const payload = JSON.stringify({ type: reportType, data, targetPath, fontCandidates, language });
   const result = spawnSync(pythonBin, [scriptPath], {
     input: payload,
     encoding: 'utf8',
@@ -234,7 +332,7 @@ function runPythonReport({ pythonBin, reportsDir, reportType, data, targetPath, 
   return targetPath;
 }
 
-function exportTournamentReportFile({ state, reportsDir, pythonBin, isTournamentFinished, sanitizeFilePart, buildTournamentReportData, fontCandidates = [] }) {
+function exportTournamentReportFile({ state, reportsDir, pythonBin, isTournamentFinished, sanitizeFilePart, buildTournamentReportData, fontCandidates = [], language = '' }) {
   if (!isTournamentFinished(state)) return null;
   const fileName = `${sanitizeFilePart(state.tournamentName, 'tournament')}-report.pdf`;
   const targetPath = path.join(reportsDir, fileName);
@@ -245,11 +343,12 @@ function exportTournamentReportFile({ state, reportsDir, pythonBin, isTournament
     data: buildTournamentReportData(state),
     targetPath,
     fontCandidates,
+    language,
   });
   return targetPath;
 }
 
-function exportPlayerReportFile({ playerName, state, reportsDir, pythonBin, sanitizeFilePart, buildPlayerReportData, fontCandidates = [] }) {
+function exportPlayerReportFile({ playerName, state, reportsDir, pythonBin, sanitizeFilePart, buildPlayerReportData, fontCandidates = [], language = '' }) {
   const reportData = buildPlayerReportData(playerName, state);
   if (!reportData) return null;
   const fileName = `${sanitizeFilePart(state.tournamentName, 'tournament')}-${sanitizeFilePart(playerName, 'player')}-report.pdf`;
@@ -261,6 +360,7 @@ function exportPlayerReportFile({ playerName, state, reportsDir, pythonBin, sani
     data: reportData,
     targetPath,
     fontCandidates,
+    language,
   });
   return targetPath;
 }

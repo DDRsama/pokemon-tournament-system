@@ -147,6 +147,16 @@ Theme: PDF report multilingual font fallback fix
 - Fixed missing Chinese glyphs in PDF reports when a Japanese font is preferred.
 - Fixed leftover Chinese stage suffixes in English and Japanese PDF reports.
 
+## Version 3.3.4
+
+Status: released
+
+Theme: bug fixes
+
+### Main Update
+
+- Fixed several bugs.
+
 ## Version 3.x
 
 Theme: theme system and expanded formats

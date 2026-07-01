@@ -84,3 +84,41 @@ test('tournament pdf embeds fallback font for Chinese glyphs missing from Japane
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('Chinese tournament pdf prefers Chinese font even when Japanese candidate is first', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pts-report-font-language-'));
+  try {
+    const targetPath = path.join(dir, 'zh.pdf');
+    runPythonReport({
+      pythonBin: PYTHON_BIN,
+      reportsDir: dir,
+      reportType: 'tournament',
+      targetPath,
+      language: 'zh-CN',
+      fontCandidates: [
+        path.join(root, 'public/shared/fonts/NotoSansJP-Medium.ttf'),
+        path.join(root, 'public/shared/fonts/NotoSansSC-Medium.ttf'),
+      ],
+      data: {
+        language: 'zh-CN',
+        tournamentName: '中文战报字体测试',
+        generatedAt: '2026/07/01 20:00:00',
+        labels: {
+          exportedAt: '导出时间：',
+          finalResultsTitle: '最终成绩',
+          rank: '名次',
+          player: '选手',
+          result: '结果',
+        },
+        finalPlacements: [
+          { rankLabel: '冠军', player: '涩之律者', result: '冠军' },
+        ],
+      },
+    });
+    const pdf = fs.readFileSync(targetPath).toString('latin1');
+    assert.match(pdf, /NotoSansSC-Medium/);
+    assert.doesNotMatch(pdf, /NotoSansJP-Medium/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
