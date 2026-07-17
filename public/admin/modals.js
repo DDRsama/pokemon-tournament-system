@@ -19,6 +19,7 @@ function toast(message, type = '') {
 }
 
 function confirmAction(message, options = {}) {
+  const t = window.PTSI18n?.t || (value => value);
   const title = options.title || '确认操作';
   const okText = options.okText || '确认';
   const cancelText = options.cancelText || '取消';
@@ -39,10 +40,10 @@ function confirmAction(message, options = {}) {
     </div>
   `;
   document.body.appendChild(overlay);
-  overlay.querySelector('#adminConfirmTitle').textContent = title;
-  overlay.querySelector('#adminConfirmMessage').textContent = message || '';
-  overlay.querySelector('[data-confirm-cancel]').textContent = cancelText;
-  overlay.querySelector('[data-confirm-ok]').textContent = okText;
+  overlay.querySelector('#adminConfirmTitle').textContent = t(title);
+  overlay.querySelector('#adminConfirmMessage').textContent = t(message || '');
+  overlay.querySelector('[data-confirm-cancel]').textContent = t(cancelText);
+  overlay.querySelector('[data-confirm-ok]').textContent = t(okText);
 
   return new Promise(resolve => {
     const cleanup = value => {

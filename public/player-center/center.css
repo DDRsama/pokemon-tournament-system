@@ -235,6 +235,10 @@ h2 {
   background: #24344d;
 }
 
+.secondary-action:disabled {
+  opacity: 0.58;
+}
+
 .join-action {
   min-height: 32px;
   padding: 0 12px;

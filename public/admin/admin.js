@@ -181,6 +181,32 @@ function entrantRosterText(s, name) {
   if (!entrant || !Array.isArray(entrant.teamRoster) || entrant.teamRoster.length === 0) return '';
   return entrant.teamRoster.join(' / ');
 }
+function escJs(value) {
+  return String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+function entrantCheckInStats(s) {
+  const players = Array.isArray(s?.players) ? s.players : [];
+  const entrants = players.map(name => getEntrantByDisplayName(s, name)).filter(Boolean);
+  return {
+    checked: entrants.filter(entrant => entrant.checkedIn === true).length,
+    total: players.length,
+  };
+}
+async function togglePlayerCheckIn(entrantId, nextChecked) {
+  const targetId = String(entrantId || '').trim();
+  if (!targetId) return;
+  const payload = {
+    checkedIn: nextChecked === true,
+    checkedInAt: nextChecked === true ? Date.now() : null,
+    checkedInBy: nextChecked === true ? 'admin' : '',
+  };
+  const res = await apiMethod(tournamentApi(`/entrants/${encodeURIComponent(targetId)}`), 'PATCH', payload);
+  if (!res.ok) {
+    toast(res.message || res.err || '更新签到状态失败', 'error');
+    return;
+  }
+  if (res.state) render(res.state);
+}
 function hasStageType(s, type) {
   return getStages(s).some(stage => stage.type === type);
 }
@@ -417,7 +443,8 @@ function render(s) {
   renderQrInto('playerQrImage', playerEntryUrl);
 
   // 统计
-  document.getElementById('participantPanelTitle').innerHTML = `📋 ${label} <span id="playerCount" style="color:#94a3b8;">${n}</span>`;
+  const checkInStats = entrantCheckInStats(s);
+  document.getElementById('participantPanelTitle').innerHTML = `📋 ${label} <span id="playerCount" style="color:#94a3b8;">${n}</span><span id="checkInCount" class="checkin-count${s.phase === 'setup' && checkInStats.total > 0 ? '' : ' hidden'}">${checkInStats.checked}/${checkInStats.total} 已签到</span>`;
   document.getElementById('playerInput').placeholder = `${label}名称...`;
   document.getElementById('bulkAddBtn').textContent = `批量导入${label}`;
   document.getElementById('bulkModalTitle').textContent = `批量导入${label}`;
@@ -757,10 +784,16 @@ function renderPlayers(s, p8Set) {
     list.innerHTML = s.players.length === 0
       ? `<div class="empty-state"><div class="empty-state-icon">👥</div>暂无${label}</div>`
       : s.players.map(p => {
-          const esc = p.replace(/'/g, "\\'");
+          const esc = escJs(p);
           const isDropped = dropped.has(p);
+          const entrant = getEntrantByDisplayName(s, p);
+          const entrantId = entrant?.id || '';
+          const checkedIn = entrant?.checkedIn === true;
           const roster = entrantRosterText(s, p);
-          return `<div class="player-item${isDropped ? ' dropped' : ''}"><span class="rank">—</span><span class="name" title="${escAttr(p)}">${escHtml(p)}${roster ? `<small>${escHtml(roster)}</small>` : ''}</span>${isDropped ? '<span class="wd-badge">WD</span>' : ''}<button class="drop-btn" onclick="removePlayer('${esc}')" title="移除">×</button></div>`;
+          const checkInControl = entrantId
+            ? `<span class="checkin-badge ${checkedIn ? 'checked' : 'pending'}">${checkedIn ? '已签到' : '未签到'}</span><button class="checkin-btn ${checkedIn ? 'checked' : ''}" onclick="togglePlayerCheckIn('${escJs(entrantId)}', ${checkedIn ? 'false' : 'true'})" type="button">${checkedIn ? '取消' : '签到'}</button>`
+            : '';
+          return `<div class="player-item setup-player${checkedIn ? ' checked-in' : ''}${isDropped ? ' dropped' : ''}"><span class="rank">—</span><span class="name" title="${escAttr(p)}">${escHtml(p)}${roster ? `<small>${escHtml(roster)}</small>` : ''}</span>${checkInControl}${isDropped ? '<span class="wd-badge">WD</span>' : ''}<button class="drop-btn" onclick="removePlayer('${esc}')" title="移除">×</button></div>`;
          }).join('');
     return;
   }
@@ -1252,6 +1285,6 @@ window.addEventListener('pts-languagechange', () => {
 });
 apiGet('/state').then(state => { if (state && state.phase) render(state); });
 
-Object.assign(window.PTSAdmin, { setLive, setResult, setDraw, swapSeats, dropPlayerFromMatchAction, setBo3Score, roundStats, top8PhaseStats, eliminationPhaseLabel, wdlHtml, getRecord2, hasOpponent, getActiveStage, normalizeMatchRules, render, removeLegacySwissControls, stageTypeName, renderStages, renderPlayers, renderTop8Bracket, renderStageArena, renderStageArenaActions, matchCard, adjustScore, renderOverlay });
+Object.assign(window.PTSAdmin, { setLive, setResult, setDraw, swapSeats, dropPlayerFromMatchAction, setBo3Score, roundStats, top8PhaseStats, eliminationPhaseLabel, wdlHtml, getRecord2, hasOpponent, getActiveStage, normalizeMatchRules, render, removeLegacySwissControls, stageTypeName, renderStages, renderPlayers, renderTop8Bracket, renderStageArena, renderStageArenaActions, matchCard, adjustScore, renderOverlay, togglePlayerCheckIn });
 removeLegacySwissControls();
 flushPendingSocketState();

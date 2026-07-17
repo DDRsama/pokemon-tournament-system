@@ -22,6 +22,9 @@ function normalizeEntrant(raw = {}) {
   const teamRoster = Array.isArray(raw.teamRoster)
     ? raw.teamRoster.map(member => String(member || '').trim()).filter(Boolean)
     : [];
+  const checkedInAt = raw.checkedInAt === null || raw.checkedInAt === undefined || raw.checkedInAt === ''
+    ? null
+    : Number(raw.checkedInAt);
   return {
     id: raw.id || createEntrantId(raw.tournamentId, displayName),
     tournamentId: raw.tournamentId || null,
@@ -35,6 +38,10 @@ function normalizeEntrant(raw = {}) {
     rankedEligible: typeof raw.rankedEligible === 'boolean' ? raw.rankedEligible : !!raw.profileId,
     dropped: !!raw.dropped,
     dropAfterRound: typeof raw.dropAfterRound === 'number' ? raw.dropAfterRound : null,
+    checkedIn: raw.checkedIn === true,
+    checkedInAt: Number.isFinite(checkedInAt) ? checkedInAt : null,
+    checkedInBy: raw.checkedInBy ? String(raw.checkedInBy) : '',
+    checkInNote: raw.checkInNote ? String(raw.checkInNote) : '',
     createdAt: raw.createdAt || null,
     updatedAt: raw.updatedAt || null,
   };

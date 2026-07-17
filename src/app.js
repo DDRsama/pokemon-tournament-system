@@ -2373,6 +2373,8 @@ function buildGlobalPlayerSummary(playerId, options = {}) {
       tournamentName: raw.tournamentName || item.name || item.id,
       phase: raw.phase,
       entrantName: entrant?.displayName || awards[0]?.displayName || profile.displayName,
+      checkedIn: !!entrant?.checkedIn,
+      checkedInAt: entrant?.checkedInAt || null,
       rank: finalStanding?.rank || awards[0]?.rank || null,
       rankLabel: finalStanding?.rankLabel || finalStanding?.resultLabel || '',
       resultLabel: finalStanding?.resultLabel || '',
@@ -2399,6 +2401,8 @@ function buildGlobalPlayerSummary(playerId, options = {}) {
           tournamentName: currentState.tournamentName,
           phase: currentState.phase,
           entrantName: entrant?.displayName || awards[0]?.displayName || profile.displayName,
+          checkedIn: !!entrant?.checkedIn,
+          checkedInAt: entrant?.checkedInAt || null,
           rank: finalStanding?.rank || awards[0]?.rank || null,
           rankLabel: finalStanding?.rankLabel || finalStanding?.resultLabel || '',
           resultLabel: finalStanding?.resultLabel || '',
@@ -2722,7 +2726,7 @@ function startServer({ port = PORT, host = '0.0.0.0' } = {}) {
     buildClientState,
   });
   server.listen(port, host, () => {
-    console.log(`3.3.4 server running on ${getPublicBaseUrl()}`);
+    console.log(`3.3.5 server running on ${getPublicBaseUrl()}`);
   });
   return server;
 }

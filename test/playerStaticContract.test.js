@@ -54,7 +54,9 @@ test('player page scopes remembered identity per tournament and resets stale ids
     "const storageScope = tournamentId ? `pto2_${tournamentId}` : 'pto2_unknown';",
     "const centerProfileIdKey = 'pts_player_center_profile_id';",
     'const safeStoredName = looksLikePlayerId(storedName) ?',
-    'const suggestedLoginName = looksLikePlayerId(launchName) ?',
+    "const launchFromCenter = params.get('fromCenter') === '1';",
+    'const launchIdentityName = launchEntrantName || launchName;',
+    'const suggestedLoginName = looksLikePlayerId(launchIdentityName) ?',
     'function resetPlayerIdentity()',
     'function isUsablePlayerView(view)',
     'looksLikePlayerId(view.playerName)',
@@ -124,7 +126,7 @@ test('player-facing pages include the shared PTS header', () => {
     '<div class="brand">',
     '<img class="brand-mark" src="/shared/favicon.svg" alt="">',
     '<span class="brand-text">Pokemon Tournament System</span>',
-    '<div class="version">3.3.4</div>',
+    '<div class="version">3.3.5</div>',
   ];
 
   for (const token of headerTokens) {
@@ -151,7 +153,11 @@ test('player center page has local profile selection and tournament entry points
     '/api/player-profiles',
     '/api/tournaments',
     'data-return-tournament',
+    'data-entrant-name',
     'data-register-tournament',
+    'refreshProfileBtn',
+    'function refreshProfileCenter()',
+    "url.searchParams.set('fromCenter', '1');",
     'profileEditBox',
     'editProfileBtn',
     '/api/player-profiles/${encodeURIComponent(profile.id)}',
@@ -175,6 +181,7 @@ test('player center separates return and registration tournament actions', () =>
     'class="modal-dialog tournament-confirm"',
     '<button class="secondary-action" id="changeProfileBtn" type="button">登出</button>',
     '<button class="secondary-action" id="editProfileBtn" type="button">改名</button>',
+    '<button class="secondary-action" id="refreshProfileBtn" type="button">刷新</button>',
     "const registeredTournamentIds = new Set(tournaments.map(tournamentIdOf).filter(Boolean));",
     "tournaments.filter(item => !isTournamentItemFinished(item)),",
     "{ action: 'return', emptyText: '当前没有正在参加的比赛。' }",
@@ -215,7 +222,7 @@ test('player center exposes report export for finished tournaments only', () => 
   const js = readUtf8('public/player-center/center.js');
   const source = html + css + js;
   const required = [
-    '/player/center.js?v=3.3-entry-name-1',
+    '/player/center.js?v=3.3.5-refresh-1',
     'function effectiveTournamentPhase(item)',
     'function isTournamentItemFinished(item)',
     'tournaments.filter(item => !isTournamentItemFinished(item)),',

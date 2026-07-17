@@ -227,15 +227,19 @@
     }
     list.innerHTML = items.map(item => {
       const phase = effectiveTournamentPhase(item);
+      const checkInMeta = !options.history && Object.prototype.hasOwnProperty.call(item, 'checkedIn')
+        ? ` · ${item.checkedIn ? '已签到' : '未签到'}`
+        : '';
       const meta = options.history
         ? `${item.leagueName || '未计入联赛'}${item.pointsProfileName ? ` · ${item.pointsProfileName}` : ''}${item.rank ? ` · 第 ${item.rank} 名` : ''}`
-        : `${formatDate(item.date)}${item.date ? ' · ' : ''}${phaseText(phase)}`;
+        : `${formatDate(item.date)}${item.date ? ' · ' : ''}${phaseText(phase)}${checkInMeta}`;
       const tournamentId = tournamentIdOf(item);
       const exportPlayerName = item.entrantName || state.activeSummary?.profile?.displayName || getActiveProfile()?.displayName || '';
+      const entryName = item.entrantName || state.activeSummary?.profile?.displayName || getActiveProfile()?.displayName || '';
       const actionLabel = options.action === 'register' ? '报名' : '返回';
       const actionAttr = options.action === 'register' ? 'data-register-tournament' : 'data-return-tournament';
       const right = options.action
-        ? `<button class="join-action ${options.action === 'register' ? 'register-action' : ''}" type="button" ${actionAttr}="${escHtml(tournamentId)}">${actionLabel}</button>`
+        ? `<button class="join-action ${options.action === 'register' ? 'register-action' : ''}" type="button" ${actionAttr}="${escHtml(tournamentId)}" data-entrant-name="${escHtml(entryName)}">${actionLabel}</button>`
         : (options.history && isTournamentItemFinished(item) && tournamentId
           ? `<button class="join-action export-action" type="button" data-export-tournament="${escHtml(tournamentId)}" data-export-player="${escHtml(exportPlayerName)}">导出战报</button>`
           : `<span class="${phase === 'done' ? 'phase-tag done' : 'points-tag'}">${options.history ? `${Number(item.points || 0)} pt` : phaseText(phase)}</span>`);
@@ -422,8 +426,11 @@
 
   function buildTournamentEntryUrl(tournamentId, profile, entrantName = '') {
     const url = new URL(`/t/${encodeURIComponent(tournamentId)}/player-login`, location.origin);
+    const entryName = entrantName || profile.displayName || '';
+    url.searchParams.set('fromCenter', '1');
     url.searchParams.set('profileId', profile.id);
-    url.searchParams.set('name', entrantName || profile.displayName || '');
+    url.searchParams.set('name', entryName);
+    url.searchParams.set('entrantName', entryName);
     url.searchParams.set('profileName', profile.displayName || '');
     return url;
   }
@@ -433,13 +440,31 @@
     return `/api/tournaments/${encodeURIComponent(tournamentId)}/export-player-report?playerName=${encodeURIComponent(playerName || '')}&lang=${encodeURIComponent(lang)}`;
   }
 
-  function enterTournament(tournamentId) {
+  function enterTournament(tournamentId, entrantName = '') {
     const profile = getActiveProfile() || state.activeSummary?.profile || null;
     if (!profile) {
       showToast('请先选择或登记选手档案。');
       return;
     }
-    location.href = buildTournamentEntryUrl(tournamentId, profile).toString();
+    location.href = buildTournamentEntryUrl(tournamentId, profile, entrantName).toString();
+  }
+
+  async function refreshProfileCenter() {
+    const btn = qs('refreshProfileBtn');
+    const oldText = btn?.textContent || '刷新';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '刷新中';
+    }
+    try {
+      await refreshData();
+      showToast('已刷新');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    }
   }
 
   function exportPlayerReport(tournamentId, playerName) {
@@ -495,7 +520,7 @@
   document.addEventListener('click', evt => {
     const returnBtn = evt.target.closest('[data-return-tournament]');
     if (returnBtn) {
-      enterTournament(returnBtn.dataset.returnTournament);
+      enterTournament(returnBtn.dataset.returnTournament, returnBtn.dataset.entrantName || '');
       return;
     }
     const exportBtn = evt.target.closest('[data-export-tournament]');
@@ -531,6 +556,9 @@
     if (evt.key === 'Escape') hideTournamentConfirm();
   });
   qs('editProfileBtn').addEventListener('click', showProfileEdit);
+  qs('refreshProfileBtn').addEventListener('click', () => {
+    refreshProfileCenter().catch(() => showToast('刷新失败。'));
+  });
   qs('profileEditCancelBtn').addEventListener('click', hideProfileEdit);
   qs('profileEditBox').addEventListener('click', evt => {
     if (evt.target === qs('profileEditBox')) hideProfileEdit();

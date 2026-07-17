@@ -157,6 +157,18 @@ Theme: bug fixes
 
 - Fixed several bugs.
 
+## Version 3.3.5
+
+Status: released
+
+Theme: player-center and onsite check-in experience fixes
+
+### Main Updates
+
+- Added in-page refresh to Player Center and improved identity handoff when returning to a tournament page.
+- Added onsite check-in status, check-in buttons, and check-in counts during admin registration.
+- Added a confirmation before starting a stage when registered entrants are still unchecked.
+
 ## Version 3.x
 
 Theme: theme system and expanded formats

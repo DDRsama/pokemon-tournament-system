@@ -15,7 +15,7 @@
 <link rel="manifest" href="/player/manifest.webmanifest">
   <link rel="stylesheet" href="/shared/theme.css?v=3.3-release-1">
   <script src="/shared/font-loader.js?v=3.3-font-loader-2"></script>
-<link rel="stylesheet" href="/player/center.css?v=3.3-entry-name-1">
+<link rel="stylesheet" href="/player/center.css?v=3.3.5-refresh-1">
   <script src="/shared/i18n.js?v=3.3-i18n-scan-1"></script>
 </head>
 <body>
@@ -24,7 +24,7 @@
       <img class="brand-mark" src="/shared/favicon.svg" alt="">
       <span class="brand-text">Pokemon Tournament System</span>
     </div>
-    <div class="version">3.3.4</div>
+    <div class="version">3.3.5</div>
   </header>
 
   <main class="app-shell player-center-compact">
@@ -76,6 +76,7 @@
           <h2 id="activeProfileName">-</h2>
         </div>
         <div class="profile-actions">
+          <button class="secondary-action" id="refreshProfileBtn" type="button">刷新</button>
           <button class="secondary-action" id="editProfileBtn" type="button">改名</button>
           <button class="secondary-action" id="changeProfileBtn" type="button">登出</button>
         </div>
@@ -164,6 +165,6 @@
   </div>
 
   <div class="toast hidden" id="toast"></div>
-  <script src="/player/center.js?v=3.3-entry-name-1"></script>
+  <script src="/player/center.js?v=3.3.5-refresh-1"></script>
 </body>
 </html>

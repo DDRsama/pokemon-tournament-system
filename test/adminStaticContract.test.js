@@ -47,9 +47,10 @@ test('admin static files do not reintroduce legacy swiss control surface', () =>
 
 test('admin entry uses current cache-busting asset version', () => {
   const html = readUtf8('public/admin/index.html');
-  assert.equal(html.includes('/admin/admin.css?v=3.3-admin-confirm-1'), true);
-  assert.equal(html.includes('/admin/admin.js?v=3.3-confirm-i18n-1'), true);
-  assert.equal(html.includes('/admin/modals.js?v=3.3-single-profile-mode-1'), true);
+  assert.equal(html.includes('/admin/admin.css?v=3.3.5-checkin-touch-1'), true);
+  assert.equal(html.includes('/admin/admin.js?v=3.3.5-checkin-1'), true);
+  assert.equal(html.includes('/admin/stages-panel.js?v=3.3.5-start-checkin-1'), true);
+  assert.equal(html.includes('/admin/modals.js?v=3.3.5-confirm-i18n-1'), true);
   assert.equal(html.includes('/shared/i18n.js?v=3.3-i18n-scan-1'), true);
   assert.equal(html.includes('/admin/admin.css?v=3.2-i18n-1'), false);
   assert.equal(html.includes('/admin/admin.js?v=3.1-visual-polish-1'), false);
@@ -166,7 +167,7 @@ test('admin entrant import controls avoid sample player names and support single
     'id="bulkCreateProfiles"',
     '未匹配时登记长期档案',
     '默认只绑定已有档案，未匹配保持临时参赛',
-    '/admin/modals.js?v=3.3-single-profile-mode-1',
+    '/admin/modals.js?v=3.3.5-confirm-i18n-1',
   ].forEach(token => assert.equal(html.includes(token), true, `admin bulk import UI should contain: ${token}`));
   [
     '.single-profile-toggle',
@@ -262,6 +263,53 @@ test('admin sidebar places stage controls above participant list', () => {
   assert.notEqual(stageIndex, -1);
   assert.notEqual(participantIndex, -1);
   assert.equal(stageIndex < participantIndex, true);
+});
+
+test('admin setup participant list supports onsite check-in', () => {
+  const html = readUtf8('public/admin/index.html');
+  const css = readUtf8('public/admin/admin.css');
+  const js = readUtf8('public/admin/admin.js');
+  const source = html + css + js;
+  const required = [
+    'id="checkInCount"',
+    'class="checkin-count hidden"',
+    'function entrantCheckInStats(s)',
+    'async function togglePlayerCheckIn(entrantId, nextChecked)',
+    "checkedIn: nextChecked === true",
+    'checkedInAt: nextChecked === true ? Date.now() : null',
+    "apiMethod(tournamentApi(`/entrants/${encodeURIComponent(targetId)}`), 'PATCH', payload)",
+    'checkin-badge',
+    'checkin-btn',
+    'min-height: 32px',
+    'touch-action: manipulation',
+    '已签到',
+    '未签到',
+    'togglePlayerCheckIn',
+  ];
+
+  for (const token of required) {
+    assert.equal(source.includes(token), true, `admin check-in should contain: ${token}`);
+  }
+});
+
+test('admin confirms stage start when registered entrants are not checked in', () => {
+  const js = readUtf8('public/admin/stages-panel.js');
+  const required = [
+    'async function startStage(stageId)',
+    'const confirmed = await confirmStageStartWithUncheckedEntrants();',
+    "if (!currentState || currentState.phase !== 'setup') return [];",
+    'function uncheckedEntrantsBeforeStageStart()',
+    'function confirmStageStartWithUncheckedEntrants()',
+    "entrant.checkedIn !== true",
+    "title: '仍有未签到'",
+    "okText: '继续开始'",
+    "tone: 'primary'",
+    'confirmAction(message',
+  ];
+
+  for (const token of required) {
+    assert.equal(js.includes(token), true, `stage start check-in guard should contain: ${token}`);
+  }
 });
 
 test('admin idle stage start button stays on idle screen instead of stage list cards', () => {

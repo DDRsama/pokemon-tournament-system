@@ -500,7 +500,7 @@
       <img class="brand-mark" src="/shared/favicon.svg" alt="">
       <span class="brand-text">Pokemon Tournament System</span>
     </div>
-    <div class="version">3.3.4</div>
+    <div class="version">3.3.5</div>
   </header>
 
   <div class="wrap">
@@ -649,16 +649,20 @@ const storageScope = tournamentId ? `pto2_${tournamentId}` : 'pto2_unknown';
 const storageNameKey = `${storageScope}_player_name`;
 const storageIdKey = `${storageScope}_player_id`;
 const launchName = (params.get('name') || params.get('playerName') || '').trim();
+const launchEntrantName = (params.get('entrantName') || '').trim();
+const launchFromCenter = params.get('fromCenter') === '1';
 const launchProfileId = (params.get('profileId') || '').trim();
 const launchProfileName = (params.get('profileName') || '').trim();
 const storedName = localStorage.getItem(storageNameKey) || '';
 const safeStoredName = looksLikePlayerId(storedName) ? '' : storedName;
-const suggestedLoginName = looksLikePlayerId(launchName) ? '' : launchName;
+const launchIdentityName = launchEntrantName || launchName;
+const suggestedLoginName = looksLikePlayerId(launchIdentityName) ? '' : launchIdentityName;
 if (storedName && !safeStoredName) localStorage.removeItem(storageNameKey);
 if (launchProfileId) localStorage.setItem(centerProfileIdKey, launchProfileId);
 let activeProfileId = launchProfileId || localStorage.getItem(centerProfileIdKey) || '';
-let playerName = safeStoredName;
+let playerName = launchFromCenter && suggestedLoginName ? suggestedLoginName : safeStoredName;
 let playerId = params.get('playerId') || localStorage.getItem(storageIdKey) || '';
+if (launchFromCenter && suggestedLoginName) localStorage.setItem(storageNameKey, suggestedLoginName);
 let lastView = null;
 if (!tournamentId) {
   document.body.innerHTML = '<div style="padding:40px;color:#fff;font-family:var(--pts-font-sans),sans-serif;">Tournament not found</div>';

@@ -13,7 +13,7 @@
 它最初以宝可梦 VGC 线下赛事为主要开发目标，但由于核心流程围绕瑞士轮、淘汰赛、直播桌管理与战报整理展开，因此同样适用于 PTCG、游戏王等采用瑞士轮结构的对战赛事。
 它将后台管理、直播叠加层、选手端页面、瑞士轮与淘汰赛流程、战报导出，以及 Docker 部署能力整合到同一套系统中，目标是尽可能覆盖一场比赛从报名到赛后整理的完整流程。
 
-最新稳定版：`3.3.4`
+最新稳定版：`3.3.5`
 
 当前 beta 版：暂无
 
@@ -21,8 +21,8 @@
 
 - `latest`：稳定版 Docker 镜像
 - `beta`：测试版 Docker 镜像
-- 形如 `3.3.4-beta` 的 tag：具体 beta 版本镜像
-- 形如 `3.3.4` 的 tag：具体稳定版镜像
+- 形如 `3.3.5-beta` 的 tag：具体 beta 版本镜像
+- 形如 `3.3.5` 的 tag：具体稳定版镜像
 
 版本路线图：[ROADMAP.md](./ROADMAP.md)
 
@@ -274,7 +274,7 @@ docker pull ddrsama/pokemon-tournament-system:beta
 也可以指定具体版本：
 
 ```bash
-docker pull ddrsama/pokemon-tournament-system:3.3.4
+docker pull ddrsama/pokemon-tournament-system:3.3.5
 ```
 
 ### 本地开发用 Docker Compose
@@ -298,7 +298,7 @@ docker compose -f docker-compose.deploy.yml up -d
 如果要锁定某个具体稳定版本，也可以显式指定：
 
 ```bash
-PTS_TAG=3.3.4 docker compose -f docker-compose.deploy.yml up -d
+PTS_TAG=3.3.5 docker compose -f docker-compose.deploy.yml up -d
 ```
 
 ### 部署 Beta Docker Compose
